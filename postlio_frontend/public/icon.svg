@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Główny gradient tła -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4F46E5"/>
+      <stop offset="50%" style="stop-color:#3B82F6"/>
+      <stop offset="100%" style="stop-color:#0EA5E9"/>
+    </linearGradient>
+    
+    <!-- Gradient dla litery P -->
+    <linearGradient id="pGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF"/>
+      <stop offset="100%" style="stop-color:#E0E7FF"/>
+    </linearGradient>
+    
+    <!-- Gradient dla iskry AI -->
+    <linearGradient id="sparkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FDE047"/>
+      <stop offset="100%" style="stop-color:#FBBF24"/>
+    </linearGradient>
+    
+    <!-- Cień -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#1E40AF" flood-opacity="0.3"/>
+    </filter>
+    
+    <!-- Glow dla iskry -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Tło - zaokrąglony kwadrat -->
+  <rect x="32" y="32" width="448" height="448" rx="96" ry="96" fill="url(#bgGradient)"/>
+  
+  <!-- Subtelny overlay dla głębi -->
+  <rect x="32" y="32" width="448" height="224" rx="96" ry="96" fill="white" opacity="0.1"/>
+  
+  <!-- Stylizowana litera P -->
+  <g filter="url(#shadow)">
+    <!-- Główne P -->
+    <path d="M160 120 
+             L160 380 
+             C160 395 190 395 190 380 
+             L190 285
+             L280 285
+             C340 285 380 245 380 195
+             C380 145 340 120 280 120
+             L160 120
+             Z
+             M190 150
+             L270 150
+             C310 150 345 165 345 195
+             C345 225 310 255 270 255
+             L190 255
+             L190 150
+             Z" 
+          fill="url(#pGradient)"/>
+    
+    <!-- Strzałka wysyłania zintegrowana z P -->
+    <path d="M300 180 L340 195 L300 210 L310 195 Z" 
+          fill="url(#pGradient)" opacity="0.8"/>
+  </g>
+  
+  <!-- Iskra AI - 4-ramienna gwiazda -->
+  <g filter="url(#glow)">
+    <path d="M390 100 
+             L395 130 
+             C396 135 400 140 405 140
+             L435 145
+             L405 150
+             C400 150 396 155 395 160
+             L390 190
+             L385 160
+             C384 155 380 150 375 150
+             L345 145
+             L375 140
+             C380 140 384 135 385 130
+             Z" 
+          fill="url(#sparkGradient)"/>
+  </g>
+  
+  <!-- Mniejsza iskra -->
+  <g filter="url(#glow)" opacity="0.7">
+    <path d="M420 200 
+             L423 218 
+             L440 222
+             L423 226
+             L420 244
+             L417 226
+             L400 222
+             L417 218
+             Z" 
+          fill="url(#sparkGradient)"/>
+  </g>
+  
+  <!-- Kropki dekoracyjne - LEWY DOLNY RÓG, POD NOGĄ P -->
+  <circle cx="100" cy="440" r="8" fill="white" opacity="0.4"/>
+  <circle cx="130" cy="455" r="5" fill="white" opacity="0.3"/>
+  <circle cx="80" cy="460" r="4" fill="white" opacity="0.25"/>
+</svg>
