@@ -1,6 +1,10 @@
-﻿from datetime import datetime
+﻿# postlio_backend/app/models/user.py
+"""
+Model użytkownika.
+"""
+from datetime import datetime
 from sqlalchemy import String, Boolean, DateTime
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 
@@ -17,3 +21,9 @@ class User(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships - na końcu klasy
+    brands = relationship("Brand", back_populates="user", cascade="all, delete-orphan")
+
+    def __repr__(self) -> str:
+        return f"<User(id={self.id}, email='{self.email}')>"
