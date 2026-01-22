@@ -8,6 +8,16 @@ export type FrequencyType = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custo
 
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Sunday
 
+// Nowy typ dla backendu (używa nazw dni)
+export type DayOfWeekName =
+    | 'monday'
+    | 'tuesday'
+    | 'wednesday'
+    | 'thursday'
+    | 'friday'
+    | 'saturday'
+    | 'sunday';
+
 export interface TimeSlot {
     id: string;
     time: string; // "HH:mm" format
@@ -55,7 +65,17 @@ export interface TopicSuggestion {
 // ==================== GENERATION SETTINGS ====================
 
 export type AIProvider = 'gemini' | 'groq' | 'auto';
-export type ImageProvider = 'pollinations' | 'huggingface' | 'clipdrop' | 'none';
+
+export type ImageProvider = 'pollinations' | 'huggingface' | 'none';
+
+export type PostLength = 'short' | 'medium' | 'long';
+export type ImageStyle =
+    | 'realistic'
+    | 'artistic'
+    | 'cartoon'
+    | 'minimalist'
+    | 'vibrant'
+    | 'professional';
 
 export interface GenerationSettings {
     textProvider: AIProvider;
@@ -83,6 +103,15 @@ export type QueueStatus =
     | 'published'
     | 'failed'
     | 'rejected';
+
+// Status z backendu (mapowany na QueueStatus w UI)
+export type BackendQueueStatus =
+    | 'pending'
+    | 'approved'
+    | 'rejected'
+    | 'published'
+    | 'failed'
+    | 'scheduled';
 
 export interface QueuedPost {
     id: string;
@@ -114,7 +143,219 @@ export interface PostVariation {
     characterCount: number;
 }
 
-// ==================== AUTOPILOT CONFIG ====================
+// ==================== BACKEND API TYPES ====================
+// Typy zsynchronizowane z backendem
+
+export interface BackendAutopilotConfig {
+    id: number;
+    user_id: number;
+    brand_id: number;
+    is_active: boolean;
+    is_paused: boolean;
+
+    // Schedule
+    posts_per_week: number;
+    schedule_days: DayOfWeekName[];
+    schedule_time: string;
+    timezone: string;
+
+    // Platforms & Categories
+    platforms: Platform[];
+    categories: ThematicCategoryId[];
+
+    // Social Media Mapping
+    social_account_mapping: Record<string, number>;
+    auto_publish_on_approve: boolean;
+
+    // Generation settings
+    creativity_level: number;
+    post_length: PostLength;
+    include_images: boolean;
+    include_hashtags: boolean;
+    include_emoji: boolean;
+
+    // AI preferences
+    text_provider: string;
+    image_provider: string;
+    image_style: ImageStyle;
+
+    // Stats
+    total_generated: number;
+    total_approved: number;
+    total_rejected: number;
+    total_published: number;
+    streak_days: number;
+    last_generation_at: string | null;
+    last_published_at: string | null;
+
+    // Computed
+    health_score?: number;
+    next_generation_at?: string | null;
+
+    // Timestamps
+    created_at: string;
+    updated_at: string;
+}
+
+export interface BackendAutopilotConfigCreate {
+    brand_id: number;
+    posts_per_week?: number;
+    schedule_days?: DayOfWeekName[];
+    schedule_time?: string;
+    timezone?: string;
+    platforms?: Platform[];
+    categories?: ThematicCategoryId[];
+    social_account_mapping?: Record<string, number>;
+    auto_publish_on_approve?: boolean;
+    creativity_level?: number;
+    post_length?: PostLength;
+    include_images?: boolean;
+    include_hashtags?: boolean;
+    include_emoji?: boolean;
+    text_provider?: string;
+    image_provider?: string;
+    image_style?: ImageStyle;
+}
+
+export interface BackendAutopilotConfigUpdate {
+    is_active?: boolean;
+    is_paused?: boolean;
+    posts_per_week?: number;
+    schedule_days?: DayOfWeekName[];
+    schedule_time?: string;
+    timezone?: string;
+    platforms?: Platform[];
+    categories?: ThematicCategoryId[];
+    social_account_mapping?: Record<string, number>;
+    auto_publish_on_approve?: boolean;
+    creativity_level?: number;
+    post_length?: PostLength;
+    include_images?: boolean;
+    include_hashtags?: boolean;
+    include_emoji?: boolean;
+    text_provider?: string;
+    image_provider?: string;
+    image_style?: ImageStyle;
+}
+
+export interface BackendQueueItem {
+    id: number;
+    config_id: number;
+    user_id: number;
+    brand_id: number;
+
+    // Content
+    platform: Platform;
+    content: string;
+    image_url: string | null;
+    hashtags: string[];
+    category: string | null;
+
+    // Status
+    status: BackendQueueStatus;
+    scheduled_for: string;
+    published_at: string | null;
+
+    // AI info
+    topic_used: string | null;
+    text_provider_used: string | null;
+    image_provider_used: string | null;
+    generation_params: Record<string, unknown>;
+
+    // Pola publikacji
+    social_account_id: number | null;
+    platform_post_id: string | null;
+    platform_post_url: string | null;
+    publish_error: string | null;
+    publish_attempts: number;
+
+    // Feedback
+    user_notes: string | null;
+    edit_count: number;
+
+    // Timestamps
+    created_at: string;
+    updated_at: string;
+}
+
+export interface BackendQueueItemUpdate {
+    content?: string;
+    image_url?: string;
+    hashtags?: string[];
+    status?: BackendQueueStatus;
+    scheduled_for?: string;
+    user_notes?: string;
+    social_account_id?: number;
+}
+
+export interface BackendQueueStats {
+    pending_count: number;
+    approved_count: number;
+    scheduled_count: number;
+    published_today: number;
+    published_this_week: number;
+    failed_count: number;
+    rejection_rate: number;
+    average_edit_count: number;
+}
+
+export interface BackendAutopilotDashboard {
+    config: BackendAutopilotConfig | null;
+    queue_stats: BackendQueueStats;
+    pending_items: BackendQueueItem[];
+    upcoming_items: BackendQueueItem[];
+    recent_published: BackendQueueItem[];
+    failed_items: BackendQueueItem[];
+    health_score: number;
+    streak_days: number;
+    next_post_at: string | null;
+    recommendations: string[];
+    social_accounts_status: Record<string, string>;
+}
+
+export interface BackendBulkActionRequest {
+    item_ids: number[];
+    action: 'approve' | 'reject' | 'delete' | 'publish';
+}
+
+export interface BackendBulkActionResponse {
+    success_count: number;
+    fail_count: number;
+    action: string;
+}
+
+// ==================== PUBLISH TYPES ====================
+
+export interface PublishRequest {
+    social_account_id?: number;
+    publish_now?: boolean;
+}
+
+export interface PublishResponse {
+    success: boolean;
+    item_id: number;
+    platform: string;
+    platform_post_id?: string;
+    platform_post_url?: string;
+    error?: string;
+    published_at?: string;
+    requires_manual?: boolean;  // ← DODAJ TO
+}
+
+export interface ManualPublishData {
+    item_id: number;
+    content: string;
+    full_content: string;
+    hashtags: string[];
+    hashtags_string: string;
+    image_url: string | null;
+    platform: Platform;
+    platform_link: string;
+    instructions: string;
+    share_url?: string;
+}
+
+// ==================== AUTOPILOT CONFIG (UI) ====================
 
 export type AutopilotStatus = 'active' | 'paused' | 'inactive' | 'error';
 
@@ -136,7 +377,7 @@ export interface AutopilotConfig {
     totalGenerated: number;
     totalPublished: number;
     requiresApproval: boolean;
-    autoApproveAfterHours?: number; // Auto-approve if not reviewed within X hours
+    autoApproveAfterHours?: number;
     notifyOnGeneration: boolean;
     notifyOnPublish: boolean;
     notifyOnError: boolean;
@@ -160,14 +401,14 @@ export interface AutopilotStats {
     totalApproved: number;
     totalRejected: number;
     totalFailed: number;
-    avgApprovalTime: number; // in hours
+    avgApprovalTime: number;
     avgEngagementRate: number;
     platformStats: PlatformStat[];
     contentTypePerformance: Record<ContentType, number>;
     lastRunAt?: string;
     nextRunAt?: string;
-    streak: number; // consecutive successful runs
-    healthScore: number; // 0-100
+    streak: number;
+    healthScore: number;
 }
 
 // ==================== ACTIVITY LOG ====================
@@ -221,16 +462,61 @@ export interface QuickSchedulePreset {
     schedule: Partial<ScheduleConfig>;
 }
 
+// ==================== THEMATIC CATEGORIES ====================
+
+export type ThematicCategoryId =
+    | 'fitness'
+    | 'health'
+    | 'beauty'
+    | 'cooking'
+    | 'business'
+    | 'technology'
+    | 'travel'
+    | 'lifestyle'
+    | 'education'
+    | 'entertainment'
+    | 'nature'
+    | 'diet';
+
+export interface ThematicCategory {
+    id: string;
+    name: string;
+    icon: string;
+    color: string;
+    keywords: string[];
+}
+
+export interface SelectedCategory {
+    categoryId: string;
+    percentage: number;
+}
+
+// ==================== GENERATE QUEUE TYPES ====================
+
+export interface GenerateQueueRequest {
+    count?: number;
+    topics?: string[];
+    platforms?: string[];
+}
+
+export interface GenerateQueueResponse {
+    success: boolean;
+    generated_count: number;
+    failed_count: number;
+    items: BackendQueueItem[];
+    errors: string[];
+}
+
 // ==================== CONSTANTS ====================
 
-export const DAYS_OF_WEEK: { value: DayOfWeek; label: string; short: string }[] = [
-    { value: 0, label: 'Niedziela', short: 'Nd' },
-    { value: 1, label: 'Poniedziałek', short: 'Pn' },
-    { value: 2, label: 'Wtorek', short: 'Wt' },
-    { value: 3, label: 'Środa', short: 'Śr' },
-    { value: 4, label: 'Czwartek', short: 'Cz' },
-    { value: 5, label: 'Piątek', short: 'Pt' },
-    { value: 6, label: 'Sobota', short: 'Sb' },
+export const DAYS_OF_WEEK: { value: DayOfWeek; label: string; short: string; name: DayOfWeekName }[] = [
+    { value: 0, label: 'Niedziela', short: 'Nd', name: 'sunday' },
+    { value: 1, label: 'Poniedziałek', short: 'Pn', name: 'monday' },
+    { value: 2, label: 'Wtorek', short: 'Wt', name: 'tuesday' },
+    { value: 3, label: 'Środa', short: 'Śr', name: 'wednesday' },
+    { value: 4, label: 'Czwartek', short: 'Cz', name: 'thursday' },
+    { value: 5, label: 'Piątek', short: 'Pt', name: 'friday' },
+    { value: 6, label: 'Sobota', short: 'Sb', name: 'saturday' },
 ];
 
 export const CONTENT_TYPE_LABELS: Record<ContentType, { label: string; icon: string; color: string }> = {
@@ -314,6 +600,15 @@ export const STATUS_CONFIG: Record<QueueStatus, { label: string; color: string; 
     rejected: { label: 'Odrzucony', color: '#6B7280', bgColor: 'rgba(107, 114, 128, 0.1)' },
 };
 
+export const BACKEND_STATUS_MAP: Record<BackendQueueStatus, QueueStatus> = {
+    pending: 'pending_review',
+    approved: 'approved',
+    rejected: 'rejected',
+    published: 'published',
+    failed: 'failed',
+    scheduled: 'scheduled',
+};
+
 export const AUTOPILOT_STATUS_CONFIG: Record<AutopilotStatus, { label: string; color: string; icon: string }> = {
     active: { label: 'Aktywny', color: '#10B981', icon: 'Play' },
     paused: { label: 'Wstrzymany', color: '#F59E0B', icon: 'Pause' },
@@ -321,15 +616,6 @@ export const AUTOPILOT_STATUS_CONFIG: Record<AutopilotStatus, { label: string; c
     error: { label: 'Błąd', color: '#EF4444', icon: 'AlertCircle' },
 };
 
-export interface ThematicCategory {
-    id: string;
-    name: string;
-    icon: string;
-    color: string;
-    keywords: string[];
-}
-
-// Predefiniowane kategorie tematyczne
 export const THEMATIC_CATEGORIES: ThematicCategory[] = [
     // Lifestyle & Food
     { id: 'kitchen', name: 'Kuchnia', icon: '🍳', color: '#F59E0B', keywords: ['przepisy', 'gotowanie', 'jedzenie'] },
@@ -357,6 +643,7 @@ export const THEMATIC_CATEGORIES: ThematicCategory[] = [
     { id: 'yoga', name: 'Joga', icon: '🧘', color: '#A855F7', keywords: ['medytacja', 'mindfulness'] },
     { id: 'running', name: 'Bieganie', icon: '🏃', color: '#F97316', keywords: ['jogging', 'maraton'] },
     { id: 'cycling', name: 'Kolarstwo', icon: '🚴', color: '#0EA5E9', keywords: ['rower', 'trasy rowerowe'] },
+    { id: 'fitness', name: 'Fitness', icon: '🏃‍♂️', color: '#3B82F6', keywords: ['trening', 'forma'] },
 
     // Nature & Outdoors
     { id: 'nature', name: 'Przyroda', icon: '🌿', color: '#22C55E', keywords: ['natura', 'ekologia'] },
@@ -382,6 +669,7 @@ export const THEMATIC_CATEGORIES: ThematicCategory[] = [
     { id: 'books', name: 'Książki', icon: '📚', color: '#8B5CF6', keywords: ['literatura', 'czytanie'] },
     { id: 'movies', name: 'Film', icon: '🎬', color: '#EF4444', keywords: ['kino', 'seriale'] },
     { id: 'gaming', name: 'Gry', icon: '🎮', color: '#10B981', keywords: ['gaming', 'esport'] },
+    { id: 'entertainment', name: 'Rozrywka', icon: '🎭', color: '#EC4899', keywords: ['zabawa', 'imprezy'] },
 
     // Home & Family
     { id: 'home', name: 'Dom', icon: '🏠', color: '#F59E0B', keywords: ['wnętrza', 'dekoracje'] },
@@ -389,6 +677,7 @@ export const THEMATIC_CATEGORIES: ThematicCategory[] = [
     { id: 'parenting', name: 'Rodzicielstwo', icon: '👶', color: '#EC4899', keywords: ['dzieci', 'rodzina'] },
     { id: 'education', name: 'Edukacja', icon: '📖', color: '#3B82F6', keywords: ['nauka', 'rozwój'] },
     { id: 'kids', name: 'Dzieci', icon: '🧒', color: '#F472B6', keywords: ['zabawki', 'zabawy'] },
+    { id: 'lifestyle', name: 'Lifestyle', icon: '✨', color: '#A855F7', keywords: ['styl życia', 'inspiracje'] },
 
     // Motivation & Personal Development
     { id: 'motivation', name: 'Motywacja', icon: '🔥', color: '#EF4444', keywords: ['inspiracja', 'rozwój osobisty'] },
@@ -406,14 +695,6 @@ export const THEMATIC_CATEGORIES: ThematicCategory[] = [
     { id: 'community', name: 'Społeczność', icon: '🤝', color: '#6366F1', keywords: ['ludzie', 'networking'] },
 ];
 
-// Rozszerzona konfiguracja z kategoriami tematycznymi
-export interface SelectedCategory {
-    categoryId: string;
-    percentage: number; // 0-100, suma wszystkich = 100
-}
-
-// ==================== AI PROVIDER LABELS ====================
-
 export const AI_PROVIDER_LABELS: Record<AIProvider, { name: string; description: string; icon: string; speed: string }> = {
     gemini: { name: 'Gemini 2.5', description: 'Google AI - kreatywny i dokładny', icon: '✨', speed: 'Szybki' },
     groq: { name: 'Groq (Llama 3.3)', description: 'Ultra szybki, świetny do krótkich postów', icon: '⚡', speed: 'Błyskawiczny' },
@@ -423,11 +704,8 @@ export const AI_PROVIDER_LABELS: Record<AIProvider, { name: string; description:
 export const IMAGE_PROVIDER_LABELS: Record<ImageProvider, { name: string; description: string; icon: string; quality: string }> = {
     pollinations: { name: 'Pollinations', description: 'Darmowy, dobra jakość', icon: '🌸', quality: 'Dobra' },
     huggingface: { name: 'HuggingFace FLUX', description: 'Najlepsza jakość obrazów', icon: '🤗', quality: 'Świetna' },
-    clipdrop: { name: 'ClipDrop', description: 'Szybki, spójny styl', icon: '✂️', quality: 'Bardzo dobra' },
     none: { name: 'Bez obrazów', description: 'Tylko tekst', icon: '📝', quality: '-' },
 };
-
-// ==================== CREATIVITY LEVEL LABELS ====================
 
 export const CREATIVITY_LEVEL_LABELS: { value: number; label: string; description: string; icon: string }[] = [
     { value: 20, label: 'Bezpieczny', description: 'Sprawdzone, klasyczne podejście', icon: '🛡️' },
@@ -437,15 +715,11 @@ export const CREATIVITY_LEVEL_LABELS: { value: number; label: string; descriptio
     { value: 100, label: 'Szalony', description: 'Eksperymentalne, nieszablonowe', icon: '🚀' },
 ];
 
-// ==================== POST LENGTH PRESETS ====================
-
-export const POST_LENGTH_PRESETS = [
+export const POST_LENGTH_PRESETS: { id: PostLength; label: string; minLength: number; maxLength: number; description: string }[] = [
     { id: 'short', label: 'Krótki', minLength: 50, maxLength: 150, description: '50-150 znaków' },
     { id: 'medium', label: 'Średni', minLength: 150, maxLength: 300, description: '150-300 znaków' },
     { id: 'long', label: 'Długi', minLength: 300, maxLength: 500, description: '300-500 znaków' },
 ];
-
-// ==================== TIME SLOT SUGGESTIONS ====================
 
 export interface TimeSlotSuggestion {
     time: string;
@@ -463,3 +737,49 @@ export const TIME_SLOT_SUGGESTIONS: TimeSlotSuggestion[] = [
     { time: '18:00', label: 'Wieczór', icon: '🌆', description: 'Po pracy', color: '#F97316' },
     { time: '21:00', label: 'Późny wieczór', icon: '🌙', description: 'Relaks przed snem', color: '#8B5CF6' },
 ];
+
+// ==================== HELPER FUNCTIONS ====================
+
+export function mapBackendConfigToUI(config: BackendAutopilotConfig): Partial<AutopilotConfig> {
+    return {
+        id: String(config.id),
+        brandId: String(config.brand_id),
+        status: config.is_active
+            ? (config.is_paused ? 'paused' : 'active')
+            : 'inactive',
+        platforms: config.platforms,
+        totalGenerated: config.total_generated,
+        totalPublished: config.total_published,
+        createdAt: config.created_at,
+        updatedAt: config.updated_at,
+        lastRunAt: config.last_generation_at || undefined,
+        nextRunAt: config.next_generation_at || undefined,
+    };
+}
+
+export function mapBackendQueueItemToUI(item: BackendQueueItem): Partial<QueuedPost> {
+    return {
+        id: String(item.id),
+        autopilotId: String(item.config_id),
+        brandId: String(item.brand_id),
+        content: item.content,
+        platforms: [item.platform],
+        scheduledFor: item.scheduled_for,
+        status: BACKEND_STATUS_MAP[item.status] || 'pending_review',
+        generatedAt: item.created_at,
+        imageUrl: item.image_url || undefined,
+        topic: item.topic_used || undefined,
+        publishedAt: item.published_at || undefined,
+        reviewNotes: item.user_notes || undefined,
+    };
+}
+
+export function dayNumberToName(day: DayOfWeek): DayOfWeekName {
+    const dayInfo = DAYS_OF_WEEK.find(d => d.value === day);
+    return dayInfo?.name || 'monday';
+}
+
+export function dayNameToNumber(name: DayOfWeekName): DayOfWeek {
+    const dayInfo = DAYS_OF_WEEK.find(d => d.name === name);
+    return dayInfo?.value ?? 1;
+}

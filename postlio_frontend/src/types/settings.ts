@@ -1,4 +1,10 @@
 // src/types/settings.ts
+/**
+ * Types for Settings module.
+ *
+ * UWAGA: Typy dla Connected Accounts są w @/lib/api/social.ts
+ * Ten plik zawiera tylko typy dla lokalnych preferencji.
+ */
 
 import type { AIProvider, ImageProvider } from './autopilot';
 
@@ -66,32 +72,6 @@ export interface AppearancePreferences {
     showAvatars: boolean;
 }
 
-// ==================== CONNECTED ACCOUNTS ====================
-
-export type SocialPlatform = 'facebook' | 'instagram' | 'linkedin' | 'twitter';
-
-export interface ConnectedAccount {
-    id: string;
-    platform: SocialPlatform;
-    accountName: string;
-    accountId: string;
-    avatar?: string;
-    isConnected: boolean;
-    connectedAt?: string;
-    expiresAt?: string;
-    permissions: string[];
-}
-
-// ==================== FULL SETTINGS ====================
-
-export interface UserSettings {
-    profile: UserProfile;
-    ai: AIPreferences;
-    notifications: NotificationPreferences;
-    appearance: AppearancePreferences;
-    connectedAccounts: ConnectedAccount[];
-}
-
 // ==================== SETTINGS SECTION ====================
 
 export type SettingsSection =
@@ -114,37 +94,37 @@ export const SETTINGS_SECTIONS: SettingsSectionInfo[] = [
         id: 'profile',
         label: 'Profil',
         description: 'Twoje dane i informacje o koncie',
-        icon: 'User'
+        icon: 'User',
     },
     {
         id: 'ai',
         label: 'Preferencje AI',
         description: 'Domyślne ustawienia generowania',
-        icon: 'Sparkles'
+        icon: 'Sparkles',
     },
     {
         id: 'notifications',
         label: 'Powiadomienia',
         description: 'Zarządzaj alertami i powiadomieniami',
-        icon: 'Bell'
+        icon: 'Bell',
     },
     {
         id: 'appearance',
         label: 'Wygląd',
         description: 'Motyw, kolory i personalizacja',
-        icon: 'Palette'
+        icon: 'Palette',
     },
     {
         id: 'accounts',
         label: 'Połączone konta',
         description: 'Zarządzaj kontami social media',
-        icon: 'Link'
+        icon: 'Link',
     },
     {
         id: 'danger',
         label: 'Strefa niebezpieczna',
         description: 'Eksport danych i usunięcie konta',
-        icon: 'AlertTriangle'
+        icon: 'AlertTriangle',
     },
 ];
 
@@ -178,9 +158,5 @@ export const TIMEZONE_OPTIONS = [
     { value: 'America/Los_Angeles', label: 'Los Angeles (PST)' },
 ];
 
-export const PLATFORM_INFO: Record<SocialPlatform, { name: string; color: string; icon: string }> = {
-    facebook: { name: 'Facebook', color: '#1877F2', icon: 'Facebook' },
-    instagram: { name: 'Instagram', color: '#E4405F', icon: 'Instagram' },
-    linkedin: { name: 'LinkedIn', color: '#0A66C2', icon: 'Linkedin' },
-    twitter: { name: 'X (Twitter)', color: '#000000', icon: 'Twitter' },
-};
+// Platform info przeniesione do @/lib/api/social.ts
+// Używaj getPlatformColor(), getPlatformName() z tego modułu

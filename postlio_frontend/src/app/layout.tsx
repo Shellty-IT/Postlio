@@ -18,11 +18,33 @@ export const metadata: Metadata = {
     keywords: ['social media', 'AI', 'automatyzacja', 'posty', 'Facebook', 'Instagram', 'LinkedIn'],
     authors: [{ name: 'Postlio' }],
     creator: 'Postlio',
+    publisher: 'Postlio',
+    robots: 'index, follow',
+
+    // PWA
     manifest: '/manifest.json',
-    icons: {
-        icon: '/favicon.ico',
-        apple: '/apple-touch-icon.png',
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: 'black-translucent',
+        title: 'Postlio',
     },
+    formatDetection: {
+        telephone: false,
+    },
+
+    // Icons
+    icons: {
+        icon: [
+            { url: '/favicon.ico', sizes: '32x32' },
+            { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+            { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+        ],
+        apple: [
+            { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+        ],
+    },
+
+    // Open Graph
     openGraph: {
         type: 'website',
         locale: 'pl_PL',
@@ -30,23 +52,31 @@ export const metadata: Metadata = {
         siteName: 'Postlio',
         title: 'Postlio - AI Social Media Manager',
         description: 'Automatyzuj tworzenie postów na social media z pomocą AI.',
+        images: [
+            {
+                url: '/og-image.png',
+                width: 1200,
+                height: 630,
+                alt: 'Postlio - AI Social Media Manager',
+            },
+        ],
     },
+
+    // Twitter
     twitter: {
         card: 'summary_large_image',
         title: 'Postlio - AI Social Media Manager',
         description: 'Automatyzuj tworzenie postów na social media z pomocą AI.',
-    },
-    robots: {
-        index: true,
-        follow: true,
+        images: ['/og-image.png'],
     },
 };
 
 export const viewport: Viewport = {
     width: 'device-width',
     initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
+    maximumScale: 5,
+    userScalable: true,
+    viewportFit: 'cover',
     themeColor: [
         { media: '(prefers-color-scheme: light)', color: '#F8FAFC' },
         { media: '(prefers-color-scheme: dark)', color: '#0A0F1C' },
@@ -60,6 +90,14 @@ export default function RootLayout({
 }) {
     return (
         <html lang="pl" suppressHydrationWarning>
+        <head>
+            {/* Dodatkowe meta tagi PWA */}
+            <meta name="mobile-web-app-capable" content="yes" />
+            <meta name="apple-mobile-web-app-capable" content="yes" />
+            <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+            <meta name="msapplication-TileColor" content="#2563EB" />
+            <meta name="msapplication-tap-highlight" content="no" />
+        </head>
         <body className={`${inter.variable} font-sans`}>
         <Providers>{children}</Providers>
         </body>

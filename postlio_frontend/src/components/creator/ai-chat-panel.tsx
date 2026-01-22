@@ -1,6 +1,6 @@
 // src/components/creator/ai-chat-panel.tsx
 /**
- * Panel czatu z AI
+ * Panel czatu z AI - z obsługą providerów
  */
 
 'use client';
@@ -19,14 +19,28 @@ import {
     Image as ImageIcon,
     Wand2,
     Lightbulb,
+    Settings2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AIProviderSelector } from './ai-provider-selector';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
 import { useAIChat, useGenerateText, useGenerateImage } from '@/hooks';
 import type { Platform } from '@/types';
-import type { ChatMessage, ChatResponse, TextGenerationResponse, ImageGenerationResponse } from '@/lib/api';
+import type {
+    ChatMessage as APIChatMessage,
+    TextGenerationResponse,
+    ImageGenerationResponse,
+    Platform as AIPlatform,
+    TextProvider,
+    ImageProvider,
+} from '@/lib/api/ai';
 
 // ============================================================
 // TYPY
@@ -43,14 +57,19 @@ interface AIChatPanelProps {
     onImageGenerated: (imageUrl: string) => void;
     isGeneratingText?: boolean;
     isGeneratingImage?: boolean;
+    textProvider?: TextProvider;
+    imageProvider?: ImageProvider;
 }
 
-interface ChatMessageDisplay extends ChatMessage {
+interface ChatMessageDisplay {
     id: string;
+    role: 'user' | 'assistant';
+    content: string;
     timestamp: Date;
     isLoading?: boolean;
     generatedContent?: string;
     generatedImage?: string;
+    provider?: string;
 }
 
 // ============================================================
@@ -71,66 +90,99 @@ const QUICK_ACTIONS = [
 export function AIChatPanel({
                                 isOpen,
                                 onToggle,
-                                currentContent,
                                 selectedPlatforms,
-                                selectedBrandId,
                                 selectedBrandName,
                                 onContentGenerated,
                                 onImageGenerated,
                                 isGeneratingText = false,
                                 isGeneratingImage = false,
+                                textProvider: externalTextProvider = 'gemini',
+                                imageProvider: externalImageProvider = 'pollinations',
                             }: AIChatPanelProps) {
     const [messages, setMessages] = useState<ChatMessageDisplay[]>([]);
     const [input, setInput] = useState('');
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+    // Local provider state (can be different from parent)
+    const [localTextProvider, setLocalTextProvider] = useState<TextProvider>(externalTextProvider);
+    const [localImageProvider, setLocalImageProvider] = useState<ImageProvider>(externalImageProvider);
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
-    // Hooks z explicite typami
-    const { mutateAsync: sendMessage, isPending: isSending } = useAIChat({
-        onSuccess: (data: ChatResponse) => {
+    // Sync with external providers
+    useEffect(() => {
+        setLocalTextProvider(externalTextProvider);
+    }, [externalTextProvider]);
+
+    useEffect(() => {
+        setLocalImageProvider(externalImageProvider);
+    }, [externalImageProvider]);
+
+    // Convert Platform to AIPlatform
+    const getAIPlatform = useCallback((): AIPlatform => {
+        const platform = selectedPlatforms[0];
+        if (platform === 'facebook' || platform === 'instagram' || platform === 'linkedin') {
+            return platform;
+        }
+        return 'facebook';
+    }, [selectedPlatforms]);
+
+    // Hooks
+    const chatMutation = useAIChat({
+        onSuccess: (data) => {
             const newMessage: ChatMessageDisplay = {
                 id: crypto.randomUUID(),
                 role: 'assistant',
-                content: data.message.content,
+                content: data.message,
                 timestamp: new Date(),
+                provider: data.provider,
             };
             setMessages((prev) => [...prev, newMessage]);
         },
     });
 
-    const { mutateAsync: generateText, isPending: isGenText } = useGenerateText({
+    const textMutation = useGenerateText({
         onSuccess: (data: TextGenerationResponse) => {
-            onContentGenerated(data.content);
-            const newMessage: ChatMessageDisplay = {
-                id: crypto.randomUUID(),
-                role: 'assistant',
-                content: 'Wygenerowałem tekst i dodałem go do edytora. Możesz go teraz edytować.',
-                timestamp: new Date(),
-                generatedContent: data.content,
-            };
-            setMessages((prev) => [...prev, newMessage]);
-        },
-    });
-
-    const { mutateAsync: generateImage, isPending: isGenImage } = useGenerateImage({
-        onSuccess: (data: ImageGenerationResponse) => {
-            if (data.images?.[0]?.url) {
-                onImageGenerated(data.images[0].url);
+            if (data.success && data.data) {
+                onContentGenerated(data.data.content);
                 const newMessage: ChatMessageDisplay = {
                     id: crypto.randomUUID(),
                     role: 'assistant',
-                    content: 'Wygenerowałem obraz i dodałem go do posta.',
+                    content: `✨ Wygenerowałem tekst używając **${data.data.provider}** i dodałem go do edytora.`,
                     timestamp: new Date(),
-                    generatedImage: data.images[0].url,
+                    generatedContent: data.data.content,
+                    provider: data.data.provider,
                 };
                 setMessages((prev) => [...prev, newMessage]);
             }
         },
     });
 
-    const isLoading = isSending || isGenText || isGenImage || isGeneratingText || isGeneratingImage;
+    const imageMutation = useGenerateImage({
+        onSuccess: (data: ImageGenerationResponse) => {
+            if (data.success && data.data) {
+                // Obsłuż oba przypadki: image_url (Pollinations) lub image_data (HuggingFace/ClipDrop)
+                const generatedImageUrl = data.data.image_url || data.data.image_data;
+
+                if (generatedImageUrl) {
+                    onImageGenerated(generatedImageUrl);
+                    const newMessage: ChatMessageDisplay = {
+                        id: crypto.randomUUID(),
+                        role: 'assistant',
+                        content: `🎨 Wygenerowałem obraz używając **${data.data.provider}** i dodałem go do posta.`,
+                        timestamp: new Date(),
+                        generatedImage: generatedImageUrl,
+                        provider: data.data.provider,
+                    };
+                    setMessages((prev) => [...prev, newMessage]);
+                }
+            }
+        },
+    });
+
+    const isLoading = chatMutation.isPending || textMutation.isPending || imageMutation.isPending || isGeneratingText || isGeneratingImage;
 
     // Scroll to bottom on new messages
     useEffect(() => {
@@ -146,7 +198,7 @@ export function AIChatPanel({
                 {
                     id: 'welcome',
                     role: 'assistant',
-                    content: `Cześć! 👋 Jestem Twoim asystentem AI. Mogę pomóc Ci:\n\n• Napisać angażujący post\n• Wygenerować obraz\n• Ulepszyć istniejący tekst\n• Zasugerować hashtagi\n\nCo chciałbyś stworzyć?`,
+                    content: `Cześć! 👋 Jestem Twoim asystentem AI. Mogę pomóc Ci:\n\n• Napisać angażujący post\n• Wygenerować obraz\n• Ulepszyć istniejący tekst\n• Zasugerować hashtagi\n\nMożesz zmienić model AI klikając ⚙️ w prawym górnym rogu.`,
                     timestamp: new Date(),
                 },
             ]);
@@ -172,9 +224,12 @@ export function AIChatPanel({
         // Detect intent
         if (lowerInput.includes('obraz') || lowerInput.includes('zdjęcie') || lowerInput.includes('grafik')) {
             try {
-                await generateImage({
+                await imageMutation.mutateAsync({
                     prompt: currentInput,
-                    brand_id: selectedBrandId,
+                    width: selectedPlatforms.includes('instagram') ? 1080 : 1200,
+                    height: selectedPlatforms.includes('instagram') ? 1080 : 630,
+                    style: 'professional',
+                    provider: localImageProvider,
                 });
             } catch {
                 // Error handled by hook
@@ -186,33 +241,39 @@ export function AIChatPanel({
             lowerInput.includes('post')
         ) {
             try {
-                await generateText({
-                    prompt: currentInput,
-                    platform: selectedPlatforms[0],
-                    brand_id: selectedBrandId,
-                    use_brand_voice: !!selectedBrandId,
+                await textMutation.mutateAsync({
+                    topic: currentInput,
+                    platform: getAIPlatform(),
+                    tone: 'professional',
+                    language: 'pl',
+                    include_hashtags: true,
+                    include_emoji: true,
+                    provider: localTextProvider,
                 });
             } catch {
                 // Error handled by hook
             }
         } else {
             try {
-                await sendMessage({
-                    messages: [
-                        ...messages.map((m) => ({ role: m.role, content: m.content })),
-                        { role: 'user' as const, content: currentInput },
-                    ],
-                    platform: selectedPlatforms[0],
-                    brand_id: selectedBrandId,
-                    context: {
-                        current_draft: currentContent,
-                    },
+                const chatMessages: APIChatMessage[] = messages
+                    .filter(m => m.role === 'user' || m.role === 'assistant')
+                    .map((m) => ({
+                        role: m.role as 'user' | 'assistant',
+                        content: m.content
+                    }));
+
+                chatMessages.push({ role: 'user', content: currentInput });
+
+                await chatMutation.mutateAsync({
+                    messages: chatMessages,
+                    platform: getAIPlatform(),
+                    provider: localTextProvider,
                 });
             } catch {
                 // Error handled by hook
             }
         }
-    }, [input, isLoading, messages, selectedPlatforms, selectedBrandId, currentContent, sendMessage, generateText, generateImage]);
+    }, [input, isLoading, messages, selectedPlatforms, chatMutation, textMutation, imageMutation, getAIPlatform, localTextProvider, localImageProvider]);
 
     // Quick action
     const handleQuickAction = useCallback((prompt: string) => {
@@ -270,9 +331,38 @@ export function AIChatPanel({
                                 </p>
                             </div>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={onToggle}>
-                            <ChevronRight className="w-5 h-5" />
-                        </Button>
+
+                        <div className="flex items-center gap-1">
+                            {/* Settings popover */}
+                            <Popover open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <Settings2 className="w-4 h-4" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80" align="end">
+                                    <div className="space-y-4">
+                                        <h4 className="font-medium text-sm">Ustawienia AI</h4>
+
+                                        <AIProviderSelector
+                                            type="text"
+                                            value={localTextProvider}
+                                            onChange={(p) => setLocalTextProvider(p as TextProvider)}
+                                        />
+
+                                        <AIProviderSelector
+                                            type="image"
+                                            value={localImageProvider}
+                                            onChange={(p) => setLocalImageProvider(p as ImageProvider)}
+                                        />
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+
+                            <Button variant="ghost" size="icon" onClick={onToggle} className="h-8 w-8">
+                                <ChevronRight className="w-5 h-5" />
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Messages */}

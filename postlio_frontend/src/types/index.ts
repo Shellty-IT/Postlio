@@ -42,9 +42,89 @@ export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed' | 'archi
 
 export type UserRole = 'user' | 'admin' | 'premium';
 
-export type AIProvider = 'gemini' | 'groq' | 'pollinations' | 'huggingface' | 'clipdrop';
+// AI Providers - ZAKTUALIZOWANE
+export type TextProvider = 'gemini' | 'groq';
+export type ImageProvider = 'pollinations' | 'gemini' | 'huggingface' | 'clipdrop';
+export type AIProvider = TextProvider | ImageProvider;
 
 export type ContentType = 'post' | 'story' | 'reel' | 'article';
+
+// ============================================================
+// AI PROVIDER DEFINITIONS - ZAKTUALIZOWANE
+// ============================================================
+
+export interface ProviderInfo {
+    id: string;
+    name: string;
+    description: string;
+    isFree: boolean;
+    isAvailable?: boolean;
+    models?: ModelInfo[];
+}
+
+export interface ModelInfo {
+    id: string;
+    name: string;
+    description: string;
+    aliases?: string[];
+}
+
+export const TEXT_PROVIDERS: ProviderInfo[] = [
+    {
+        id: 'gemini',
+        name: 'Gemini (Google)',
+        description: 'Rozumie polski, szybki, wysoka jakość.',
+        isFree: true,
+    },
+    {
+        id: 'groq',
+        name: 'Groq (Llama 3.3)',
+        description: 'Bardzo szybki, darmowy.',
+        isFree: true,
+    },
+];
+
+export const IMAGE_PROVIDERS: ProviderInfo[] = [
+    {
+        id: 'pollinations',
+        name: 'Pollinations AI',
+        description: 'Darmowy, szybki. Auto-tłumaczenie PL→EN.',
+        isFree: true,
+    },
+    {
+        id: 'gemini',
+        name: 'Gemini (Google)',
+        description: 'Rozumie polski! Dwa modele do wyboru.',
+        isFree: true,
+        models: [
+            {
+                id: 'gemini-2.0-flash-exp-image-generation',
+                name: 'Nano Banana',
+                description: 'Szybki, eksperymentalny',
+                aliases: ['nano-banana', 'flash'],
+            },
+            {
+                id: 'imagen-3.0-generate-002',
+                name: 'Nano Banana Pro',
+                description: 'Najwyższa jakość, fotorealizm',
+                aliases: ['nano-banana-pro', 'pro'],
+            },
+        ],
+    },
+    {
+        id: 'huggingface',
+        name: 'HuggingFace FLUX',
+        description: 'Wysokiej jakości. Auto-tłumaczenie PL→EN.',
+        isFree: true,
+    },
+    // ClipDrop ukryty bo płatny - odkomentuj jeśli chcesz pokazać
+    // {
+    //     id: 'clipdrop',
+    //     name: 'ClipDrop (Płatny)',
+    //     description: 'Stability AI. Wymaga płatnej subskrypcji.',
+    //     isFree: false,
+    // },
+];
 
 // ============================================================
 // USER
@@ -65,8 +145,8 @@ export interface User {
 export interface UserPreferences {
     default_platform?: Platform;
     default_brand_id?: string;
-    default_text_provider?: string;
-    default_image_provider?: string;
+    default_text_provider?: TextProvider;
+    default_image_provider?: ImageProvider;
     language?: string;
     timezone?: string;
     notifications_enabled?: boolean;

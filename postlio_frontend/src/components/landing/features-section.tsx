@@ -18,36 +18,42 @@ const features = [
         title: 'Autopilot AI',
         description: 'Ustaw harmonogram i pozwól AI tworzyć treści automatycznie. Ty zatwierdzasz, my publikujemy.',
         gradient: 'bg-gradient-to-br from-violet-500/5 to-purple-500/5',
+        href: '/features/autopilot',
     },
     {
         icon: Palette,
         title: 'Brand Voice DNA',
         description: 'Zdefiniuj unikalny głos marki. AI nauczy się Twojego stylu i będzie pisać jak Ty.',
         gradient: 'bg-gradient-to-br from-pink-500/5 to-rose-500/5',
+        href: '/features/brand-voice',
     },
     {
         icon: Calendar,
         title: 'Smart Kalendarz',
         description: 'Planuj posty z wyprzedzeniem. Drag & drop, widok tygodniowy i miesięczny, automatyczne publikowanie.',
         gradient: 'bg-gradient-to-br from-blue-500/5 to-cyan-500/5',
+        href: '/features/kalendarz',
     },
     {
         icon: Zap,
-        title: 'Multi-Provider AI',
-        description: 'Wybierz swojego ulubionego dostawcę AI. Gemini, Groq, lub inny - Ty decydujesz.',
+        title: 'Kreator AI',
+        description: 'Wybierz swojego ulubionego dostawcę AI. Gemini, Groq i więcej - generuj tekst i obrazy.',
         gradient: 'bg-gradient-to-br from-yellow-500/5 to-orange-500/5',
+        href: '/features/kreator-ai',
     },
     {
         icon: BarChart3,
         title: 'Analityka & Insights',
         description: 'Śledź zaangażowanie, zasięgi i trendy. Dowiedz się, co działa najlepiej dla Twojej marki.',
         gradient: 'bg-gradient-to-br from-green-500/5 to-emerald-500/5',
+        href: '/features',
     },
     {
         icon: Users,
         title: 'Multi-Platform',
         description: 'Facebook, Instagram, LinkedIn - zarządzaj wszystkimi kanałami z jednego miejsca.',
         gradient: 'bg-gradient-to-br from-indigo-500/5 to-blue-500/5',
+        href: '/features',
     },
 ];
 
@@ -107,6 +113,7 @@ export function FeaturesSection() {
                             description={feature.description}
                             gradient={feature.gradient}
                             index={index}
+                            href={feature.href}
                         />
                     ))}
                 </div>
@@ -123,11 +130,11 @@ export function FeaturesSection() {
                         I to dopiero początek. Odkryj wszystkie możliwości.
                     </p>
                     <motion.a
-                        href="/register"
+                        href="/features"
                         className="inline-flex items-center gap-2 text-primary font-medium hover:underline"
                         whileHover={{ x: 5 }}
                     >
-                        Rozpocznij darmowy okres próbny
+                        Zobacz wszystkie funkcje
                         <span>→</span>
                     </motion.a>
                 </motion.div>

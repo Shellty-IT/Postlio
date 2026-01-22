@@ -100,11 +100,11 @@ export function ScheduleModal() {
         },
     });
 
-    // ✅ FIX 1: Dodano typ dla parametru 'data'
+    // ✅ FIX: Usunięto explicit typ - TypeScript sam wydedukuje
     const generateText = useGenerateText({
-        onSuccess: (data: { content: string }) => {
-            setValue('content', data.content);
-            setIsGenerating(false);
+            onSuccess: (data) => {
+                setValue('content', data.data.content || '');
+                setIsGenerating(false);
         },
         onError: () => {
             setIsGenerating(false);
@@ -170,11 +170,13 @@ export function ScheduleModal() {
         }
     };
 
+    // ✅ FIX: Zmieniono 'prompt' na 'topic' + dodano wymagane 'tone'
     const handleAIGenerate = async () => {
         setIsGenerating(true);
         generateText.mutate({
-            prompt: 'Napisz angażujący post do social media',
+            topic: 'Angażujący post do social media',
             platform: selectedPlatforms[0],
+            tone: 'professional',
         });
     };
 
@@ -274,10 +276,9 @@ export function ScheduleModal() {
                                     {brands.map((brand) => (
                                         <SelectItem key={brand.id} value={brand.id}>
                                             <div className="flex items-center gap-2">
-                                                {/* ✅ FIX 2: Zmieniono primaryColor na primary_color */}
                                                 <div
                                                     className="w-3 h-3 rounded-full"
-                                                    style={{ backgroundColor: brand.primary_color || '#8B5CF6' }}
+                                                    style={{ backgroundColor: brand.primaryColor || '#8B5CF6' }}
                                                 />
                                                 {brand.name}
                                             </div>

@@ -7,153 +7,182 @@
  */
 
 import { apiClient } from './client';
-import type { Platform } from '@/types';
 
 // ============================================================
-// TYPY PROVIDERÓW
+// ENUMS (dopasowane do backendu)
 // ============================================================
 
-export interface TextProviderInfo {
-    id: string;
-    name: string;
-    description: string;
-    models: string[];
-    is_available: boolean;
-}
+export type TextProvider = 'gemini' | 'groq';
+export type ImageProvider = 'pollinations' | 'huggingface';
 
-export interface ImageProviderInfo {
-    id: string;
+export type Platform = 'facebook' | 'instagram' | 'linkedin';
+
+export type Category =
+    | 'fitness'
+    | 'health'
+    | 'beauty'
+    | 'cooking'
+    | 'business'
+    | 'technology'
+    | 'travel'
+    | 'lifestyle'
+    | 'education'
+    | 'entertainment';
+
+export type Tone =
+    | 'professional'
+    | 'casual'
+    | 'humorous'
+    | 'inspirational'
+    | 'educational'
+    | 'friendly';
+
+export type ImageStyle =
+    | 'realistic'
+    | 'artistic'
+    | 'cartoon'
+    | 'minimalist'
+    | 'vibrant'
+    | 'professional';
+
+// ============================================================
+// PROVIDER INFO
+// ============================================================
+
+export interface ProviderInfo {
     name: string;
-    description: string;
+    display_name?: string;
+    available: boolean;
+    is_free?: boolean;
     models: string[];
-    supported_sizes: string[];
-    is_available: boolean;
+    is_default: boolean;
+    description?: string;
 }
 
 export interface ProvidersResponse {
-    text_providers: TextProviderInfo[];
-    image_providers: ImageProviderInfo[];
-    default_text_provider: string;
-    default_image_provider: string;
+    text_providers: ProviderInfo[];
+    image_providers: ProviderInfo[];
 }
 
 // ============================================================
-// TYPY GENEROWANIA TEKSTU
+// TEXT GENERATION
 // ============================================================
 
 export interface TextGenerationRequest {
-    prompt: string;
-    platform?: Platform;
-    brand_id?: string;
-    tone?: string;
-    language?: string;
-    max_length?: number;
-    provider?: string;
+    topic: string;
+    platform: Platform;
+    provider?: TextProvider;
     model?: string;
-    // Dla trybu Autopilot
-    use_brand_voice?: boolean;
-    content_type?: 'post' | 'story' | 'reel' | 'article';
+    category?: Category;
+    tone?: Tone;
+    language?: string;
+    include_hashtags?: boolean;
+    include_emoji?: boolean;
+    max_length?: number;
+}
+
+export interface GeneratedTextContent {
+    content: string;
+    platform: string;
+    provider: string;
+    model?: string;
+    hashtags?: string[];
 }
 
 export interface TextGenerationResponse {
+    success: boolean;
+    data: GeneratedTextContent;
+    tokens_used?: number;
+}
+
+// ============================================================
+// VARIATIONS
+// ============================================================
+
+export interface VariationsRequest {
+    content: string;
+    platform: Platform;
+    provider?: TextProvider;
+    model?: string;
+    variations_count?: number;
+}
+
+export interface VariationsResponse {
+    success: boolean;
+    variations: string[];
+    provider: string;
+}
+
+// ============================================================
+// IMPROVE TEXT
+// ============================================================
+
+export interface ImproveRequest {
+    content: string;
+    platform: Platform;
+    provider?: TextProvider;
+    model?: string;
+    instructions?: string;
+}
+
+export interface ImproveResponse {
+    success: boolean;
     content: string;
     provider: string;
-    model: string;
-    tokens_used?: number;
-    generation_time?: number;
-    suggestions?: string[];
 }
 
 // ============================================================
-// TYPY GENEROWANIA OBRAZÓW
-// ============================================================
-
-export interface ImageGenerationRequest {
-    prompt: string;
-    negative_prompt?: string;
-    style?: string;
-    size?: string;
-    provider?: string;
-    model?: string;
-    num_images?: number;
-    brand_id?: string;
-}
-
-export interface ImageGenerationResponse {
-    images: GeneratedImage[];
-    provider: string;
-    model: string;
-    generation_time?: number;
-}
-
-export interface GeneratedImage {
-    url: string;
-    base64?: string;
-    width: number;
-    height: number;
-    prompt: string;
-}
-
-// ============================================================
-// TYPY CHAT (Tryb Kreator)
+// CHAT
 // ============================================================
 
 export interface ChatMessage {
-    role: 'user' | 'assistant' | 'system';
+    role: 'user' | 'assistant';
     content: string;
 }
 
 export interface ChatRequest {
     messages: ChatMessage[];
+    provider?: TextProvider;
+    model?: string;
+    category?: Category;
     platform?: Platform;
-    brand_id?: string;
-    provider?: string;
-    context?: {
-        current_draft?: string;
-        post_type?: string;
-        target_audience?: string;
-    };
 }
 
 export interface ChatResponse {
-    message: ChatMessage;
-    suggestions?: string[];
+    success: boolean;
+    message: string;
     provider: string;
 }
 
 // ============================================================
-// TYPY IMPROVE
+// IMAGE GENERATION
 // ============================================================
 
-export interface ImproveRequest {
-    content: string;
-    improvement_type: 'grammar' | 'engagement' | 'seo' | 'tone' | 'shorten' | 'expand';
-    platform?: Platform;
-    provider?: string;
+export interface ImageGenerationRequest {
+    prompt: string;
+    provider?: ImageProvider;
+    model?: string;
+    style?: ImageStyle;
+    width?: number;
+    height?: number;
 }
 
-export interface ImproveResponse {
-    original: string;
-    improved: string;
-    changes: string[];
+export interface GeneratedImageContent {
+    image_url?: string;
+    image_data?: string;
+    prompt: string;
+    prompt_translated?: string;
+    prompt_enhanced?: string;
     provider: string;
+    model?: string;
+    width?: number;
+    height?: number;
 }
 
-// ============================================================
-// TYPY VARIATIONS
-// ============================================================
-
-export interface VariationsRequest {
-    content: string;
-    num_variations?: number;
-    platform?: Platform;
-    provider?: string;
-}
-
-export interface VariationsResponse {
-    original: string;
-    variations: string[];
-    provider: string;
+export interface ImageGenerationResponse {
+    success: boolean;
+    data?: GeneratedImageContent;
+    error?: string;
 }
 
 // ============================================================
@@ -173,7 +202,18 @@ export async function getProviders(): Promise<ProvidersResponse> {
 export async function generateText(
     request: TextGenerationRequest
 ): Promise<TextGenerationResponse> {
-    return apiClient.post<TextGenerationResponse>('/ai/generate/text', request);
+    return apiClient.post<TextGenerationResponse>('/ai/generate/text', {
+        topic: request.topic,
+        platform: request.platform,
+        provider: request.provider,
+        model: request.model,
+        category: request.category,
+        tone: request.tone || 'professional',
+        language: request.language || 'pl',
+        include_hashtags: request.include_hashtags ?? true,
+        include_emoji: request.include_emoji ?? true,
+        max_length: request.max_length,
+    });
 }
 
 /**
@@ -182,8 +222,15 @@ export async function generateText(
 export async function generateImage(
     request: ImageGenerationRequest
 ): Promise<ImageGenerationResponse> {
-    return apiClient.post<ImageGenerationResponse>('/ai/generate/image', request, {
-        timeout: 60000, // Obrazy mogą trwać dłużej
+    return apiClient.post<ImageGenerationResponse>('/ai/generate/image', {
+        prompt: request.prompt,
+        provider: request.provider,
+        model: request.model,
+        style: request.style,
+        width: request.width || 1024,
+        height: request.height || 1024,
+    }, {
+        timeout: 120000,
     });
 }
 
@@ -193,7 +240,13 @@ export async function generateImage(
 export async function improveText(
     request: ImproveRequest
 ): Promise<ImproveResponse> {
-    return apiClient.post<ImproveResponse>('/ai/improve', request);
+    return apiClient.post<ImproveResponse>('/ai/improve', {
+        content: request.content,
+        platform: request.platform,
+        provider: request.provider,
+        model: request.model,
+        instructions: request.instructions,
+    });
 }
 
 /**
@@ -202,14 +255,26 @@ export async function improveText(
 export async function generateVariations(
     request: VariationsRequest
 ): Promise<VariationsResponse> {
-    return apiClient.post<VariationsResponse>('/ai/generate/variations', request);
+    return apiClient.post<VariationsResponse>('/ai/generate/variations', {
+        content: request.content,
+        platform: request.platform,
+        provider: request.provider,
+        model: request.model,
+        variations_count: request.variations_count || 3,
+    });
 }
 
 /**
  * Chat z AI (tryb Kreator)
  */
 export async function chat(request: ChatRequest): Promise<ChatResponse> {
-    return apiClient.post<ChatResponse>('/ai/chat', request);
+    return apiClient.post<ChatResponse>('/ai/chat', {
+        messages: request.messages,
+        provider: request.provider,
+        model: request.model,
+        category: request.category,
+        platform: request.platform,
+    });
 }
 
 // ============================================================

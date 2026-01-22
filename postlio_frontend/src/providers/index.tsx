@@ -15,6 +15,10 @@ import { ThemeProvider } from './theme-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAuthStore } from '@/store/auth-store';
 import { Toaster } from 'sonner';
+import { InstallPrompt } from '@/components/pwa/install-prompt';
+import { OfflineIndicator } from '@/components/pwa/offline-indicator';
+import { UpdateNotification } from '@/components/pwa/update-notification';
+import { initReminders } from '@/lib/reminders'; // ← NOWE
 
 interface ProvidersProps {
     children: ReactNode;
@@ -27,6 +31,8 @@ const PUBLIC_PATHS = [
     '/register',
     '/forgot-password',
     '/reset-password',
+    '/offline',
+    '/features',
 ];
 
 // Ścieżki tylko dla niezalogowanych
@@ -36,6 +42,18 @@ const AUTH_ONLY_PATHS = [
     '/forgot-password',
     '/reset-password',
 ];
+
+/**
+ * Reminder Initializer - inicjalizuje system przypomnień
+ */
+function ReminderInitializer() {
+    useEffect(() => {
+        // Inicjalizuj przypomnienia po załadowaniu aplikacji
+        initReminders();
+    }, []);
+
+    return null;
+}
 
 /**
  * Auth Initializer - sprawdza stan autoryzacji przy starcie
@@ -67,10 +85,8 @@ function AuthInitializer({ children }: { children: ReactNode }) {
         if (!isInitialized) return;
 
         if (!isAuthenticated && !isPublicPath) {
-            // Niezalogowany na chronionej stronie -> przekieruj do login
             router.replace('/login');
         } else if (isAuthenticated && isAuthOnlyPath) {
-            // Zalogowany na stronie auth -> przekieruj do dashboard
             router.replace('/dashboard');
         }
     }, [isInitialized, isAuthenticated, isPublicPath, isAuthOnlyPath, router]);
@@ -80,7 +96,6 @@ function AuthInitializer({ children }: { children: ReactNode }) {
         return (
             <div className="fixed inset-0 flex items-center justify-center bg-background">
                 <div className="flex flex-col items-center gap-4">
-                    {/* Logo Postlio z animacją */}
                     <div className="relative">
                         <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 animate-pulse" />
                         <div className="absolute inset-0 h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 animate-ping opacity-20" />
@@ -121,6 +136,14 @@ export function Providers({ children }: ProvidersProps) {
                             closeButton
                             richColors
                         />
+
+                        {/* PWA Components */}
+                        <InstallPrompt />
+                        <OfflineIndicator />
+                        <UpdateNotification />
+
+                        {/* Reminder System - NOWE */}
+                        <ReminderInitializer />
                     </AuthInitializer>
                 </TooltipProvider>
             </ThemeProvider>

@@ -15,7 +15,8 @@ import {
     MoreHorizontal,
     Eye,
     Edit3,
-    Trash2
+    Trash2,
+    Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -37,26 +38,42 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { useAutopilotStore } from '@/store/autopilot-store';
-import { STATUS_CONFIG, type QueueStatus } from '@/types/autopilot';
+import {
+    useApproveQueueItem,
+    useRejectQueueItem,
+    useDeleteQueueItem,
+} from '@/hooks/useAutopilot';
+import type { BackendQueueItem, BackendQueueStatus } from '@/types/autopilot';
 
-export function AutopilotQueue() {
+// Status config
+const STATUS_CONFIG: Record<BackendQueueStatus, { label: string; color: string; bgColor: string }> = {
+    pending: { label: 'Do przeglądu', color: '#F59E0B', bgColor: 'rgba(245, 158, 11, 0.1)' },
+    approved: { label: 'Zatwierdzony', color: '#10B981', bgColor: 'rgba(16, 185, 129, 0.1)' },
+    scheduled: { label: 'Zaplanowany', color: '#3B82F6', bgColor: 'rgba(59, 130, 246, 0.1)' },
+    published: { label: 'Opublikowany', color: '#10B981', bgColor: 'rgba(16, 185, 129, 0.1)' },
+    failed: { label: 'Błąd', color: '#EF4444', bgColor: 'rgba(239, 68, 68, 0.1)' },
+    rejected: { label: 'Odrzucony', color: '#6B7280', bgColor: 'rgba(107, 114, 128, 0.1)' },
+};
+
+interface AutopilotQueueProps {
+    configId: number | null;
+    queueItems: BackendQueueItem[];
+}
+
+export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
     const [searchQuery, setSearchQuery] = useState('');
-    const {
-        queueFilter,
-        setQueueFilter,
-        getFilteredQueue,
-        approvePost,
-        rejectPost,
-        regeneratePost,
-        deleteQueuedPost,
-    } = useAutopilotStore();
+    const { queueFilter, setQueueFilter } = useAutopilotStore();
 
-    const posts = getFilteredQueue();
+    // Mutations
+    const approveItem = useApproveQueueItem();
+    const rejectItem = useRejectQueueItem();
+    const deleteItem = useDeleteQueueItem();
 
     // Filter by search
-    const filteredPosts = posts.filter(post =>
+    const filteredPosts = queueItems.filter(post =>
         post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.topic?.toLowerCase().includes(searchQuery.toLowerCase())
+        post.topic_used?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.category?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     // Format date
@@ -77,8 +94,10 @@ export function AutopilotQueue() {
     };
 
     // Status badge
-    const StatusBadge = ({ status }: { status: QueueStatus }) => {
+    const StatusBadge = ({ status }: { status: BackendQueueStatus }) => {
         const config = STATUS_CONFIG[status];
+        if (!config) return null;
+
         return (
             <Badge
                 variant="outline"
@@ -111,6 +130,32 @@ export function AutopilotQueue() {
         );
     };
 
+    // Handlers
+    const handleApprove = (postId: number) => {
+        approveItem.mutate(postId);
+    };
+
+    const handleReject = (postId: number) => {
+        rejectItem.mutate({ itemId: postId });
+    };
+
+    const handleDelete = (postId: number) => {
+        deleteItem.mutate(postId);
+    };
+
+    // No config selected
+    if (!configId) {
+        return (
+            <div className="text-center py-12 text-muted-foreground">
+                <Calendar className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                <h3 className="font-medium mb-1">Wybierz konfigurację</h3>
+                <p className="text-sm">
+                    Wybierz konfigurację Autopilota aby zobaczyć kolejkę postów
+                </p>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-4">
             {/* Filters */}
@@ -127,7 +172,7 @@ export function AutopilotQueue() {
 
                 <Select
                     value={queueFilter}
-                    onValueChange={(v) => setQueueFilter(v as QueueStatus | 'all')}
+                    onValueChange={(v) => setQueueFilter(v as BackendQueueStatus | 'all')}
                 >
                     <SelectTrigger className="w-full sm:w-48">
                         <Filter className="w-4 h-4 mr-2" />
@@ -135,7 +180,7 @@ export function AutopilotQueue() {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">Wszystkie</SelectItem>
-                        <SelectItem value="pending_review">Do przeglądu</SelectItem>
+                        <SelectItem value="pending">Do przeglądu</SelectItem>
                         <SelectItem value="approved">Zatwierdzone</SelectItem>
                         <SelectItem value="scheduled">Zaplanowane</SelectItem>
                         <SelectItem value="published">Opublikowane</SelectItem>
@@ -177,21 +222,24 @@ export function AutopilotQueue() {
                                     )}
                                 >
                                     <div className="flex items-start gap-4">
-                                        {/* Platforms */}
+                                        {/* Platform */}
                                         <div className="flex flex-col gap-1">
-                                            {post.platforms.map((platform) => (
-                                                <PlatformBadge key={platform} platform={platform} />
-                                            ))}
+                                            <PlatformBadge platform={post.platform} />
                                         </div>
 
                                         {/* Content */}
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-2">
                                                 <StatusBadge status={post.status} />
-                                                {post.topic && (
+                                                {post.category && (
                                                     <span className="text-xs text-muted-foreground">
-                            {post.topic}
-                          </span>
+                                                        {post.category}
+                                                    </span>
+                                                )}
+                                                {post.edit_count > 0 && (
+                                                    <span className="text-xs text-muted-foreground">
+                                                        • edytowano {post.edit_count}x
+                                                    </span>
                                                 )}
                                             </div>
 
@@ -200,21 +248,23 @@ export function AutopilotQueue() {
                                             </p>
 
                                             <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                            {formatDate(post.scheduledFor)}
-                        </span>
-                                                <span>
-                          via {post.generatedBy}
-                        </span>
+                                                <span className="flex items-center gap-1">
+                                                    <Clock className="w-3 h-3" />
+                                                    {formatDate(post.scheduled_for)}
+                                                </span>
+                                                {post.text_provider_used && (
+                                                    <span>
+                                                        via {post.text_provider_used}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
 
                                         {/* Image Preview */}
-                                        {post.imageUrl && (
+                                        {post.image_url && (
                                             <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 relative">
                                                 <Image
-                                                    src={post.imageUrl}
+                                                    src={post.image_url}
                                                     alt="Post preview"
                                                     fill
                                                     className="object-cover"
@@ -225,24 +275,34 @@ export function AutopilotQueue() {
 
                                         {/* Actions */}
                                         <div className="flex items-center gap-2">
-                                            {post.status === 'pending_review' && (
+                                            {post.status === 'pending' && (
                                                 <>
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        onClick={() => approvePost(post.id)}
+                                                        onClick={() => handleApprove(post.id)}
+                                                        disabled={approveItem.isPending}
                                                         className="gap-1 text-green-500 hover:text-green-600 hover:bg-green-500/10"
                                                     >
-                                                        <Check className="w-4 h-4" />
+                                                        {approveItem.isPending ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                        ) : (
+                                                            <Check className="w-4 h-4" />
+                                                        )}
                                                         <span className="hidden sm:inline">Zatwierdź</span>
                                                     </Button>
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        onClick={() => rejectPost(post.id)}
+                                                        onClick={() => handleReject(post.id)}
+                                                        disabled={rejectItem.isPending}
                                                         className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
                                                     >
-                                                        <X className="w-4 h-4" />
+                                                        {rejectItem.isPending ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                        ) : (
+                                                            <X className="w-4 h-4" />
+                                                        )}
                                                         <span className="hidden sm:inline">Odrzuć</span>
                                                     </Button>
                                                 </>
@@ -263,17 +323,14 @@ export function AutopilotQueue() {
                                                         <Edit3 className="w-4 h-4" />
                                                         Edytuj
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        className="gap-2"
-                                                        onClick={() => regeneratePost(post.id)}
-                                                    >
+                                                    <DropdownMenuItem className="gap-2">
                                                         <RefreshCw className="w-4 h-4" />
                                                         Regeneruj
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem
                                                         className="gap-2 text-destructive"
-                                                        onClick={() => deleteQueuedPost(post.id)}
+                                                        onClick={() => handleDelete(post.id)}
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                         Usuń
@@ -292,7 +349,7 @@ export function AutopilotQueue() {
             {/* Summary */}
             {filteredPosts.length > 0 && (
                 <div className="text-sm text-muted-foreground text-center">
-                    Pokazano {filteredPosts.length} z {posts.length} postów
+                    Pokazano {filteredPosts.length} postów
                 </div>
             )}
         </div>

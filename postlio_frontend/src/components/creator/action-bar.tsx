@@ -1,6 +1,6 @@
 // src/components/creator/action-bar.tsx
 /**
- * Pasek akcji w kreatorze
+ * Pasek akcji w kreatorze - z opcją ręcznej publikacji
  */
 
 'use client';
@@ -9,10 +9,10 @@ import { useState } from 'react';
 import {
     Save,
     Calendar,
-    Send,
     Loader2,
     Clock,
     ChevronDown,
+    Hand,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -40,9 +40,11 @@ import { Label } from '@/components/ui/label';
 interface ActionBarProps {
     onSaveDraft: () => Promise<void>;
     onSchedule: (scheduledAt: string) => Promise<void>;
-    onPublishNow?: () => Promise<void>;
+    onPublishManually: () => void;  // ← NOWE
     isSaving: boolean;
     hasContent: boolean;
+    hasImage?: boolean;  // ← NOWE - dla Instagram
+    selectedPlatform?: string;  // ← NOWE - info o platformie
 }
 
 // ============================================================
@@ -79,9 +81,11 @@ function getScheduleDate(option: number | string): string {
 export function ActionBar({
                               onSaveDraft,
                               onSchedule,
-                              onPublishNow,
+                              onPublishManually,
                               isSaving,
                               hasContent,
+                              hasImage = false,
+                              selectedPlatform,
                           }: ActionBarProps) {
     const [isScheduleOpen, setIsScheduleOpen] = useState(false);
     const [scheduleDate, setScheduleDate] = useState('');
@@ -124,21 +128,31 @@ export function ActionBar({
 
     const isLoading = isSaving || isSubmitting;
 
+    // Instagram wymaga obrazka
+    const isInstagram = selectedPlatform === 'instagram';
+    const canPublish = hasContent && (!isInstagram || hasImage);
+    const instagramWarning = isInstagram && !hasImage;
+
     return (
         <>
             <div className="flex items-center justify-between p-4">
                 {/* Left side - info */}
                 <div className="text-sm text-muted-foreground">
-                    {hasContent ? (
+                    {instagramWarning ? (
+                        <span className="flex items-center gap-1 text-amber-500">
+                            <span className="w-2 h-2 rounded-full bg-amber-500" />
+                            Instagram wymaga zdjęcia
+                        </span>
+                    ) : hasContent ? (
                         <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              Gotowy do publikacji
-            </span>
+                            <span className="w-2 h-2 rounded-full bg-green-500" />
+                            Gotowy do publikacji
+                        </span>
                     ) : (
                         <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-muted-foreground" />
-              Dodaj treść
-            </span>
+                            <span className="w-2 h-2 rounded-full bg-muted-foreground" />
+                            Dodaj treść
+                        </span>
                     )}
                 </div>
 
@@ -163,7 +177,7 @@ export function ActionBar({
                         <DropdownMenuTrigger asChild>
                             <Button
                                 variant="outline"
-                                disabled={!hasContent || isLoading}
+                                disabled={!canPublish || isLoading}
                             >
                                 <Calendar className="w-4 h-4 mr-2" />
                                 Zaplanuj
@@ -187,21 +201,15 @@ export function ActionBar({
                         </DropdownMenuContent>
                     </DropdownMenu>
 
-                    {/* Publish now */}
-                    {onPublishNow && (
-                        <Button
-                            onClick={onPublishNow}
-                            disabled={!hasContent || isLoading}
-                            className="bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90"
-                        >
-                            {isLoading ? (
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            ) : (
-                                <Send className="w-4 h-4 mr-2" />
-                            )}
-                            Opublikuj teraz
-                        </Button>
-                    )}
+                    {/* Publish manually - NOWY PRZYCISK */}
+                    <Button
+                        onClick={onPublishManually}
+                        disabled={!canPublish || isLoading}
+                        className="bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90"
+                    >
+                        <Hand className="w-4 h-4 mr-2" />
+                        Opublikuj ręcznie
+                    </Button>
                 </div>
             </div>
 
@@ -211,7 +219,9 @@ export function ActionBar({
                     <DialogHeader>
                         <DialogTitle>Zaplanuj publikację</DialogTitle>
                         <DialogDescription>
-                            Wybierz datę i godzinę, kiedy post ma zostać opublikowany.
+                            Wybierz datę i godzinę. Post zostanie dodany do kalendarza
+                            i może być opublikowany automatycznie przez Autopilota
+                            (wymaga Facebook Page lub Instagram Business).
                         </DialogDescription>
                     </DialogHeader>
 

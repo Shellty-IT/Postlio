@@ -8,7 +8,8 @@ import {
     ChevronDown,
     Plus,
     RefreshCw,
-    Settings
+    Settings,
+    Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -20,15 +21,14 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { AutopilotConfig, AutopilotStatus } from '@/types/autopilot';
-import { AUTOPILOT_STATUS_CONFIG } from '@/types/autopilot';
+import type { BackendAutopilotConfig } from '@/types/autopilot';
 
 interface AutopilotHeaderProps {
-    selectedConfig?: AutopilotConfig;
-    configs: AutopilotConfig[];
+    selectedConfig?: BackendAutopilotConfig;
+    configs: BackendAutopilotConfig[];
     isRunning: boolean;
     isGenerating?: boolean;
-    onSelectConfig: (config: AutopilotConfig) => void;
+    onSelectConfig: (config: BackendAutopilotConfig) => void;
     onToggleAutopilot: () => void;
     onGenerateNow: () => void;
     onCreateNew: () => void;
@@ -45,22 +45,51 @@ export function AutopilotHeader({
                                     onCreateNew,
                                 }: AutopilotHeaderProps) {
 
-    const StatusIndicator = ({ status }: { status: AutopilotStatus }) => {
-        const config = AUTOPILOT_STATUS_CONFIG[status];
+    // Status indicator
+    const StatusIndicator = ({ config }: { config: BackendAutopilotConfig }) => {
+        const isActive = config.is_active;
+        const isPaused = config.is_paused;
+
+        let color = '#6B7280'; // inactive
+        let label = 'Nieaktywny';
+
+        if (isActive && !isPaused) {
+            color = '#10B981';
+            label = 'Aktywny';
+        } else if (isActive && isPaused) {
+            color = '#F59E0B';
+            label = 'Wstrzymany';
+        }
+
         return (
             <div className="flex items-center gap-2">
                 <div
                     className={cn(
                         "w-2 h-2 rounded-full",
-                        status === 'active' && "animate-pulse"
+                        isActive && !isPaused && "animate-pulse"
                     )}
-                    style={{ backgroundColor: config.color }}
+                    style={{ backgroundColor: color }}
                 />
-                <span className="text-sm" style={{ color: config.color }}>
-          {config.label}
-        </span>
+                <span className="text-sm" style={{ color }}>
+                    {label}
+                </span>
             </div>
         );
+    };
+
+    // Format next run time
+    const formatNextRun = (dateStr: string | null | undefined) => {
+        if (!dateStr) return null;
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diff = date.getTime() - now.getTime();
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+        if (diff < 0) return 'Wkrótce';
+        if (hours > 24) return date.toLocaleDateString('pl-PL', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+        if (hours > 0) return `Za ${hours}h ${minutes}min`;
+        return `Za ${minutes}min`;
     };
 
     return (
@@ -80,11 +109,13 @@ export function AutopilotHeader({
                 {/* Config Selector */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="gap-2 min-w-[200px] justify-between">
+                        <Button variant="outline" className="gap-2 min-w-[220px] justify-between">
                             {selectedConfig ? (
                                 <>
-                                    <span className="truncate">{selectedConfig.name}</span>
-                                    <StatusIndicator status={selectedConfig.status} />
+                                    <span className="truncate max-w-[120px]">
+                                        Marka #{selectedConfig.brand_id}
+                                    </span>
+                                    <StatusIndicator config={selectedConfig} />
                                 </>
                             ) : (
                                 <span className="text-muted-foreground">Wybierz konfigurację</span>
@@ -92,8 +123,8 @@ export function AutopilotHeader({
                             <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[280px]">
-                        <DropdownMenuLabel>Konfiguracje</DropdownMenuLabel>
+                    <DropdownMenuContent align="start" className="w-[300px]">
+                        <DropdownMenuLabel>Konfiguracje Autopilota</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         {configs.map((config) => (
                             <DropdownMenuItem
@@ -102,12 +133,14 @@ export function AutopilotHeader({
                                 className="flex items-center justify-between py-3"
                             >
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-medium truncate">{config.name}</p>
+                                    <p className="font-medium truncate">
+                                        Marka #{config.brand_id}
+                                    </p>
                                     <p className="text-xs text-muted-foreground">
-                                        {config.platforms.join(', ')} • {config.totalPublished} opublikowanych
+                                        {config.platforms.join(', ')} • {config.total_published} opublikowanych
                                     </p>
                                 </div>
-                                <StatusIndicator status={config.status} />
+                                <StatusIndicator config={config} />
                             </DropdownMenuItem>
                         ))}
                         {configs.length === 0 && (
@@ -122,16 +155,45 @@ export function AutopilotHeader({
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
+
+                {/* Next run info */}
+                {selectedConfig?.next_generation_at && isRunning && (
+                    <div className="text-sm text-muted-foreground">
+                        Następny post: {formatNextRun(selectedConfig.next_generation_at)}
+                    </div>
+                )}
             </div>
 
             {/* Right - Actions */}
             <div className="flex items-center gap-3">
-                {/* Generate Now Button */}
+                {/* Health Score */}
+                {selectedConfig?.health_score !== undefined && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border">
+                        <div
+                            className="w-2 h-2 rounded-full"
+                            style={{
+                                backgroundColor: selectedConfig.health_score >= 80
+                                    ? '#10B981'
+                                    : selectedConfig.health_score >= 50
+                                        ? '#F59E0B'
+                                        : '#EF4444'
+                            }}
+                        />
+                        <span className="text-sm font-medium">
+                            {selectedConfig.health_score}%
+                        </span>
+                    </div>
+                )}
+
+                {/* Generate Now Button - ZAKTUALIZOWANE: działa także gdy autopilot nieaktywny */}
                 <Button
                     variant="outline"
                     onClick={onGenerateNow}
                     disabled={!selectedConfig || isGenerating}
-                    className="gap-2"
+                    className={cn(
+                        "gap-2",
+                        isGenerating && "cursor-wait"
+                    )}
                 >
                     {isGenerating ? (
                         <>
@@ -140,7 +202,7 @@ export function AutopilotHeader({
                         </>
                     ) : (
                         <>
-                            <Zap className="w-4 h-4" />
+                            <Sparkles className="w-4 h-4" />
                             Generuj teraz
                         </>
                     )}

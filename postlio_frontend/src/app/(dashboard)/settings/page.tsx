@@ -1,7 +1,10 @@
 // src/app/(dashboard)/settings/page.tsx
 'use client';
 
+import { useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
     SettingsHeader,
@@ -14,9 +17,62 @@ import {
     DangerZoneSection,
 } from '@/components/settings';
 import { useSettingsStore } from '@/store/settings-store';
+import { useOAuthCallback } from '@/hooks/useSocial';
+import type { SocialPlatform } from '@/lib/api/social';
 
-export default function SettingsPage() {
-    const { activeSection } = useSettingsStore();
+function SettingsContent() {
+    const { activeSection, setActiveSection } = useSettingsStore();
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const oauthCallback = useOAuthCallback();
+
+    // Handle OAuth callback
+    useEffect(() => {
+        const oauthSuccess = searchParams.get('oauth_success');
+        const oauthError = searchParams.get('oauth_error');
+        const platform = searchParams.get('platform') as SocialPlatform | null;
+
+        if (oauthError && platform) {
+            const errorDescription = searchParams.get('oauth_error_description');
+            toast.error(`Błąd połączenia ${platform}`, {
+                description: errorDescription || oauthError,
+            });
+
+            // Switch to accounts section
+            setActiveSection('accounts');
+
+            // Clean URL
+            router.replace('/settings', { scroll: false });
+            return;
+        }
+
+        if (oauthSuccess === 'true' && platform) {
+            const code = searchParams.get('oauth_code');
+            const state = searchParams.get('oauth_state');
+            const savedState = sessionStorage.getItem('oauth_state');
+
+            // Verify state
+            if (state !== savedState) {
+                toast.error('Błąd bezpieczeństwa', {
+                    description: 'Nieprawidłowy token state. Spróbuj ponownie.',
+                });
+                sessionStorage.removeItem('oauth_state');
+                router.replace('/settings', { scroll: false });
+                return;
+            }
+
+            if (code && state) {
+                // Exchange code for token
+                oauthCallback.mutate({ platform, code, state });
+
+                // Switch to accounts section
+                setActiveSection('accounts');
+            }
+
+            // Clean URL
+            router.replace('/settings', { scroll: false });
+        }
+    }, [searchParams, router, oauthCallback, setActiveSection]);
 
     // Render active section
     const renderSection = () => {
@@ -69,5 +125,17 @@ export default function SettingsPage() {
                 </main>
             </div>
         </div>
+    );
+}
+
+export default function SettingsPage() {
+    return (
+        <Suspense fallback={
+            <div className="p-6 h-[calc(100vh-4rem)] flex items-center justify-center">
+                <div className="animate-pulse text-muted-foreground">Ładowanie...</div>
+            </div>
+        }>
+            <SettingsContent />
+        </Suspense>
     );
 }

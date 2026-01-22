@@ -1,13 +1,12 @@
 // src/components/creator/post-editor.tsx
 /**
- * Edytor posta z obsługą AI
+ * Edytor posta z obsługą AI i wyborem providerów
  */
 
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
 import {
     Sparkles,
     Hash,
@@ -38,7 +37,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AIProviderSelector } from './ai-provider-selector';
 import type { Platform } from '@/types';
+import type { TextProvider, ImageProvider } from '@/lib/api/ai';
 
 // ============================================================
 // TYPY
@@ -53,8 +54,13 @@ interface PostEditorProps {
     onHashtagsChange: (hashtags: string[]) => void;
     platforms: Platform[];
     isGenerating?: boolean;
-    onGenerateText?: (prompt: string) => Promise<string>;
-    onGenerateImage?: (prompt: string) => Promise<string | undefined>;
+    // Rozszerzone o provider i model
+    onGenerateText?: (prompt: string, provider?: TextProvider) => Promise<string>;
+    onGenerateImage?: (prompt: string, provider?: ImageProvider, model?: string) => Promise<string | undefined>;
+    // Domyślne providery
+    defaultTextProvider?: TextProvider;
+    defaultImageProvider?: ImageProvider;
+    defaultImageModel?: string;
 }
 
 // ============================================================
@@ -82,6 +88,9 @@ export function PostEditor({
                                isGenerating = false,
                                onGenerateText,
                                onGenerateImage,
+                               defaultTextProvider = 'gemini',
+                               defaultImageProvider = 'pollinations',
+                               defaultImageModel,
                            }: PostEditorProps) {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -92,6 +101,11 @@ export function PostEditor({
     const [textPrompt, setTextPrompt] = useState('');
     const [imagePrompt, setImagePrompt] = useState('');
     const [isGeneratingLocal, setIsGeneratingLocal] = useState(false);
+
+    // Provider state
+    const [selectedTextProvider, setSelectedTextProvider] = useState<TextProvider>(defaultTextProvider);
+    const [selectedImageProvider, setSelectedImageProvider] = useState<ImageProvider>(defaultImageProvider);
+    const [selectedImageModel, setSelectedImageModel] = useState<string | undefined>(defaultImageModel);
 
     // Limit znaków (najmniejszy z wybranych platform)
     const charLimit = Math.min(...platforms.map((p) => PLATFORM_LIMITS[p]));
@@ -118,7 +132,7 @@ export function PostEditor({
 
         setIsGeneratingLocal(true);
         try {
-            await onGenerateText(textPrompt);
+            await onGenerateText(textPrompt, selectedTextProvider);
             setIsGenerateTextOpen(false);
             setTextPrompt('');
         } catch {
@@ -126,7 +140,7 @@ export function PostEditor({
         } finally {
             setIsGeneratingLocal(false);
         }
-    }, [textPrompt, onGenerateText]);
+    }, [textPrompt, onGenerateText, selectedTextProvider]);
 
     // Generuj obraz
     const handleGenerateImage = useCallback(async () => {
@@ -134,7 +148,7 @@ export function PostEditor({
 
         setIsGeneratingLocal(true);
         try {
-            await onGenerateImage(imagePrompt);
+            await onGenerateImage(imagePrompt, selectedImageProvider, selectedImageModel);
             setIsGenerateImageOpen(false);
             setImagePrompt('');
         } catch {
@@ -142,7 +156,7 @@ export function PostEditor({
         } finally {
             setIsGeneratingLocal(false);
         }
-    }, [imagePrompt, onGenerateImage]);
+    }, [imagePrompt, onGenerateImage, selectedImageProvider, selectedImageModel]);
 
     // Upload obrazu
     const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,6 +166,12 @@ export function PostEditor({
             onImageChange(url);
         }
     }, [onImageChange]);
+
+    // Handler zmiany providera obrazu
+    const handleImageProviderChange = (provider: string, model?: string) => {
+        setSelectedImageProvider(provider as ImageProvider);
+        setSelectedImageModel(model);
+    };
 
     return (
         <div className="space-y-4">
@@ -187,9 +207,9 @@ export function PostEditor({
 
                 {/* Licznik znaków */}
                 <div className="absolute bottom-3 right-3 flex items-center gap-2">
-          <span className={`text-xs ${isOverLimit ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
-            {charCount.toLocaleString()} / {charLimit.toLocaleString()}
-          </span>
+                    <span className={`text-xs ${isOverLimit ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+                        {charCount.toLocaleString()} / {charLimit.toLocaleString()}
+                    </span>
                 </div>
             </div>
 
@@ -318,12 +338,11 @@ export function PostEditor({
                         className="relative rounded-lg overflow-hidden border border-border"
                     >
                         <div className="relative w-full h-80">
-                            <Image
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
                                 src={imageUrl}
                                 alt="Post image"
-                                fill
-                                className="object-cover"
-                                unoptimized
+                                className="absolute inset-0 w-full h-full object-cover"
                             />
                         </div>
                         <div className="absolute top-2 right-2 flex gap-2">
@@ -350,18 +369,25 @@ export function PostEditor({
 
             {/* Dialog: Generuj tekst */}
             <Dialog open={isGenerateTextOpen} onOpenChange={setIsGenerateTextOpen}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Sparkles className="w-5 h-5 text-violet-500" />
                             Generuj tekst z AI
                         </DialogTitle>
                         <DialogDescription>
-                            Opisz, jaki post chcesz stworzyć. AI wygeneruje treść dopasowaną do wybranych platform.
+                            Opisz, jaki post chcesz stworzyć. Wybierz model AI, który najlepiej pasuje do Twoich potrzeb.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
+                        {/* Provider selector */}
+                        <AIProviderSelector
+                            type="text"
+                            value={selectedTextProvider}
+                            onChange={(p) => setSelectedTextProvider(p as TextProvider)}
+                        />
+
                         <div className="space-y-2">
                             <Label htmlFor="text-prompt">Opis posta</Label>
                             <Textarea
@@ -428,27 +454,39 @@ export function PostEditor({
 
             {/* Dialog: Generuj obraz */}
             <Dialog open={isGenerateImageOpen} onOpenChange={setIsGenerateImageOpen}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Wand2 className="w-5 h-5 text-violet-500" />
                             Generuj obraz z AI
                         </DialogTitle>
                         <DialogDescription>
-                            Opisz obraz, który chcesz wygenerować. Im dokładniejszy opis, tym lepszy rezultat.
+                            Opisz obraz, który chcesz wygenerować. Gemini rozumie polski, inne providery auto-tłumaczą.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
+                        {/* Provider selector z obsługą modeli */}
+                        <AIProviderSelector
+                            type="image"
+                            value={selectedImageProvider}
+                            selectedModel={selectedImageModel}
+                            onChange={handleImageProviderChange}
+                        />
+
                         <div className="space-y-2">
                             <Label htmlFor="image-prompt">Opis obrazu</Label>
                             <Textarea
                                 id="image-prompt"
                                 value={imagePrompt}
                                 onChange={(e) => setImagePrompt(e.target.value)}
-                                placeholder="np. Minimalistyczne zdjęcie kawy latte art na drewnianym stole, ciepłe światło poranne, styl Instagram"
+                                placeholder="np. Minimalistyczne zdjęcie kawy latte art na drewnianym stole, ciepłe światło poranne"
                                 className="min-h-[100px]"
                             />
+                            {/* Info o auto-tłumaczeniu - wszystkie nasze providery to obsługują */}
+                            <p className="text-xs text-blue-600 dark:text-blue-400">
+                                ℹ️ Prompt zostanie automatycznie przetłumaczony na angielski
+                            </p>
                         </div>
 
                         {/* Style presets */}
@@ -468,7 +506,9 @@ export function PostEditor({
                                         variant="outline"
                                         size="sm"
                                         className="text-xs"
-                                        onClick={() => setImagePrompt((prev) => `${prev} ${style.toLowerCase()} styl`)}
+                                        onClick={() => setImagePrompt((prev) =>
+                                            prev ? `${prev}, ${style.toLowerCase()} styl` : style.toLowerCase()
+                                        )}
                                     >
                                         {style}
                                     </Button>

@@ -5,15 +5,20 @@
  * Obsługuje: generowanie tekstu, obrazów, chat, ulepszanie
  */
 
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, UseMutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { aiApi, ApiException } from '@/lib/api';
 import type {
     TextGenerationRequest,
+    TextGenerationResponse,
     ImageGenerationRequest,
+    ImageGenerationResponse,
     ChatRequest,
+    ChatResponse,
     ImproveRequest,
+    ImproveResponse,
     VariationsRequest,
+    VariationsResponse,
 } from '@/lib/api/ai';
 
 // ============================================================
@@ -29,14 +34,11 @@ export const aiKeys = {
 // HOOK: useAIProviders
 // ============================================================
 
-/**
- * Pobiera listę dostępnych providerów AI
- */
 export function useAIProviders() {
     return useQuery({
         queryKey: aiKeys.providers(),
         queryFn: () => aiApi.getProviders(),
-        staleTime: 10 * 60 * 1000, // 10 minut
+        staleTime: 10 * 60 * 1000,
     });
 }
 
@@ -44,10 +46,12 @@ export function useAIProviders() {
 // HOOK: useGenerateText
 // ============================================================
 
-/**
- * Mutacja do generowania tekstu
- */
-export function useGenerateText() {
+type GenerateTextOptions = Omit<
+    UseMutationOptions<TextGenerationResponse, Error, TextGenerationRequest>,
+    'mutationFn'
+>;
+
+export function useGenerateText(options?: GenerateTextOptions) {
     return useMutation({
         mutationFn: (data: TextGenerationRequest) => aiApi.generateText(data),
         onError: (error: Error) => {
@@ -56,6 +60,7 @@ export function useGenerateText() {
                 : 'Nie udało się wygenerować tekstu';
             toast.error('Błąd AI', { description: message });
         },
+        ...options,
     });
 }
 
@@ -63,10 +68,12 @@ export function useGenerateText() {
 // HOOK: useGenerateImage
 // ============================================================
 
-/**
- * Mutacja do generowania obrazów
- */
-export function useGenerateImage() {
+type GenerateImageOptions = Omit<
+    UseMutationOptions<ImageGenerationResponse, Error, ImageGenerationRequest>,
+    'mutationFn'
+>;
+
+export function useGenerateImage(options?: GenerateImageOptions) {
     return useMutation({
         mutationFn: (data: ImageGenerationRequest) => aiApi.generateImage(data),
         onError: (error: Error) => {
@@ -75,6 +82,7 @@ export function useGenerateImage() {
                 : 'Nie udało się wygenerować obrazu';
             toast.error('Błąd AI', { description: message });
         },
+        ...options,
     });
 }
 
@@ -82,10 +90,12 @@ export function useGenerateImage() {
 // HOOK: useAIChat
 // ============================================================
 
-/**
- * Mutacja do chatu z AI
- */
-export function useAIChat() {
+type AIChatOptions = Omit<
+    UseMutationOptions<ChatResponse, Error, ChatRequest>,
+    'mutationFn'
+>;
+
+export function useAIChat(options?: AIChatOptions) {
     return useMutation({
         mutationFn: (data: ChatRequest) => aiApi.chat(data),
         onError: (error: Error) => {
@@ -94,6 +104,7 @@ export function useAIChat() {
                 : 'Nie udało się połączyć z AI';
             toast.error('Błąd AI', { description: message });
         },
+        ...options,
     });
 }
 
@@ -101,10 +112,12 @@ export function useAIChat() {
 // HOOK: useImproveText
 // ============================================================
 
-/**
- * Mutacja do ulepszania tekstu
- */
-export function useImproveText() {
+type ImproveTextOptions = Omit<
+    UseMutationOptions<ImproveResponse, Error, ImproveRequest>,
+    'mutationFn'
+>;
+
+export function useImproveText(options?: ImproveTextOptions) {
     return useMutation({
         mutationFn: (data: ImproveRequest) => aiApi.improveText(data),
         onError: (error: Error) => {
@@ -113,6 +126,7 @@ export function useImproveText() {
                 : 'Nie udało się ulepszyć tekstu';
             toast.error('Błąd AI', { description: message });
         },
+        ...options,
     });
 }
 
@@ -120,10 +134,12 @@ export function useImproveText() {
 // HOOK: useGenerateVariations
 // ============================================================
 
-/**
- * Mutacja do generowania wariantów tekstu
- */
-export function useGenerateVariations() {
+type GenerateVariationsOptions = Omit<
+    UseMutationOptions<VariationsResponse, Error, VariationsRequest>,
+    'mutationFn'
+>;
+
+export function useGenerateVariations(options?: GenerateVariationsOptions) {
     return useMutation({
         mutationFn: (data: VariationsRequest) => aiApi.generateVariations(data),
         onError: (error: Error) => {
@@ -132,6 +148,7 @@ export function useGenerateVariations() {
                 : 'Nie udało się wygenerować wariantów';
             toast.error('Błąd AI', { description: message });
         },
+        ...options,
     });
 }
 
@@ -139,9 +156,6 @@ export function useGenerateVariations() {
 // HOOK: useAI (kombinowany)
 // ============================================================
 
-/**
- * Główny hook AI - łączy wszystkie funkcjonalności
- */
 export function useAI() {
     const generateText = useGenerateText();
     const generateImage = useGenerateImage();

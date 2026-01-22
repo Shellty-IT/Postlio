@@ -1,14 +1,10 @@
 // src/app/(dashboard)/autopilot/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-    ListTodo,
-    BarChart3,
-    Settings,
-} from 'lucide-react';
+import { Loader2, ListTodo, BarChart3, Settings } from 'lucide-react';
 import {
     AutopilotHeader,
     AutopilotQueue,
@@ -17,62 +13,133 @@ import {
     CreateConfigModal,
 } from '@/components/autopilot';
 import { useAutopilotStore } from '@/store/autopilot-store';
-import { useBrandsStore } from '@/store/brands-store';
-import type { AutopilotConfig } from '@/types/autopilot';
+import { useBrands } from '@/hooks/useBrands';
+import {
+    useAutopilotConfigs,
+    useAutopilotConfig,
+    useToggleAutopilot,
+    usePauseAutopilot,
+    useCreateAutopilotConfig,
+    useUpdateAutopilotConfig,
+    useDeleteAutopilotConfig,
+    useAutopilotQueue,
+    useQueueStats,
+    useGeneratePosts, // NOWY IMPORT
+} from '@/hooks/useAutopilot';
+import type { BackendAutopilotConfigCreate, BackendAutopilotConfigUpdate } from '@/types/autopilot';
 
 export default function AutopilotPage() {
-    const [activeTab, setActiveTab] = useState('queue');
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
+    // UI Store
     const {
-        configs,
         selectedConfigId,
-        isGenerating,
+        activeTab,
+        isCreateModalOpen,
+        queueFilter,
         selectConfig,
-        createConfig,
-        updateConfig,
-        deleteConfig,
-        toggleConfigStatus,
-        getConfigById,
-        triggerGeneration,
-        getPendingCount,
+        setActiveTab,
+        setCreateModalOpen,
     } = useAutopilotStore();
 
-    const { brands } = useBrandsStore();
+    // React Query - Configs
+    const { data: configs = [], isLoading: isLoadingConfigs } = useAutopilotConfigs();
+    const { data: selectedConfig } = useAutopilotConfig(selectedConfigId);
 
-    // Get selected config
-    const selectedConfig = selectedConfigId ? getConfigById(selectedConfigId) : undefined;
+    // React Query - Queue & Stats
+    const { data: queueItems = [] } = useAutopilotQueue(
+        selectedConfigId,
+        { status: queueFilter === 'all' ? undefined : queueFilter }
+    );
+    const { data: queueStats } = useQueueStats(selectedConfigId);
 
-    // Check if autopilot is running (config is active)
-    const isRunning = selectedConfig?.status === 'active';
+    // React Query - Brands
+    const brandsQuery = useBrands();
+    const brands = brandsQuery.data?.brands || [];
 
-    // Get pending count
-    const pendingCount = getPendingCount();
+    // Mutations
+    const toggleAutopilot = useToggleAutopilot();
+    const pauseAutopilot = usePauseAutopilot();
+    const createConfig = useCreateAutopilotConfig();
+    const updateConfig = useUpdateAutopilotConfig();
+    const deleteConfig = useDeleteAutopilotConfig();
+    const generatePosts = useGeneratePosts(); // NOWA MUTACJA
 
-    // Handle create new config
-    const handleCreateConfig = (configData: Omit<AutopilotConfig, 'id' | 'createdAt' | 'updatedAt' | 'totalGenerated' | 'totalPublished'>) => {
-        createConfig(configData);
-        setIsCreateModalOpen(false);
-    };
+    // Auto-select first config if none selected
+    useEffect(() => {
+        if (!selectedConfigId && configs.length > 0) {
+            selectConfig(configs[0].id);
+        }
+    }, [configs, selectedConfigId, selectConfig]);
 
-    // Handle toggle autopilot
+    // Computed
+    const isRunning = selectedConfig ? (selectedConfig.is_active && !selectedConfig.is_paused) : false;
+    const isGenerating = generatePosts.isPending; // NOWY STATE
+    const pendingCount = queueStats?.pending_count || 0;
+
+    // Handlers
     const handleToggleAutopilot = () => {
-        if (selectedConfigId) {
-            toggleConfigStatus(selectedConfigId);
+        if (!selectedConfigId || !selectedConfig) return;
+
+        if (selectedConfig.is_active) {
+            if (selectedConfig.is_paused) {
+                pauseAutopilot.mutate({ configId: selectedConfigId, paused: false });
+            } else {
+                pauseAutopilot.mutate({ configId: selectedConfigId, paused: true });
+            }
+        } else {
+            toggleAutopilot.mutate({ configId: selectedConfigId, active: true });
         }
     };
 
-    // Handle generate now
-    const handleGenerateNow = async () => {
-        if (selectedConfigId) {
-            await triggerGeneration(selectedConfigId);
-        }
+    // NOWY HANDLER - Generuj teraz
+    const handleGenerateNow = () => {
+        if (!selectedConfigId) return;
+
+        generatePosts.mutate({
+            configId: selectedConfigId,
+            request: {
+                count: 1, // Generuj 1 post na raz (można zmienić na więcej)
+            },
+        });
     };
 
-    // Handle config selection for header
-    const handleSelectConfigFromHeader = (config: AutopilotConfig) => {
-        selectConfig(config.id);
+    const handleCreateConfig = (data: BackendAutopilotConfigCreate) => {
+        createConfig.mutate(data, {
+            onSuccess: (newConfig) => {
+                selectConfig(newConfig.id);
+                setCreateModalOpen(false);
+            },
+        });
     };
+
+    const handleUpdateConfig = (configId: number, updates: BackendAutopilotConfigUpdate) => {
+        updateConfig.mutate({ configId, data: updates });
+    };
+
+    const handleDeleteConfig = (configId: number) => {
+        deleteConfig.mutate(configId, {
+            onSuccess: () => {
+                if (selectedConfigId === configId) {
+                    selectConfig(null);
+                }
+            },
+        });
+    };
+
+    const handleSelectConfig = (configId: number) => {
+        selectConfig(configId);
+    };
+
+    // Loading state
+    if (isLoadingConfigs) {
+        return (
+            <div className="flex items-center justify-center h-[60vh]">
+                <div className="text-center">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+                    <p className="text-muted-foreground">Ładowanie konfiguracji...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="p-6 space-y-6">
@@ -81,30 +148,43 @@ export default function AutopilotPage() {
                 selectedConfig={selectedConfig}
                 configs={configs}
                 isRunning={isRunning}
-                onSelectConfig={handleSelectConfigFromHeader}
+                isGenerating={isGenerating} // PODŁĄCZONE
+                onSelectConfig={(config) => selectConfig(config.id)}
                 onToggleAutopilot={handleToggleAutopilot}
-                onGenerateNow={handleGenerateNow}
-                onCreateNew={() => setIsCreateModalOpen(true)}
-                isGenerating={isGenerating}
+                onGenerateNow={handleGenerateNow} // PODŁĄCZONE
+                onCreateNew={() => setCreateModalOpen(true)}
             />
 
             {/* Main Content */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <Tabs
+                value={activeTab}
+                onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+                className="space-y-6"
+            >
                 <TabsList className="bg-card border border-border">
-                    <TabsTrigger value="queue" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    <TabsTrigger
+                        value="queue"
+                        className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                    >
                         <ListTodo className="w-4 h-4" />
                         Kolejka
                         {pendingCount > 0 && (
                             <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/20">
-                {pendingCount}
-              </span>
+                                {pendingCount}
+                            </span>
                         )}
                     </TabsTrigger>
-                    <TabsTrigger value="stats" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    <TabsTrigger
+                        value="stats"
+                        className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                    >
                         <BarChart3 className="w-4 h-4" />
                         Statystyki
                     </TabsTrigger>
-                    <TabsTrigger value="config" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    <TabsTrigger
+                        value="config"
+                        className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                    >
                         <Settings className="w-4 h-4" />
                         Konfiguracja
                     </TabsTrigger>
@@ -115,7 +195,10 @@ export default function AutopilotPage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                     >
-                        <AutopilotQueue />
+                        <AutopilotQueue
+                            configId={selectedConfigId}
+                            queueItems={queueItems}
+                        />
                     </motion.div>
                 </TabsContent>
 
@@ -124,7 +207,11 @@ export default function AutopilotPage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                     >
-                        <AutopilotStats />
+                        <AutopilotStats
+                            configId={selectedConfigId}
+                            config={selectedConfig}
+                            stats={queueStats}
+                        />
                     </motion.div>
                 </TabsContent>
 
@@ -136,10 +223,10 @@ export default function AutopilotPage() {
                         <ConfigPanel
                             configs={configs}
                             selectedConfigId={selectedConfigId}
-                            onSelectConfig={selectConfig}
-                            onUpdateConfig={(id, updates) => updateConfig(id, updates)}
-                            onDeleteConfig={deleteConfig}
-                            onCreateNew={() => setIsCreateModalOpen(true)}
+                            onSelectConfig={handleSelectConfig}
+                            onUpdateConfig={handleUpdateConfig}
+                            onDeleteConfig={handleDeleteConfig}
+                            onCreateNew={() => setCreateModalOpen(true)}
                         />
                     </motion.div>
                 </TabsContent>
@@ -148,7 +235,7 @@ export default function AutopilotPage() {
             {/* Create Config Modal */}
             <CreateConfigModal
                 isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
+                onClose={() => setCreateModalOpen(false)}
                 onSubmit={handleCreateConfig}
                 brands={brands}
             />

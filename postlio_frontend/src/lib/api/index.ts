@@ -18,6 +18,42 @@ export { authApi } from './auth';
 export { aiApi } from './ai';
 export { postsApi } from './posts';
 export { brandsApi } from './brands';
+export { autopilotApi } from './autopilot';
+
+// Social Media API - named exports
+export {
+    getConnectedAccounts,
+    getAccount,
+    initOAuth,
+    handleOAuthCallback,
+    disconnectAccount,
+    refreshAccountToken,
+    publishPost,
+    getAvailablePlatforms,
+    getCapabilities,
+    requiresImage,
+    getPlatformColor,
+    getPlatformName,
+    getAccountTypeLabel,
+    ACCOUNT_CAPABILITIES,
+} from './social';
+
+export type {
+    SocialPlatform,
+    AccountType,
+    ConnectionStatus,
+    AccountCapabilities,
+    FacebookPageInfo,
+    InstagramAccountInfo,
+    ConnectedAccount,
+    ListAccountsResponse,
+    OAuthInitResponse,
+    OAuthCallbackResponse,
+    PublishPostRequest,
+    PublishPostResponse,
+    RefreshTokenResponse,
+    PlatformInfo,
+} from './social';
 
 // ============================================================
 // AUTH TYPES
@@ -35,14 +71,14 @@ export type {
 // ============================================================
 
 export type {
-    TextProviderInfo,
-    ImageProviderInfo,
+    ProviderInfo,
     ProvidersResponse,
     TextGenerationRequest,
     TextGenerationResponse,
+    GeneratedTextContent,
     ImageGenerationRequest,
     ImageGenerationResponse,
-    GeneratedImage,
+    GeneratedImageContent,
     ChatMessage,
     ChatRequest,
     ChatResponse,
@@ -50,6 +86,12 @@ export type {
     ImproveResponse,
     VariationsRequest,
     VariationsResponse,
+    TextProvider,
+    ImageProvider,
+    Platform,
+    Category,
+    Tone,
+    ImageStyle,
 } from './ai';
 
 // ============================================================

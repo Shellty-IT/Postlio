@@ -11,10 +11,8 @@ import {
     Calendar,
     Sparkles,
     Layers,
-    MessageSquare,
     Play,
     Pause,
-    AlertCircle,
     CheckCircle2,
     Clock
 } from 'lucide-react';
@@ -23,7 +21,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -37,23 +34,35 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { ContentCategoriesEditor } from './content-categories-editor';
-import { TopicsManager } from './topics-manager';
-import { AISettingsForm } from './ai-settings-form';
-import { TimeSlotsPicker } from './time-slots-picker';
+import { Badge } from '@/components/ui/badge';
 import {
-    AutopilotConfig,
-    AutopilotStatus,
-    AUTOPILOT_STATUS_CONFIG,
-    SelectedCategory,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import type { Platform } from '@/types';  // <-- ZMIANA: import z @/types
+import type {
+    BackendAutopilotConfig,
+    BackendAutopilotConfigUpdate,
+    PostLength,
+    DayOfWeekName,
+    ThematicCategoryId,
+} from '@/types/autopilot';
+import {
+    THEMATIC_CATEGORIES,
+    POST_LENGTH_PRESETS,
+    CREATIVITY_LEVEL_LABELS,
+    DAYS_OF_WEEK,
 } from '@/types/autopilot';
 
 interface ConfigPanelProps {
-    configs: AutopilotConfig[];
-    selectedConfigId: string | null;
-    onSelectConfig: (id: string | null) => void;
-    onUpdateConfig: (id: string, updates: Partial<AutopilotConfig>) => void;
-    onDeleteConfig: (id: string) => void;
+    configs: BackendAutopilotConfig[];
+    selectedConfigId: number | null;
+    onSelectConfig: (id: number) => void;
+    onUpdateConfig: (id: number, updates: BackendAutopilotConfigUpdate) => void;
+    onDeleteConfig: (id: number) => void;
     onCreateNew: () => void;
     className?: string;
 }
@@ -68,7 +77,7 @@ export function ConfigPanel({
                                 className,
                             }: ConfigPanelProps) {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-    const [editedConfig, setEditedConfig] = useState<AutopilotConfig | null>(null);
+    const [editedConfig, setEditedConfig] = useState<BackendAutopilotConfig | null>(null);
 
     const currentConfig = configs.find(c => c.id === selectedConfigId);
 
@@ -82,15 +91,10 @@ export function ConfigPanel({
         }
     }, [selectedConfigId, currentConfig]);
 
-    // Inicjalizuj edycję gdy zmieni się selekcja
-    const handleSelectConfig = (id: string) => {
-        onSelectConfig(id);
-    };
-
     // Aktualizuj edytowaną konfigurację
-    const updateEditedConfig = <K extends keyof AutopilotConfig>(
+    const updateEditedConfig = <K extends keyof BackendAutopilotConfig>(
         key: K,
-        value: AutopilotConfig[K]
+        value: BackendAutopilotConfig[K]
     ) => {
         if (!editedConfig) return;
         setEditedConfig({ ...editedConfig, [key]: value });
@@ -100,54 +104,89 @@ export function ConfigPanel({
     // Zapisz zmiany
     const handleSave = () => {
         if (!editedConfig) return;
-        onUpdateConfig(editedConfig.id, editedConfig);
+
+        const updates: BackendAutopilotConfigUpdate = {
+            posts_per_week: editedConfig.posts_per_week,
+            schedule_days: editedConfig.schedule_days,
+            schedule_time: editedConfig.schedule_time,
+            platforms: editedConfig.platforms,
+            categories: editedConfig.categories,
+            creativity_level: editedConfig.creativity_level,
+            post_length: editedConfig.post_length as PostLength,
+            include_images: editedConfig.include_images,
+            include_hashtags: editedConfig.include_hashtags,
+            include_emoji: editedConfig.include_emoji,
+            text_provider: editedConfig.text_provider,
+            image_provider: editedConfig.image_provider,
+        };
+
+        onUpdateConfig(editedConfig.id, updates);
         setHasUnsavedChanges(false);
     };
 
-    // Pobierz kategorie jako SelectedCategory[] z topics
-    const getSelectedCategories = (): SelectedCategory[] => {
-        if (!editedConfig) return [];
-        // Mapuj z topics na kategorie (uproszczona logika)
-        const categoryMap = new Map<string, number>();
-
-        editedConfig.topics.forEach(t => {
-            const current = categoryMap.get(t.category) || 0;
-            categoryMap.set(t.category, current + 1);
-        });
-
-        const total = editedConfig.topics.length || 1;
-        return Array.from(categoryMap.entries()).map(([categoryId, count]) => ({
-            categoryId,
-            percentage: Math.round((count / total) * 100),
-        }));
-    };
-
-    // Aktualizuj kategorie (placeholder - w przyszłości można rozbudować)
-    const handleCategoriesChange = () => {
-        if (!editedConfig) return;
-        setHasUnsavedChanges(true);
-    };
-
     // Status badge
-    const StatusBadge = ({ status }: { status: AutopilotStatus }) => {
-        const config = AUTOPILOT_STATUS_CONFIG[status];
+    const StatusBadge = ({ config }: { config: BackendAutopilotConfig }) => {
+        const isActive = config.is_active;
+        const isPaused = config.is_paused;
+
+        let color = '#6B7280';
+        let label = 'Nieaktywny';
+        let Icon = Clock;
+
+        if (isActive && !isPaused) {
+            color = '#10B981';
+            label = 'Aktywny';
+            Icon = Play;
+        } else if (isActive && isPaused) {
+            color = '#F59E0B';
+            label = 'Wstrzymany';
+            Icon = Pause;
+        }
+
         return (
             <Badge
                 variant="outline"
                 className="gap-1"
                 style={{
-                    borderColor: config.color,
-                    color: config.color,
-                    backgroundColor: `${config.color}10`,
+                    borderColor: color,
+                    color: color,
+                    backgroundColor: `${color}10`,
                 }}
             >
-                {status === 'active' && <Play className="w-3 h-3" />}
-                {status === 'paused' && <Pause className="w-3 h-3" />}
-                {status === 'error' && <AlertCircle className="w-3 h-3" />}
-                {status === 'inactive' && <Clock className="w-3 h-3" />}
-                {config.label}
+                <Icon className="w-3 h-3" />
+                {label}
             </Badge>
         );
+    };
+
+    // Toggle day selection
+    const toggleDay = (dayName: DayOfWeekName) => {
+        if (!editedConfig) return;
+        const currentDays = editedConfig.schedule_days || [];
+        const newDays = currentDays.includes(dayName)
+            ? currentDays.filter(d => d !== dayName)
+            : [...currentDays, dayName];
+        updateEditedConfig('schedule_days', newDays);
+    };
+
+    // Toggle category selection
+    const toggleCategory = (categoryId: ThematicCategoryId) => {
+        if (!editedConfig) return;
+        const currentCategories = editedConfig.categories || [];
+        const newCategories = currentCategories.includes(categoryId)
+            ? currentCategories.filter(c => c !== categoryId)
+            : [...currentCategories, categoryId];
+        updateEditedConfig('categories', newCategories as ThematicCategoryId[]);
+    };
+
+    // Toggle platform
+    const togglePlatform = (platform: Platform) => {
+        if (!editedConfig) return;
+        const current = editedConfig.platforms || [];
+        const updated = current.includes(platform)
+            ? current.filter(p => p !== platform)
+            : [...current, platform];
+        updateEditedConfig('platforms', updated);
     };
 
     return (
@@ -179,7 +218,7 @@ export function ConfigPanel({
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: -20 }}
                                     transition={{ delay: index * 0.05 }}
-                                    onClick={() => handleSelectConfig(config.id)}
+                                    onClick={() => onSelectConfig(config.id)}
                                     className={cn(
                                         "w-full p-4 rounded-xl text-left transition-all",
                                         "border-2",
@@ -191,18 +230,18 @@ export function ConfigPanel({
                                     <div className="flex items-start justify-between gap-2 mb-2">
                                         <div className="flex-1 min-w-0">
                                             <h4 className="font-medium text-sm truncate">
-                                                {config.name}
+                                                Marka #{config.brand_id}
                                             </h4>
                                             <p className="text-xs text-muted-foreground truncate">
-                                                Brand ID: {config.brandId}
+                                                {config.posts_per_week} postów/tydzień
                                             </p>
                                         </div>
-                                        <StatusBadge status={config.status} />
+                                        <StatusBadge config={config} />
                                     </div>
 
                                     {/* Platformy */}
                                     <div className="flex items-center gap-1.5 mb-2">
-                                        {config.platforms.map(platform => (
+                                        {config.platforms.map((platform) => (
                                             <div
                                                 key={platform}
                                                 className={cn(
@@ -219,14 +258,14 @@ export function ConfigPanel({
 
                                     {/* Stats */}
                                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-green-500" />
-                        {config.totalPublished}
-                    </span>
                                         <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                                            {config.schedule.timeSlots.length}x/{config.schedule.selectedDays.length} dni
-                    </span>
+                                            <CheckCircle2 className="w-3 h-3 text-green-500" />
+                                            {config.total_published}
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <Calendar className="w-3 h-3" />
+                                            {config.schedule_days?.length || 0} dni
+                                        </span>
                                     </div>
                                 </motion.button>
                             ))}
@@ -258,17 +297,14 @@ export function ConfigPanel({
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-4">
                                 <div>
-                                    <Input
-                                        value={editedConfig.name}
-                                        onChange={(e) => updateEditedConfig('name', e.target.value)}
-                                        className="text-lg font-semibold border-none p-0 h-auto focus-visible:ring-0"
-                                        placeholder="Nazwa konfiguracji"
-                                    />
+                                    <h2 className="text-lg font-semibold">
+                                        Konfiguracja #{editedConfig.id}
+                                    </h2>
                                     <p className="text-sm text-muted-foreground">
-                                        Brand ID: {editedConfig.brandId}
+                                        Marka #{editedConfig.brand_id}
                                     </p>
                                 </div>
-                                <StatusBadge status={editedConfig.status} />
+                                <StatusBadge config={editedConfig} />
                             </div>
 
                             <div className="flex items-center gap-2">
@@ -288,8 +324,8 @@ export function ConfigPanel({
                                         <AlertDialogHeader>
                                             <AlertDialogTitle>Usuń konfigurację?</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                Ta akcja jest nieodwracalna. Konfiguracja &quot;{editedConfig.name}&quot;
-                                                zostanie trwale usunięta wraz z wszystkimi powiązanymi postami w kolejce.
+                                                Ta akcja jest nieodwracalna. Konfiguracja zostanie trwale usunięta
+                                                wraz z wszystkimi powiązanymi postami w kolejce.
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
@@ -326,10 +362,6 @@ export function ConfigPanel({
                                     <Layers className="w-4 h-4" />
                                     Kategorie
                                 </TabsTrigger>
-                                <TabsTrigger value="topics" className="gap-2">
-                                    <MessageSquare className="w-4 h-4" />
-                                    Tematy
-                                </TabsTrigger>
                                 <TabsTrigger value="ai" className="gap-2">
                                     <Sparkles className="w-4 h-4" />
                                     Ustawienia AI
@@ -337,53 +369,191 @@ export function ConfigPanel({
                             </TabsList>
 
                             <ScrollArea className="h-[calc(100vh-380px)]">
-                                <TabsContent value="schedule" className="mt-0 pr-4">
-                                    <div className="space-y-6">
-                                        {/* Require approval switch */}
-                                        <div className="p-4 rounded-xl border border-border bg-card">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <Label className="text-sm font-medium">
-                                                        Wymagaj zatwierdzenia
-                                                    </Label>
-                                                    <p className="text-xs text-muted-foreground mt-1">
-                                                        Posty będą czekać na Twoje zatwierdzenie przed publikacją
-                                                    </p>
-                                                </div>
-                                                <Switch
-                                                    checked={editedConfig.requiresApproval}
-                                                    onCheckedChange={(v) => updateEditedConfig('requiresApproval', v)}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <TimeSlotsPicker
-                                            schedule={editedConfig.schedule}
-                                            onChange={(schedule) => updateEditedConfig('schedule', schedule)}
+                                {/* Schedule Tab */}
+                                <TabsContent value="schedule" className="mt-0 pr-4 space-y-6">
+                                    {/* Posts per week */}
+                                    <div className="space-y-3">
+                                        <Label>Posty tygodniowo: {editedConfig.posts_per_week}</Label>
+                                        <Input
+                                            type="range"
+                                            min={1}
+                                            max={14}
+                                            step={1}
+                                            value={editedConfig.posts_per_week}
+                                            onChange={(e) => updateEditedConfig('posts_per_week', Number(e.target.value))}
+                                            className="w-full"
                                         />
+                                    </div>
+
+                                    {/* Schedule time */}
+                                    <div className="space-y-2">
+                                        <Label>Godzina publikacji</Label>
+                                        <Input
+                                            type="time"
+                                            value={editedConfig.schedule_time}
+                                            onChange={(e) => updateEditedConfig('schedule_time', e.target.value)}
+                                        />
+                                    </div>
+
+                                    {/* Days of week */}
+                                    <div className="space-y-3">
+                                        <Label>Dni publikacji</Label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {DAYS_OF_WEEK.map((day) => (
+                                                <Button
+                                                    key={day.name}
+                                                    variant={editedConfig.schedule_days?.includes(day.name) ? "default" : "outline"}
+                                                    size="sm"
+                                                    onClick={() => toggleDay(day.name)}
+                                                >
+                                                    {day.short}
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Platforms */}
+                                    <div className="space-y-3">
+                                        <Label>Platformy</Label>
+                                        <div className="flex gap-3">
+                                            {(['facebook', 'instagram', 'linkedin'] as Platform[]).map((platform) => (
+                                                <Button
+                                                    key={platform}
+                                                    variant={editedConfig.platforms?.includes(platform) ? "default" : "outline"}
+                                                    size="sm"
+                                                    onClick={() => togglePlatform(platform)}
+                                                    className="capitalize"
+                                                >
+                                                    {platform}
+                                                </Button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </TabsContent>
 
+                                {/* Categories Tab */}
                                 <TabsContent value="categories" className="mt-0 pr-4">
-                                    <ContentCategoriesEditor
-                                        selectedCategories={getSelectedCategories()}
-                                        onChange={handleCategoriesChange}
-                                    />
+                                    <div className="space-y-4">
+                                        <p className="text-sm text-muted-foreground">
+                                            Wybierz kategorie tematyczne dla generowanych postów
+                                        </p>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {THEMATIC_CATEGORIES.slice(0, 18).map((category) => (
+                                                <Button
+                                                    key={category.id}
+                                                    variant={editedConfig.categories?.includes(category.id as ThematicCategoryId) ? "default" : "outline"}
+                                                    size="sm"
+                                                    onClick={() => toggleCategory(category.id as ThematicCategoryId)}
+                                                    className="gap-2 justify-start"
+                                                >
+                                                    <span>{category.icon}</span>
+                                                    <span className="truncate">{category.name}</span>
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </TabsContent>
 
-                                <TabsContent value="topics" className="mt-0 pr-4">
-                                    <TopicsManager
-                                        topics={editedConfig.topics}
-                                        onChange={(topics) => updateEditedConfig('topics', topics)}
-                                        categoryHints={getSelectedCategories().map(c => c.categoryId)}
-                                    />
-                                </TabsContent>
+                                {/* AI Settings Tab */}
+                                <TabsContent value="ai" className="mt-0 pr-4 space-y-6">
+                                    {/* Creativity Level */}
+                                    <div className="space-y-3">
+                                        <Label>
+                                            Poziom kreatywności: {editedConfig.creativity_level}%
+                                        </Label>
+                                        <Input
+                                            type="range"
+                                            min={0}
+                                            max={100}
+                                            step={10}
+                                            value={editedConfig.creativity_level}
+                                            onChange={(e) => updateEditedConfig('creativity_level', Number(e.target.value))}
+                                            className="w-full"
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            {CREATIVITY_LEVEL_LABELS.find(l => l.value <= editedConfig.creativity_level)?.description || 'Zbalansowany'}
+                                        </p>
+                                    </div>
 
-                                <TabsContent value="ai" className="mt-0 pr-4">
-                                    <AISettingsForm
-                                        settings={editedConfig.generationSettings}
-                                        onChange={(settings) => updateEditedConfig('generationSettings', settings)}
-                                    />
+                                    {/* Post Length */}
+                                    <div className="space-y-2">
+                                        <Label>Długość postów</Label>
+                                        <Select
+                                            value={editedConfig.post_length}
+                                            onValueChange={(value: PostLength) => updateEditedConfig('post_length', value)}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {POST_LENGTH_PRESETS.map((preset) => (
+                                                    <SelectItem key={preset.id} value={preset.id}>
+                                                        {preset.label} ({preset.description})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Text Provider */}
+                                    <div className="space-y-2">
+                                        <Label>Dostawca tekstu AI</Label>
+                                        <Select
+                                            value={editedConfig.text_provider}
+                                            onValueChange={(value: string) => updateEditedConfig('text_provider', value)}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="gemini">Gemini 2.5 ✨</SelectItem>
+                                                <SelectItem value="groq">Groq (Llama 3.3) ⚡</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Image Provider */}
+                                    <div className="space-y-2">
+                                        <Label>Dostawca obrazów AI</Label>
+                                        <Select
+                                            value={editedConfig.image_provider}
+                                            onValueChange={(value: string) => updateEditedConfig('image_provider', value)}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="pollinations">Pollinations 🌸</SelectItem>
+                                                <SelectItem value="huggingface">HuggingFace FLUX 🤗</SelectItem>
+                                                <SelectItem value="clipdrop">ClipDrop ✂️</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Toggles */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <Label>Generuj obrazy</Label>
+                                            <Switch
+                                                checked={editedConfig.include_images}
+                                                onCheckedChange={(checked: boolean) => updateEditedConfig('include_images', checked)}
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <Label>Dodawaj hashtagi</Label>
+                                            <Switch
+                                                checked={editedConfig.include_hashtags}
+                                                onCheckedChange={(checked: boolean) => updateEditedConfig('include_hashtags', checked)}
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <Label>Używaj emoji</Label>
+                                            <Switch
+                                                checked={editedConfig.include_emoji}
+                                                onCheckedChange={(checked: boolean) => updateEditedConfig('include_emoji', checked)}
+                                            />
+                                        </div>
+                                    </div>
                                 </TabsContent>
                             </ScrollArea>
                         </Tabs>

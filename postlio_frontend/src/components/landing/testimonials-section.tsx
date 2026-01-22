@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { TestimonialCard } from './testimonial-card';
+import { Sparkles, Zap, Shield, Clock } from 'lucide-react';
 
 const testimonials = [
     {
@@ -62,6 +63,13 @@ const testimonials = [
     },
 ];
 
+const features = [
+    { icon: Sparkles, label: 'AI nowej generacji', color: 'text-violet-500' },
+    { icon: Zap, label: 'Błyskawiczne rezultaty', color: 'text-yellow-500' },
+    { icon: Shield, label: 'Bezpieczne i prywatne', color: 'text-green-500' },
+    { icon: Clock, label: 'Oszczędność czasu', color: 'text-blue-500' },
+];
+
 export function TestimonialsSection() {
     return (
         <section className="py-24 md:py-32 bg-muted/30 relative overflow-hidden">
@@ -89,7 +97,7 @@ export function TestimonialsSection() {
                             variant="secondary"
                             className="mb-4 px-4 py-2 bg-primary/10 text-primary border-primary/20"
                         >
-                            Opinie klientów
+                            Opinie beta testerów
                         </Badge>
                     </motion.div>
 
@@ -100,8 +108,8 @@ export function TestimonialsSection() {
                         viewport={{ once: true }}
                         transition={{ duration: 0.5, delay: 0.1 }}
                     >
-                        Dołącz do{' '}
-                        <span className="text-primary">10,000+ zadowolonych</span> użytkowników
+                        Co mówią{' '}
+                        <span className="text-primary">nasi użytkownicy</span>
                     </motion.h2>
 
                     <motion.p
@@ -111,7 +119,7 @@ export function TestimonialsSection() {
                         viewport={{ once: true }}
                         transition={{ duration: 0.5, delay: 0.2 }}
                     >
-                        Zobacz, co mówią twórcy i marki, które już korzystają z Postlio
+                        Zobacz opinie twórców i marek, które testują Postlio
                     </motion.p>
                 </div>
 
@@ -126,7 +134,7 @@ export function TestimonialsSection() {
                     ))}
                 </div>
 
-                {/* Stats bar */}
+                {/* Features bar (zamiast fałszywych statystyk) */}
                 <motion.div
                     className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 p-8 rounded-3xl bg-card border border-border/50"
                     initial={{ opacity: 0, y: 20 }}
@@ -134,28 +142,24 @@ export function TestimonialsSection() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: 0.4 }}
                 >
-                    {[
-                        { value: '4.9/5', label: 'Średnia ocena' },
-                        { value: '10K+', label: 'Aktywnych użytkowników' },
-                        { value: '1M+', label: 'Wygenerowanych postów' },
-                        { value: '98%', label: 'Poleca znajomym' },
-                    ].map((stat, index) => (
-                        <div key={index} className="text-center">
-                            <motion.div
-                                className="text-3xl md:text-4xl font-bold text-primary mb-1"
-                                initial={{ scale: 0 }}
-                                whileInView={{ scale: 1 }}
-                                viewport={{ once: true }}
-                                transition={{
-                                    type: 'spring',
-                                    stiffness: 200,
-                                    delay: 0.5 + index * 0.1,
-                                }}
-                            >
-                                {stat.value}
-                            </motion.div>
-                            <div className="text-sm text-muted-foreground">{stat.label}</div>
-                        </div>
+                    {features.map((feature, index) => (
+                        <motion.div
+                            key={index}
+                            className="text-center"
+                            initial={{ scale: 0 }}
+                            whileInView={{ scale: 1 }}
+                            viewport={{ once: true }}
+                            transition={{
+                                type: 'spring',
+                                stiffness: 200,
+                                delay: 0.5 + index * 0.1,
+                            }}
+                        >
+                            <div className={`mx-auto w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mb-3`}>
+                                <feature.icon className={`w-6 h-6 ${feature.color}`} />
+                            </div>
+                            <div className="text-sm font-medium">{feature.label}</div>
+                        </motion.div>
                     ))}
                 </motion.div>
             </div>

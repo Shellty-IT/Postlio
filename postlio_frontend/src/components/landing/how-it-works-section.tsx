@@ -112,10 +112,10 @@ export function HowItWorksSection() {
                                     <div className="absolute -top-5 left-8">
                                         <motion.div
                                             className={`
-                        w-10 h-10 rounded-xl bg-gradient-to-br ${step.color} 
-                        flex items-center justify-center text-white font-bold text-sm
-                        shadow-lg
-                      `}
+                                                w-10 h-10 rounded-xl bg-gradient-to-br ${step.color} 
+                                                flex items-center justify-center text-white font-bold text-sm
+                                                shadow-lg
+                                            `}
                                             whileHover={{ scale: 1.1, rotate: 5 }}
                                         >
                                             {step.number}
@@ -126,12 +126,21 @@ export function HowItWorksSection() {
                                     <div className="mt-4 mb-6">
                                         <motion.div
                                             className={`
-                        w-16 h-16 rounded-2xl bg-gradient-to-br ${step.color}/10
-                        flex items-center justify-center
-                      `}
+                                                w-16 h-16 rounded-2xl bg-gradient-to-br ${step.color}/10
+                                                flex items-center justify-center
+                                            `}
                                             whileHover={{ scale: 1.05 }}
                                         >
-                                            <step.icon className={`w-8 h-8 bg-gradient-to-br ${step.color} bg-clip-text text-transparent`} style={{ color: step.color.includes('blue') ? '#3B82F6' : step.color.includes('violet') ? '#8B5CF6' : '#F97316' }} />
+                                            <step.icon
+                                                className="w-8 h-8"
+                                                style={{
+                                                    color: step.color.includes('blue')
+                                                        ? '#3B82F6'
+                                                        : step.color.includes('violet')
+                                                            ? '#8B5CF6'
+                                                            : '#F97316'
+                                                }}
+                                            />
                                         </motion.div>
                                     </div>
 
@@ -174,32 +183,6 @@ export function HowItWorksSection() {
                         ))}
                     </div>
                 </div>
-
-                {/* Bottom illustration */}
-                <motion.div
-                    className="mt-16 text-center"
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: 0.5 }}
-                >
-                    <div className="inline-flex items-center gap-4 px-6 py-4 rounded-2xl bg-card border border-border/50">
-                        <div className="flex -space-x-3">
-                            {[...Array(4)].map((_, i) => (
-                                <div
-                                    key={i}
-                                    className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-violet-500/20 border-2 border-background flex items-center justify-center text-xs font-medium"
-                                >
-                                    {['JK', 'AM', 'PN', '+99'][i]}
-                                </div>
-                            ))}
-                        </div>
-                        <div className="text-left">
-                            <p className="font-medium text-sm">Dołącz do 10,000+ użytkowników</p>
-                            <p className="text-xs text-muted-foreground">którzy już automatyzują social media</p>
-                        </div>
-                    </div>
-                </motion.div>
             </div>
         </section>
     );

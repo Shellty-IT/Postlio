@@ -26,6 +26,23 @@ interface PostPreviewProps {
     brandLogo?: string;
 }
 
+// Komponent obrazu - używa natywnego img dla zewnętrznych URL
+function PreviewImage({ src, alt, aspectRatio = 'video' }: { src: string; alt: string; aspectRatio?: 'video' | 'square' }) {
+    const aspectClass = aspectRatio === 'square' ? 'aspect-square' : 'aspect-video';
+
+    return (
+        <div className={`relative ${aspectClass} bg-muted overflow-hidden`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+                src={src}
+                alt={alt}
+                className="absolute inset-0 w-full h-full object-cover"
+                loading="lazy"
+            />
+        </div>
+    );
+}
+
 // Facebook Preview
 function FacebookPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostPreviewProps, 'platforms'>) {
     return (
@@ -40,6 +57,7 @@ function FacebookPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostP
                             width={40}
                             height={40}
                             className="h-full w-full object-cover"
+                            unoptimized
                         />
                     ) : (
                         brandName?.charAt(0) || 'P'
@@ -62,16 +80,7 @@ function FacebookPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostP
             </div>
 
             {/* Image */}
-            {imageUrl && (
-                <div className="relative aspect-video bg-muted">
-                    <Image
-                        src={imageUrl}
-                        alt="Post image"
-                        fill
-                        className="object-cover"
-                    />
-                </div>
-            )}
+            {imageUrl && <PreviewImage src={imageUrl} alt="Post image" aspectRatio="video" />}
 
             {/* Actions */}
             <div className="px-3 py-2 border-t border-[#CED0D4] dark:border-[#3E4042]">
@@ -109,6 +118,7 @@ function InstagramPreview({ content, imageUrl, brandName, brandLogo }: Omit<Post
                                 width={28}
                                 height={28}
                                 className="h-full w-full object-cover"
+                                unoptimized
                             />
                         ) : (
                             <span className="text-xs font-bold">{brandName?.charAt(0) || 'P'}</span>
@@ -122,11 +132,12 @@ function InstagramPreview({ content, imageUrl, brandName, brandLogo }: Omit<Post
             {/* Image */}
             <div className="relative aspect-square bg-muted">
                 {imageUrl ? (
-                    <Image
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
                         src={imageUrl}
                         alt="Post image"
-                        fill
-                        className="object-cover"
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-muted-foreground">
@@ -149,9 +160,9 @@ function InstagramPreview({ content, imageUrl, brandName, brandLogo }: Omit<Post
                 {/* Content */}
                 <div>
                     <p className="text-sm">
-            <span className="font-semibold mr-1">
-              {brandName?.toLowerCase().replace(/\s/g, '') || 'twoja_marka'}
-            </span>
+                        <span className="font-semibold mr-1">
+                            {brandName?.toLowerCase().replace(/\s/g, '') || 'twoja_marka'}
+                        </span>
                         {content || 'Podgląd Twojego posta pojawi się tutaj...'}
                     </p>
                 </div>
@@ -174,6 +185,7 @@ function LinkedInPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostP
                             width={48}
                             height={48}
                             className="h-full w-full object-cover"
+                            unoptimized
                         />
                     ) : (
                         brandName?.charAt(0) || 'P'
@@ -195,27 +207,18 @@ function LinkedInPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostP
             </div>
 
             {/* Image */}
-            {imageUrl && (
-                <div className="relative aspect-video bg-muted">
-                    <Image
-                        src={imageUrl}
-                        alt="Post image"
-                        fill
-                        className="object-cover"
-                    />
-                </div>
-            )}
+            {imageUrl && <PreviewImage src={imageUrl} alt="Post image" aspectRatio="video" />}
 
             {/* Stats */}
             <div className="px-4 py-2 flex items-center gap-1 text-xs text-[#666666] dark:text-[#FFFFFFA6]">
-        <span className="flex -space-x-1">
-          <span className="h-4 w-4 rounded-full bg-[#0A66C2] flex items-center justify-center">
-            <ThumbsUp className="h-2.5 w-2.5 text-white" />
-          </span>
-          <span className="h-4 w-4 rounded-full bg-[#E7A33E] flex items-center justify-center">
-            <Heart className="h-2.5 w-2.5 text-white" />
-          </span>
-        </span>
+                <span className="flex -space-x-1">
+                    <span className="h-4 w-4 rounded-full bg-[#0A66C2] flex items-center justify-center">
+                        <ThumbsUp className="h-2.5 w-2.5 text-white" />
+                    </span>
+                    <span className="h-4 w-4 rounded-full bg-[#E7A33E] flex items-center justify-center">
+                        <Heart className="h-2.5 w-2.5 text-white" />
+                    </span>
+                </span>
                 <span>24</span>
             </div>
 

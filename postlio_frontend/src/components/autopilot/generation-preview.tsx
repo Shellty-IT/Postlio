@@ -20,6 +20,7 @@ import {
     Bookmark,
     MoreHorizontal,
     Send,
+    Loader2,
 } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -29,22 +30,38 @@ import { Textarea } from '@/components/ui/textarea';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { useAutopilotStore } from '@/store/autopilot-store';
-import { STATUS_CONFIG, CONTENT_TYPE_LABELS } from '@/types/autopilot';
-import type { QueuedPost } from '@/types/autopilot';
+import { useApproveQueueItem, useRejectQueueItem, useUpdateQueueItem } from '@/hooks/useAutopilot';
+import type { BackendQueueItem, BackendQueueStatus } from '@/types/autopilot';
 import type { Platform } from '@/types';
-import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
+// ============================================================
+// TYPY
+// ============================================================
+
 interface GenerationPreviewProps {
-    post: QueuedPost | null;
+    post: BackendQueueItem | null;
     isOpen: boolean;
     onClose: () => void;
 }
+
+// ============================================================
+// KONFIGURACJA STATUSÓW (wszystkie z BackendQueueStatus)
+// ============================================================
+
+const STATUS_CONFIG: Record<BackendQueueStatus, { label: string; color: string; bgColor: string }> = {
+    pending: { label: 'Oczekuje', color: '#F59E0B', bgColor: '#FEF3C7' },
+    approved: { label: 'Zatwierdzony', color: '#10B981', bgColor: '#D1FAE5' },
+    rejected: { label: 'Odrzucony', color: '#EF4444', bgColor: '#FEE2E2' },
+    scheduled: { label: 'Zaplanowany', color: '#3B82F6', bgColor: '#DBEAFE' },
+    published: { label: 'Opublikowany', color: '#22C55E', bgColor: '#DCFCE7' },
+    failed: { label: 'Błąd', color: '#EF4444', bgColor: '#FEE2E2' },
+};
 
 const PLATFORM_ICONS: Record<Platform, React.ReactNode> = {
     facebook: <Facebook className="h-5 w-5" />,
@@ -52,18 +69,26 @@ const PLATFORM_ICONS: Record<Platform, React.ReactNode> = {
     linkedin: <Linkedin className="h-5 w-5" />,
 };
 
+// ============================================================
+// KOMPONENT GŁÓWNY
+// ============================================================
+
 export function GenerationPreview({ post, isOpen, onClose }: GenerationPreviewProps) {
-    const [activePlatform, setActivePlatform] = useState<Platform>('instagram');
     const [copied, setCopied] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState('');
 
-    const { approvePost, rejectPost, regeneratePost } = useAutopilotStore();
+    // React Query hooks
+    const approveMutation = useApproveQueueItem();
+    const rejectMutation = useRejectQueueItem();
+    const updateMutation = useUpdateQueueItem();
 
     if (!post) return null;
 
-    const statusConfig = STATUS_CONFIG[post.status];
-    const contentTypeConfig = CONTENT_TYPE_LABELS[post.contentType];
+    const statusConfig = STATUS_CONFIG[post.status] || STATUS_CONFIG.pending;
+    // BackendQueueItem ma `platform` (singular), nie `platforms`
+    const platform = post.platform as Platform;
+    const providerUsed = post.text_provider_used || 'AI';
 
     const handleCopy = () => {
         navigator.clipboard.writeText(post.content);
@@ -71,24 +96,30 @@ export function GenerationPreview({ post, isOpen, onClose }: GenerationPreviewPr
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const handleApprove = () => {
-        approvePost(post.id);
+    const handleApprove = async () => {
+        await approveMutation.mutateAsync(post.id);
         onClose();
     };
 
-    const handleReject = () => {
-        rejectPost(post.id);
+    const handleReject = async () => {
+        await rejectMutation.mutateAsync({ itemId: post.id });
         onClose();
-    };
-
-    const handleRegenerate = () => {
-        regeneratePost(post.id);
     };
 
     const handleEdit = () => {
         setEditedContent(post.content);
         setIsEditing(true);
     };
+
+    const handleSaveEdit = async () => {
+        await updateMutation.mutateAsync({
+            itemId: post.id,
+            data: { content: editedContent },
+        });
+        setIsEditing(false);
+    };
+
+    const isLoading = approveMutation.isPending || rejectMutation.isPending || updateMutation.isPending;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -97,6 +128,9 @@ export function GenerationPreview({ post, isOpen, onClose }: GenerationPreviewPr
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <DialogTitle className="text-lg">Podgląd posta</DialogTitle>
+                            <DialogDescription className="sr-only">
+                                Podgląd wygenerowanego posta z możliwością zatwierdzenia lub odrzucenia
+                            </DialogDescription>
                             <Badge
                                 variant="outline"
                                 style={{
@@ -107,7 +141,11 @@ export function GenerationPreview({ post, isOpen, onClose }: GenerationPreviewPr
                             >
                                 {statusConfig.label}
                             </Badge>
-                            <Badge variant="secondary">{contentTypeConfig.label}</Badge>
+                            {providerUsed && (
+                                <Badge variant="secondary">
+                                    {providerUsed.toUpperCase()}
+                                </Badge>
+                            )}
                         </div>
                     </div>
                 </DialogHeader>
@@ -117,40 +155,33 @@ export function GenerationPreview({ post, isOpen, onClose }: GenerationPreviewPr
                     <div className="space-y-4">
                         {/* Meta Info */}
                         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <Calendar className="h-4 w-4" />
-                  {format(new Date(post.scheduledFor), 'dd MMMM yyyy', { locale: pl })}
-              </span>
                             <span className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4" />
-                                {format(new Date(post.scheduledFor), 'HH:mm')}
-              </span>
+                                <Calendar className="h-4 w-4" />
+                                {format(new Date(post.scheduled_for), 'dd MMMM yyyy', { locale: pl })}
+                            </span>
                             <span className="flex items-center gap-1.5">
-                <Sparkles className="h-4 w-4" />
-                                {post.generatedBy.toUpperCase()}
-              </span>
+                                <Clock className="h-4 w-4" />
+                                {format(new Date(post.scheduled_for), 'HH:mm')}
+                            </span>
+                            {providerUsed && (
+                                <span className="flex items-center gap-1.5">
+                                    <Sparkles className="h-4 w-4" />
+                                    {providerUsed.toUpperCase()}
+                                </span>
+                            )}
                         </div>
 
-                        {/* Platforms */}
+                        {/* Platform */}
                         <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">Platformy:</span>
-                            <div className="flex gap-1">
-                                {post.platforms.map((platform) => (
-                                    <Button
-                                        key={platform}
-                                        variant={activePlatform === platform ? 'default' : 'outline'}
-                                        size="sm"
-                                        className={cn(
-                                            'h-8 gap-1.5',
-                                            activePlatform === platform && 'bg-violet-600 hover:bg-violet-700'
-                                        )}
-                                        onClick={() => setActivePlatform(platform)}
-                                    >
-                                        {PLATFORM_ICONS[platform]}
-                                        <span className="capitalize">{platform}</span>
-                                    </Button>
-                                ))}
-                            </div>
+                            <span className="text-sm text-muted-foreground">Platforma:</span>
+                            <Button
+                                variant="default"
+                                size="sm"
+                                className="h-8 gap-1.5 bg-violet-600 hover:bg-violet-700"
+                            >
+                                {PLATFORM_ICONS[platform]}
+                                <span className="capitalize">{platform}</span>
+                            </Button>
                         </div>
 
                         {/* Content */}
@@ -179,7 +210,14 @@ export function GenerationPreview({ post, isOpen, onClose }: GenerationPreviewPr
                                         className="min-h-[200px]"
                                     />
                                     <div className="flex gap-2">
-                                        <Button size="sm" onClick={() => setIsEditing(false)}>
+                                        <Button
+                                            size="sm"
+                                            onClick={handleSaveEdit}
+                                            disabled={updateMutation.isPending}
+                                        >
+                                            {updateMutation.isPending && (
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            )}
                                             Zapisz
                                         </Button>
                                         <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>
@@ -194,12 +232,23 @@ export function GenerationPreview({ post, isOpen, onClose }: GenerationPreviewPr
                             )}
                         </Card>
 
+                        {/* Hashtags */}
+                        {post.hashtags && post.hashtags.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                                {post.hashtags.map((tag, index) => (
+                                    <Badge key={index} variant="secondary">
+                                        #{tag}
+                                    </Badge>
+                                ))}
+                            </div>
+                        )}
+
                         {/* Image */}
-                        {post.imageUrl && (
+                        {post.image_url && (
                             <Card className="overflow-hidden">
                                 <div className="relative aspect-video">
                                     <Image
-                                        src={post.imageUrl}
+                                        src={post.image_url}
                                         alt="Generated"
                                         fill
                                         className="object-cover"
@@ -208,27 +257,39 @@ export function GenerationPreview({ post, isOpen, onClose }: GenerationPreviewPr
                                     <div className="absolute bottom-2 right-2">
                                         <Badge variant="secondary" className="bg-black/50 text-white">
                                             <ImageIcon className="mr-1 h-3 w-3" />
-                                            AI Generated
+                                            {post.image_provider_used || 'AI'} Generated
                                         </Badge>
                                     </div>
                                 </div>
-                                {post.imagePrompt && (
-                                    <div className="border-t bg-muted/50 p-3">
-                                        <p className="text-xs text-muted-foreground">
-                                            <span className="font-medium">Prompt:</span> {post.imagePrompt}
-                                        </p>
-                                    </div>
-                                )}
                             </Card>
                         )}
 
                         {/* Topic */}
-                        {post.topic && (
+                        {post.topic_used && (
                             <div className="flex items-center gap-2">
                                 <span className="text-sm text-muted-foreground">Temat:</span>
                                 <Badge variant="outline" className="text-violet-600">
-                                    {post.topic}
+                                    {post.topic_used}
                                 </Badge>
+                            </div>
+                        )}
+
+                        {/* Category */}
+                        {post.category && (
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground">Kategoria:</span>
+                                <Badge variant="outline">
+                                    {post.category}
+                                </Badge>
+                            </div>
+                        )}
+
+                        {/* User Notes */}
+                        {post.user_notes && (
+                            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
+                                <p className="text-sm text-amber-800 dark:text-amber-200">
+                                    <span className="font-medium">Notatka:</span> {post.user_notes}
+                                </p>
                             </div>
                         )}
                     </div>
@@ -239,19 +300,19 @@ export function GenerationPreview({ post, isOpen, onClose }: GenerationPreviewPr
 
                         <AnimatePresence mode="wait">
                             <motion.div
-                                key={activePlatform}
+                                key={platform}
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -20 }}
                                 transition={{ duration: 0.2 }}
                             >
-                                {activePlatform === 'instagram' && (
+                                {platform === 'instagram' && (
                                     <InstagramPreview post={post} />
                                 )}
-                                {activePlatform === 'facebook' && (
+                                {platform === 'facebook' && (
                                     <FacebookPreview post={post} />
                                 )}
-                                {activePlatform === 'linkedin' && (
+                                {platform === 'linkedin' && (
                                     <LinkedInPreview post={post} />
                                 )}
                             </motion.div>
@@ -260,9 +321,9 @@ export function GenerationPreview({ post, isOpen, onClose }: GenerationPreviewPr
                 </div>
 
                 {/* Footer Actions */}
-                {post.status === 'pending_review' && (
+                {post.status === 'pending' && (
                     <div className="flex items-center justify-between border-t bg-muted/30 p-4">
-                        <Button variant="outline" onClick={handleRegenerate}>
+                        <Button variant="outline" disabled={isLoading}>
                             <RefreshCw className="mr-2 h-4 w-4" />
                             Regeneruj
                         </Button>
@@ -271,14 +332,23 @@ export function GenerationPreview({ post, isOpen, onClose }: GenerationPreviewPr
                                 variant="outline"
                                 className="border-destructive/50 text-destructive hover:bg-destructive/10"
                                 onClick={handleReject}
+                                disabled={isLoading}
                             >
+                                {rejectMutation.isPending && (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                )}
                                 Odrzuć
                             </Button>
                             <Button
                                 className="bg-green-600 text-white hover:bg-green-700"
                                 onClick={handleApprove}
+                                disabled={isLoading}
                             >
-                                <Check className="mr-2 h-4 w-4" />
+                                {approveMutation.isPending ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Check className="mr-2 h-4 w-4" />
+                                )}
                                 Zatwierdź i zaplanuj
                             </Button>
                         </div>
@@ -289,8 +359,11 @@ export function GenerationPreview({ post, isOpen, onClose }: GenerationPreviewPr
     );
 }
 
-// Instagram Preview Component
-function InstagramPreview({ post }: { post: QueuedPost }) {
+// ============================================================
+// INSTAGRAM PREVIEW
+// ============================================================
+
+function InstagramPreview({ post }: { post: BackendQueueItem }) {
     return (
         <Card className="overflow-hidden bg-white text-black dark:bg-white">
             {/* Header */}
@@ -308,10 +381,10 @@ function InstagramPreview({ post }: { post: QueuedPost }) {
             </div>
 
             {/* Image */}
-            {post.imageUrl ? (
+            {post.image_url ? (
                 <div className="relative aspect-square w-full">
                     <Image
-                        src={post.imageUrl}
+                        src={post.image_url}
                         alt="Post"
                         fill
                         className="object-cover"
@@ -347,8 +420,11 @@ function InstagramPreview({ post }: { post: QueuedPost }) {
     );
 }
 
-// Facebook Preview Component
-function FacebookPreview({ post }: { post: QueuedPost }) {
+// ============================================================
+// FACEBOOK PREVIEW
+// ============================================================
+
+function FacebookPreview({ post }: { post: BackendQueueItem }) {
     return (
         <Card className="overflow-hidden bg-white text-black dark:bg-white">
             {/* Header */}
@@ -369,10 +445,10 @@ function FacebookPreview({ post }: { post: QueuedPost }) {
             </div>
 
             {/* Image */}
-            {post.imageUrl && (
+            {post.image_url && (
                 <div className="relative aspect-video w-full">
                     <Image
-                        src={post.imageUrl}
+                        src={post.image_url}
                         alt="Post"
                         fill
                         className="object-cover"
@@ -402,8 +478,11 @@ function FacebookPreview({ post }: { post: QueuedPost }) {
     );
 }
 
-// LinkedIn Preview Component
-function LinkedInPreview({ post }: { post: QueuedPost }) {
+// ============================================================
+// LINKEDIN PREVIEW
+// ============================================================
+
+function LinkedInPreview({ post }: { post: BackendQueueItem }) {
     return (
         <Card className="overflow-hidden bg-white text-black dark:bg-white">
             {/* Header */}
@@ -425,10 +504,10 @@ function LinkedInPreview({ post }: { post: QueuedPost }) {
             </div>
 
             {/* Image */}
-            {post.imageUrl && (
+            {post.image_url && (
                 <div className="relative aspect-video w-full">
                     <Image
-                        src={post.imageUrl}
+                        src={post.image_url}
                         alt="Post"
                         fill
                         className="object-cover"
@@ -439,13 +518,13 @@ function LinkedInPreview({ post }: { post: QueuedPost }) {
 
             {/* Stats */}
             <div className="flex items-center gap-2 px-4 py-2 text-xs text-gray-500">
-        <span className="flex items-center gap-1">
-          <span className="flex -space-x-1">
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[8px] text-white">👍</span>
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[8px] text-white">❤️</span>
-          </span>
-          156
-        </span>
+                <span className="flex items-center gap-1">
+                    <span className="flex -space-x-1">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[8px] text-white">👍</span>
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[8px] text-white">❤️</span>
+                    </span>
+                    156
+                </span>
                 <span>·</span>
                 <span>23 komentarze</span>
                 <span>·</span>

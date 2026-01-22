@@ -97,9 +97,15 @@ export function LandingFooter() {
                                         type="email"
                                         placeholder="Twój email"
                                         className="pl-10 h-11 bg-background"
+                                        aria-label="Adres email do newslettera"
                                     />
                                 </div>
-                                <Button size="icon" className="h-11 w-11 flex-shrink-0">
+                                {/* ✅ FIX: Dodano aria-label */}
+                                <Button
+                                    size="icon"
+                                    className="h-11 w-11 flex-shrink-0"
+                                    aria-label="Zapisz się do newslettera"
+                                >
                                     <ArrowRight className="w-4 h-4" />
                                 </Button>
                             </div>
@@ -112,7 +118,8 @@ export function LandingFooter() {
                     {/* Links */}
                     {Object.entries(footerLinks).map(([key, section]) => (
                         <div key={key}>
-                            <h4 className="font-semibold mb-4">{section.title}</h4>
+                            {/* ✅ FIX: Zmieniono h4 na h3 dla poprawnej hierarchii */}
+                            <h3 className="font-semibold mb-4 text-sm">{section.title}</h3>
                             <ul className="space-y-3">
                                 {section.links.map((link) => (
                                     <li key={link.label}>
