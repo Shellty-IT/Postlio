@@ -1,4 +1,6 @@
-﻿from pydantic import BaseModel, Field
+﻿# postlio_backend/app/schemas/ai.py
+
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from enum import Enum
 
@@ -12,8 +14,9 @@ class TextProviderEnum(str, Enum):
 
 class ImageProviderEnum(str, Enum):
     POLLINATIONS = "pollinations"
-    CLIPDROP = "clipdrop"
+    GEMINI = "gemini"  # NOWY - Gemini Image (Nano Banana)
     HUGGINGFACE = "huggingface"
+    CLIPDROP = "clipdrop"  # Płatny
 
 
 class CategoryEnum(str, Enum):
@@ -140,6 +143,8 @@ class GeneratedImageContent(BaseModel):
     image_url: Optional[str] = None
     image_data: Optional[str] = None  # base64
     prompt: str
+    prompt_translated: Optional[str] = None  # NOWE - dla auto-tłumaczenia
+    prompt_enhanced: Optional[str] = None  # NOWE
     provider: str
     model: Optional[str] = None
     width: Optional[int] = None
@@ -154,11 +159,15 @@ class GenerateImageResponse(BaseModel):
 
 class ProviderInfo(BaseModel):
     name: str
+    display_name: Optional[str] = None  # NOWE
     available: bool
+    is_free: Optional[bool] = True  # NOWE
     models: List[str]
     is_default: bool
+    description: Optional[str] = None  # NOWE
 
 
 class ProvidersListResponse(BaseModel):
     text_providers: List[ProviderInfo]
     image_providers: List[ProviderInfo]
+

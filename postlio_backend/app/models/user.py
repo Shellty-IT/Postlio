@@ -22,8 +22,10 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships - na końcu klasy
+    # Relationships
     brands = relationship("Brand", back_populates="user", cascade="all, delete-orphan")
+    autopilot_configs = relationship("AutopilotConfig", back_populates="user", cascade="all, delete-orphan")
+    autopilot_queue_items = relationship("AutopilotQueueItem", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email='{self.email}')>"

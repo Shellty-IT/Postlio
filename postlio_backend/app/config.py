@@ -1,59 +1,73 @@
-﻿from pydantic_settings import BaseSettings
-from functools import lru_cache
+﻿# postlio_backend/app/config.py
+"""
+Konfiguracja aplikacji.
+"""
+from pydantic_settings import BaseSettings
 from typing import Optional
 
 
 class Settings(BaseSettings):
     # App
-    APP_NAME: str = "Postlio API"
-    APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
-
-    # API
+    APP_NAME: str = "Postlio"
+    APP_VERSION: str = "1.0.0"
     API_V1_PREFIX: str = "/api/v1"
 
-    # Database
-    DATABASE_URL: str = "sqlite+aiosqlite:///./postlio.db"
-
-    # Redis
-    REDIS_URL: str = "redis://localhost:6379/0"
-
     # Security
-    SECRET_KEY: str = "your-super-secret-key-change-in-production-min-32-chars"
-    ALGORITHM: str = "HS256"
+    SECRET_KEY: str = "dev-secret-key-change-this-in-production-min-32-chars"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    ALGORITHM: str = "HS256"
 
-    # === TEXT AI PROVIDERS ===
-    GOOGLE_API_KEY: Optional[str] = None  # Gemini
-    GROQ_API_KEY: Optional[str] = None  # Groq (Llama, Mixtral)
+    # Token Encryption (dla social media tokenów)
+    # Generuj: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    TOKEN_ENCRYPTION_KEY: Optional[str] = None
 
-    # === IMAGE AI PROVIDERS ===
-    CLIPDROP_API_KEY: Optional[str] = None  # Stability AI
-    HUGGINGFACE_API_KEY: Optional[str] = None  # Stable Diffusion
-    # Pollinations - no key needed
+    # Database - PostgreSQL (Neon)
+    DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost/postlio"
 
-    # Default providers
+    # AI Providers
+    GOOGLE_API_KEY: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = None
+    CLIPDROP_API_KEY: Optional[str] = None
+    HUGGINGFACE_API_KEY: Optional[str] = None
+
+    # AI Defaults
     DEFAULT_TEXT_PROVIDER: str = "gemini"
     DEFAULT_IMAGE_PROVIDER: str = "pollinations"
 
-    # Social Media APIs
+    # Frontend
+    FRONTEND_URL: str = "http://localhost:3000"
+
+    # ==================== SOCIAL MEDIA APIs ====================
+
+    # Facebook / Instagram (Meta for Developers)
+    # https://developers.facebook.com/apps/
     FACEBOOK_APP_ID: Optional[str] = None
     FACEBOOK_APP_SECRET: Optional[str] = None
+    FACEBOOK_API_VERSION: str = "v18.0"
+
+    # LinkedIn (LinkedIn Developers)
+    # https://www.linkedin.com/developers/apps/
     LINKEDIN_CLIENT_ID: Optional[str] = None
     LINKEDIN_CLIENT_SECRET: Optional[str] = None
 
-    # Frontend URL (CORS)
-    FRONTEND_URL: str = "http://localhost:3000"
+    # OAuth Callback URLs (będą używane w OAuth flow)
+    @property
+    def facebook_redirect_uri(self) -> str:
+        return f"{self.FRONTEND_URL}/api/auth/callback/facebook"
+
+    @property
+    def instagram_redirect_uri(self) -> str:
+        return f"{self.FRONTEND_URL}/api/auth/callback/instagram"
+
+    @property
+    def linkedin_redirect_uri(self) -> str:
+        return f"{self.FRONTEND_URL}/api/auth/callback/linkedin"
 
     class Config:
         env_file = ".env"
-        case_sensitive = True
+        extra = "ignore"
 
 
-@lru_cache()
-def get_settings() -> Settings:
-    return Settings()
-
-
-settings = get_settings()
+settings = Settings()

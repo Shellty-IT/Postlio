@@ -220,3 +220,15 @@ async def list_available_models(
         "default_model": gemini_provider.default_model,
         "configured_models": gemini_provider.models,
     }
+
+
+@router.get("/models/list")
+async def list_available_models(
+        current_user: User = Depends(get_current_user)
+):
+    """Lista dostępnych modeli Gemini."""
+    from app.services.ai.image.gemini_image import GeminiImageProvider
+
+    provider = GeminiImageProvider()
+    result = await provider.list_available_models()
+    return result

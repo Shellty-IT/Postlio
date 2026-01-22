@@ -1,15 +1,20 @@
-﻿from abc import ABC, abstractmethod
+﻿# postlio_backend/app/services/ai/image/base.py
+
+from abc import ABC, abstractmethod
 from typing import Optional, List, Dict, Any
 from enum import Enum
 
 
 class ImageProvider(str, Enum):
+    """Available image generation providers."""
     POLLINATIONS = "pollinations"
-    CLIPDROP = "clipdrop"
+    GEMINI = "gemini"  # NOWY - Gemini Nano Banana
     HUGGINGFACE = "huggingface"
+    CLIPDROP = "clipdrop"  # Płatny
 
 
 class ImageStyle(str, Enum):
+    """Available image styles."""
     REALISTIC = "realistic"
     ARTISTIC = "artistic"
     CARTOON = "cartoon"
@@ -19,15 +24,16 @@ class ImageStyle(str, Enum):
 
 
 class BaseImageProvider(ABC):
-    """Abstract base class for image AI providers."""
+    """Base class for all image providers."""
 
-    name: str = "base"
+    name: str
     models: List[str] = []
+    is_free: bool = True  # Domyślnie darmowy
 
     @property
     @abstractmethod
     def is_available(self) -> bool:
-        """Check if provider is available."""
+        """Check if the provider is available (API key configured, etc.)."""
         pass
 
     @abstractmethod
@@ -39,38 +45,20 @@ class BaseImageProvider(ABC):
             height: int = 1024,
             model: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Generate an image from prompt."""
+        """Generate an image from a text prompt."""
         pass
 
-    def _enhance_prompt(
-            self,
-            prompt: str,
-            style: Optional[str] = None,
-            platform: Optional[str] = None,
-    ) -> str:
-        """Enhance prompt for better results."""
-
-        style_additions = {
-            "realistic": "photorealistic, high quality, detailed, 8k",
-            "artistic": "artistic, creative, beautiful composition",
-            "cartoon": "cartoon style, colorful, fun",
-            "minimalist": "minimalist, clean, simple, modern",
-            "vibrant": "vibrant colors, eye-catching, dynamic",
-            "professional": "professional, corporate, clean, modern",
+    def _enhance_prompt(self, prompt: str, style: Optional[str] = None) -> str:
+        """Enhance the prompt with style modifiers."""
+        style_modifiers = {
+            ImageStyle.REALISTIC.value: "photorealistic, highly detailed, 8k, professional photography",
+            ImageStyle.ARTISTIC.value: "artistic, painterly, creative, expressive, fine art",
+            ImageStyle.CARTOON.value: "cartoon style, animated, colorful, fun, illustration",
+            ImageStyle.MINIMALIST.value: "minimalist, clean, simple, modern, elegant design",
+            ImageStyle.VIBRANT.value: "vibrant colors, dynamic, energetic, bold, eye-catching",
+            ImageStyle.PROFESSIONAL.value: "professional, clean, corporate, polished, business",
         }
 
-        platform_sizes = {
-            "instagram": "square format, instagram-ready",
-            "facebook": "landscape format, facebook-ready",
-            "linkedin": "professional style, linkedin-ready",
-        }
-
-        enhanced = prompt
-
-        if style and style in style_additions:
-            enhanced += f", {style_additions[style]}"
-
-        if platform and platform in platform_sizes:
-            enhanced += f", {platform_sizes[platform]}"
-
-        return enhanced
+        if style and style in style_modifiers:
+            return f"{prompt}, {style_modifiers[style]}"
+        return prompt

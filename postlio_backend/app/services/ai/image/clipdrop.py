@@ -1,4 +1,6 @@
-﻿from typing import Optional, List, Dict, Any
+﻿# postlio_backend/app/services/ai/image/clipdrop.py
+
+from typing import Optional, Dict, Any
 import httpx
 import base64
 from app.config import settings
@@ -6,10 +8,16 @@ from app.services.ai.image.base import BaseImageProvider
 
 
 class ClipdropProvider(BaseImageProvider):
-    """Clipdrop (Stability AI) provider."""
+    """
+    Clipdrop (Stability AI) provider.
+
+    ⚠️ UWAGA: Ten provider jest PŁATNY!
+    Wymaga aktywnej subskrypcji ClipDrop.
+    """
 
     name = "clipdrop"
     models = ["stable-diffusion"]
+    is_free = False  # PŁATNY!
 
     def __init__(self):
         self.api_key = settings.CLIPDROP_API_KEY
@@ -17,7 +25,7 @@ class ClipdropProvider(BaseImageProvider):
 
     @property
     def is_available(self) -> bool:
-        return self.api_key is not None
+        return self.api_key is not None and len(self.api_key) > 0
 
     async def generate_image(
             self,
@@ -29,7 +37,11 @@ class ClipdropProvider(BaseImageProvider):
     ) -> Dict[str, Any]:
 
         if not self.is_available:
-            return {"success": False, "error": "Clipdrop API key not configured", "provider": self.name}
+            return {
+                "success": False,
+                "error": "ClipDrop API key not configured. Note: ClipDrop is a paid service.",
+                "provider": self.name
+            }
 
         enhanced_prompt = self._enhance_prompt(prompt, style)
 
@@ -42,21 +54,36 @@ class ClipdropProvider(BaseImageProvider):
                 )
 
                 if response.status_code == 200:
-                    # Response is image bytes
                     image_base64 = base64.b64encode(response.content).decode("utf-8")
 
                     return {
                         "success": True,
                         "image_base64": image_base64,
                         "image_data": f"data:image/png;base64,{image_base64}",
-                        "prompt": enhanced_prompt,
+                        "prompt": prompt,
+                        "prompt_enhanced": enhanced_prompt,
                         "provider": self.name,
                         "model": "stable-diffusion",
                     }
+
+                elif response.status_code == 402:
+                    return {
+                        "success": False,
+                        "error": "Payment required. ClipDrop requires an active subscription.",
+                        "provider": self.name,
+                    }
+
+                elif response.status_code == 401:
+                    return {
+                        "success": False,
+                        "error": "Invalid API key.",
+                        "provider": self.name,
+                    }
+
                 else:
                     return {
                         "success": False,
-                        "error": f"API error: {response.status_code} - {response.text}",
+                        "error": f"API error: {response.status_code} - {response.text[:200]}",
                         "provider": self.name,
                     }
 

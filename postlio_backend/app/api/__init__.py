@@ -1,3 +1,4 @@
+# postlio_backend/app/api/__init__.py
 """
-Postlio API Package.
+API package.
 """

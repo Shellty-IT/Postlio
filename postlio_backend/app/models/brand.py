@@ -20,7 +20,7 @@ class Brand(Base):
     logo_url: Mapped[str] = mapped_column(String(500), nullable=True)
 
     # Kolory
-    primary_color: Mapped[str] = mapped_column(String(7), default="#8B5CF6")  # hex
+    primary_color: Mapped[str] = mapped_column(String(7), default="#8B5CF6")
     secondary_color: Mapped[str] = mapped_column(String(7), nullable=True)
 
     # Informacje o marce
@@ -28,21 +28,6 @@ class Brand(Base):
     target_audience: Mapped[str] = mapped_column(Text, nullable=True)
 
     # Voice DNA - przechowywane jako JSON
-    # Struktura:
-    # {
-    #   "tone_formality": 50,
-    #   "tone_energy": 50,
-    #   "tone_humor": 30,
-    #   "tone_emotion": 50,
-    #   "personality_traits": ["professional", "friendly"],
-    #   "communication_style": "informative",
-    #   "keywords": [],
-    #   "hashtags": [],
-    #   "forbidden_words": [],
-    #   "sample_posts": [],
-    #   "emoji_usage": "moderate",
-    #   "preferred_emojis": []
-    # }
     voice_dna: Mapped[dict] = mapped_column(JSON, nullable=True, default=dict)
 
     # Status
@@ -56,8 +41,10 @@ class Brand(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationship
+    # Relationships
     user = relationship("User", back_populates="brands")
+    autopilot_config = relationship("AutopilotConfig", back_populates="brand", uselist=False, cascade="all, delete-orphan")
+    autopilot_queue_items = relationship("AutopilotQueueItem", back_populates="brand", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Brand(id={self.id}, name='{self.name}')>"

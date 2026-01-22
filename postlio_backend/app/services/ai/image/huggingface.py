@@ -1,4 +1,6 @@
-﻿from typing import Optional, List, Dict, Any
+﻿# postlio_backend/app/services/ai/image/huggingface.py
+
+from typing import Optional, Dict, Any
 import httpx
 import base64
 from app.config import settings
@@ -6,25 +8,89 @@ from app.services.ai.image.base import BaseImageProvider
 
 
 class HuggingFaceProvider(BaseImageProvider):
-    """HuggingFace Inference API provider - zaktualizowany endpoint."""
+    """HuggingFace Inference API provider - z auto-tłumaczeniem PL→EN."""
 
     name = "huggingface"
     models = [
         "black-forest-labs/FLUX.1-dev",
         "stabilityai/stable-diffusion-xl-base-1.0",
         "runwayml/stable-diffusion-v1-5",
-        "CompVis/stable-diffusion-v1-4",
     ]
+    is_free = True
 
     def __init__(self):
         self.api_key = settings.HUGGINGFACE_API_KEY
-        # Nowy endpoint HuggingFace
         self.base_url = "https://router.huggingface.co/hf-inference/models"
         self.default_model = "black-forest-labs/FLUX.1-dev"
+        self._text_provider = None
 
     @property
     def is_available(self) -> bool:
         return self.api_key is not None and len(self.api_key) > 0
+
+    def _has_non_ascii(self, text: str) -> bool:
+        """Sprawdza czy tekst zawiera znaki spoza ASCII."""
+        try:
+            text.encode('ascii')
+            return False
+        except UnicodeEncodeError:
+            return True
+
+    def _is_mostly_polish(self, text: str) -> bool:
+        """Heurystyka: sprawdza czy tekst wygląda na polski."""
+        polish_words = [
+            'i', 'w', 'z', 'na', 'do', 'o', 'się', 'jest', 'to', 'że',
+            'nie', 'jak', 'po', 'co', 'tak', 'za', 'od', 'ale', 'czy',
+            'ze', 'przez', 'przy', 'dla', 'lub', 'oraz', 'bez', 'nad',
+            'pod', 'przed', 'między', 'według', 'podczas', 'czyli',
+            'piękna', 'piękny', 'żółty', 'zielony', 'czerwony', 'biały',
+            'czarny', 'niebieski', 'duży', 'mały', 'stary', 'nowy',
+            'łąka', 'góry', 'morze', 'las', 'drzewo', 'kwiat', 'słońce',
+            'niebo', 'chmury', 'deszcz', 'śnieg', 'wiosna', 'lato',
+            'jesień', 'zima', 'dzień', 'noc', 'rano', 'wieczór', 'świt',
+            'kociaki', 'koty', 'kot', 'pies', 'psy', 'zwierzęta',
+            'śpiące', 'puchate', 'wiklinowy', 'koszyk', 'koszyku',
+            'trzy', 'dwa', 'jeden', 'cztery', 'pięć', 'sześć',
+            'zdjęcie', 'obraz', 'ilustracja', 'grafika',
+        ]
+        words = text.lower().split()
+        polish_count = sum(1 for w in words if w in polish_words)
+        return polish_count >= 1 or self._has_non_ascii(text)
+
+    async def _translate_to_english(self, text: str) -> str:
+        """Tłumaczy tekst na angielski używając Gemini."""
+        try:
+            from app.services.ai.text.gemini import GeminiProvider
+
+            if self._text_provider is None:
+                self._text_provider = GeminiProvider()
+
+            if not self._text_provider.is_available:
+                print(f"⚠️ HuggingFace: Gemini unavailable for translation, using original")
+                return text
+
+            translation_prompt = (
+                f"Translate this image description to English. "
+                f"Keep it as a descriptive prompt for image generation. "
+                f"Return ONLY the translation, nothing else:\n\n{text}"
+            )
+
+            result = await self._text_provider.generate_text(
+                prompt=translation_prompt,
+                max_tokens=150,
+                temperature=0.1,
+            )
+
+            if result.get("success") and result.get("text"):
+                translated = result["text"].strip().strip('"\'')
+                print(f"✅ HuggingFace: Translated '{text}' → '{translated}'")
+                return translated
+
+            return text
+
+        except Exception as e:
+            print(f"⚠️ HuggingFace: Translation failed: {e}")
+            return text
 
     async def generate_image(
             self,
@@ -42,7 +108,16 @@ class HuggingFaceProvider(BaseImageProvider):
                 "provider": self.name
             }
 
+        original_prompt = prompt
+
+        # 1. Sprawdź czy prompt jest po polsku i przetłumacz
+        if self._is_mostly_polish(prompt):
+            print(f"🔄 HuggingFace: Detected Polish prompt, translating...")
+            prompt = await self._translate_to_english(prompt)
+
+        # 2. Wzbogać prompt o styl
         enhanced_prompt = self._enhance_prompt(prompt, style)
+
         model_name = model if model in self.models else self.default_model
 
         # Lista modeli do wypróbowania (fallback)
@@ -50,7 +125,7 @@ class HuggingFaceProvider(BaseImageProvider):
 
         last_error = None
 
-        for current_model in models_to_try:
+        for current_model in models_to_try[:2]:  # Próbuj max 2 modele
             try:
                 print(f"🔄 HuggingFace: Trying {current_model}...")
 
@@ -72,7 +147,6 @@ class HuggingFaceProvider(BaseImageProvider):
                     )
 
                     if response.status_code == 200:
-                        # Sprawdź czy odpowiedź to obraz
                         content_type = response.headers.get("content-type", "")
 
                         if "image" in content_type:
@@ -83,31 +157,34 @@ class HuggingFaceProvider(BaseImageProvider):
                                 "success": True,
                                 "image_base64": image_base64,
                                 "image_data": f"data:image/png;base64,{image_base64}",
-                                "prompt": enhanced_prompt,
+                                "prompt": original_prompt,
+                                "prompt_translated": prompt if prompt != original_prompt else None,
+                                "prompt_enhanced": enhanced_prompt,
                                 "provider": self.name,
                                 "model": current_model,
                                 "width": width,
                                 "height": height,
                             }
                         else:
-                            # Odpowiedź JSON (prawdopodobnie błąd)
-                            error_data = response.json()
-                            last_error = error_data.get("error", "Unknown error")
+                            try:
+                                error_data = response.json()
+                                last_error = error_data.get("error", "Unknown error")
+                            except:
+                                last_error = "Invalid response format"
                             print(f"❌ HuggingFace: {current_model} - {last_error}")
 
                     elif response.status_code == 503:
-                        # Model is loading
                         try:
                             error_data = response.json()
                             estimated_time = error_data.get("estimated_time", 30)
-                            last_error = f"Model loading (~{estimated_time}s)"
+                            last_error = f"Model loading (~{estimated_time}s). Try again in a moment."
                             print(f"⏳ HuggingFace: {current_model} is loading...")
                         except:
                             last_error = "Model is loading"
                         continue
 
                     elif response.status_code == 429:
-                        last_error = "Rate limit exceeded"
+                        last_error = "Rate limit exceeded. Try again later."
                         print(f"⚠️ HuggingFace: Rate limited")
                         continue
 
@@ -121,7 +198,7 @@ class HuggingFaceProvider(BaseImageProvider):
                         continue
 
             except httpx.TimeoutException:
-                last_error = "Request timeout (model may be loading)"
+                last_error = "Request timeout. Model may be loading, try again."
                 print(f"⏳ HuggingFace: Timeout for {current_model}")
                 continue
 
