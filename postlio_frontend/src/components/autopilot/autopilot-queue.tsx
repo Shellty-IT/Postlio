@@ -130,9 +130,9 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
         );
     };
 
-    // Handlers
+// Handlers
     const handleApprove = (postId: number) => {
-        approveItem.mutate(postId);
+        approveItem.mutate({ itemId: postId });
     };
 
     const handleReject = (postId: number) => {
@@ -140,7 +140,7 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
     };
 
     const handleDelete = (postId: number) => {
-        deleteItem.mutate(postId);
+        deleteItem.mutate(postId);  // Ten jest OK - hook przyjmuje number
     };
 
     // No config selected
