@@ -339,7 +339,29 @@ export interface PublishResponse {
     platform_post_url?: string;
     error?: string;
     published_at?: string;
-    requires_manual?: boolean;  // ← DODAJ TO
+    requires_manual?: boolean;
+}
+
+export interface BulkPublishResponse {
+    total: number;
+    published: number;
+    failed: number;
+    skipped: number;
+    results: PublishResponse[];
+}
+
+export interface SocialStatusResponse {
+    config_id: number;
+    platforms: Record<string, {
+        connected: boolean;
+        account_id?: number;
+        account_name?: string;
+        account_type?: string;
+        can_auto_publish: boolean;
+        error?: string;
+    }>;
+    can_auto_publish: boolean;
+    missing_platforms: string[];
 }
 
 export interface ManualPublishData {
