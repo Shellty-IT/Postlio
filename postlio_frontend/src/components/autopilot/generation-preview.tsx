@@ -97,8 +97,7 @@ export function GenerationPreview({ post, isOpen, onClose }: GenerationPreviewPr
     };
 
     const handleApprove = async () => {
-        await approveMutation.mutateAsync(post.id);
-        onClose();
+        await approveMutation.mutateAsync({ itemId: post.id });        onClose();
     };
 
     const handleReject = async () => {
