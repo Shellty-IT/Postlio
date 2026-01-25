@@ -9,36 +9,44 @@ import { apiClient } from './client';
 import type { Post, Platform, PostStatus } from '@/types';
 
 // ============================================================
-// TYPY
+// TYPY - DOPASOWANE DO BACKENDU
 // ============================================================
 
+/**
+ * Request do tworzenia posta - ZGODNY z backend PostCreate
+ */
 export interface CreatePostRequest {
     content: string;
-    platforms: Platform[];
-    brand_id?: string;
-    scheduled_at?: string; // ISO date string
-    media_urls?: string[];
-    hashtags?: string[];
-    status?: PostStatus;
+    platform: Platform;                         // ← ZMIANA: singular
+    brand_id?: number;                          // ← ZMIANA: number
+    image_url?: string;
+    image_prompt?: string;
+    scheduled_at?: string;                      // ISO date string
     ai_generated?: boolean;
-    ai_provider?: string;
+    ai_model?: string;
+    generation_params?: Record<string, unknown>;
 }
 
+/**
+ * Request do aktualizacji posta - ZGODNY z backend PostUpdate
+ */
 export interface UpdatePostRequest {
     content?: string;
-    platforms?: Platform[];
-    scheduled_at?: string | null;
-    media_urls?: string[];
-    hashtags?: string[];
+    platform?: Platform;                        // ← ZMIANA: singular
+    brand_id?: number;                          // ← ZMIANA: number
+    image_url?: string;
+    image_prompt?: string;
     status?: PostStatus;
+    scheduled_at?: string | null;
 }
 
 export interface PostsListParams {
     page?: number;
     limit?: number;
+    offset?: number;
     status?: PostStatus;
     platform?: Platform;
-    brand_id?: string;
+    brand_id?: number;
     from_date?: string;
     to_date?: string;
     search?: string;
@@ -46,16 +54,11 @@ export interface PostsListParams {
 
 export interface PostsListResponse {
     posts: Post[];
-    total: number;
-    page: number;
-    limit: number;
-    total_pages: number;
+    count: number;                              // ← ZMIANA: backend zwraca 'count' nie 'total'
 }
 
 export interface SchedulePostRequest {
-    post_id: string;
     scheduled_at: string;
-    platforms: Platform[];
 }
 
 export interface BulkActionRequest {
@@ -79,6 +82,8 @@ export interface CalendarEvent {
     platforms: Platform[];
     status: PostStatus;
     preview?: string;
+    image_url?: string;
+    brand_id?: number;
 }
 
 // ============================================================
@@ -116,7 +121,7 @@ export async function getPost(id: string): Promise<Post> {
  * Utwórz nowy post
  */
 export async function createPost(data: CreatePostRequest): Promise<Post> {
-    return apiClient.post<Post>('/posts', data);
+    return apiClient.post<Post>('/posts/', data);
 }
 
 /**
@@ -140,12 +145,10 @@ export async function deletePost(id: string): Promise<void> {
  * Zaplanuj post
  */
 export async function schedulePost(
+    postId: string,
     data: SchedulePostRequest
 ): Promise<Post> {
-    return apiClient.post<Post>(`/posts/${data.post_id}/schedule`, {
-        scheduled_at: data.scheduled_at,
-        platforms: data.platforms,
-    });
+    return apiClient.post<Post>(`/posts/${postId}/schedule`, data);
 }
 
 /**

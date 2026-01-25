@@ -117,13 +117,6 @@ export const IMAGE_PROVIDERS: ProviderInfo[] = [
         description: 'Wysokiej jakości. Auto-tłumaczenie PL→EN.',
         isFree: true,
     },
-    // ClipDrop ukryty bo płatny - odkomentuj jeśli chcesz pokazać
-    // {
-    //     id: 'clipdrop',
-    //     name: 'ClipDrop (Płatny)',
-    //     description: 'Stability AI. Wymaga płatnej subskrypcji.',
-    //     isFree: false,
-    // },
 ];
 
 // ============================================================
@@ -175,7 +168,7 @@ export interface SocialAccount {
 }
 
 // ============================================================
-// POSTS
+// POSTS - ZGODNE Z BACKENDEM
 // ============================================================
 
 export interface PostMedia {
@@ -199,23 +192,68 @@ export interface PostAnalytics {
     engagement_rate?: number;
 }
 
+/**
+ * Post - ZGODNY Z BACKENDEM (PostResponse)
+ *
+ * Backend zwraca:
+ * - platform: string (singular)
+ * - image_url: string | null
+ * - image_prompt: string | null
+ * - platform_post_id: string | null
+ * - likes, comments, shares: int
+ */
 export interface Post {
-    id: string;
-    user_id: string;
-    brand_id?: string;
+    id: number | string;
+    user_id: number | string;
+    brand_id?: number | null;
     content: string;
-    platforms: Platform[];
+    platform: Platform;                    // ← SINGULAR - zgodne z backendem
     status: PostStatus;
-    scheduled_at?: string;
-    published_at?: string;
-    media?: PostMedia[];
-    hashtags?: string[];
-    analytics?: PostAnalytics;
+    scheduled_at?: string | null;
+    published_at?: string | null;
+
+    // Media - backend używa image_url, nie media[]
+    image_url?: string | null;
+    image_prompt?: string | null;
+
+    // Platform-specific
+    platform_post_id?: string | null;
+
+    // AI metadata
     ai_generated: boolean;
-    ai_provider?: string;
-    ai_prompt?: string;
+    ai_model?: string | null;
+    ai_provider?: string | null;
+    generation_params?: Record<string, unknown> | null;
+
+    // Analytics - backend zwraca jako osobne pola
+    likes: number;
+    comments: number;
+    shares: number;
+
+    // Timestamps
     created_at: string;
     updated_at: string;
+
+    // Opcjonalne pola dla kompatybilności z UI
+    hashtags?: string[];
+    media?: PostMedia[];
+    analytics?: PostAnalytics;
+    ai_prompt?: string;
+}
+
+/**
+ * Helper: Konwersja Post z backendu na format z platforms[]
+ * Użyj gdy potrzebujesz tablicy platform w UI
+ */
+export function postToPlatformsArray(post: Post): Platform[] {
+    return [post.platform];
+}
+
+/**
+ * Helper: Pobierz pierwszy platform z tablicy
+ */
+export function platformsToSingle(platforms: Platform[]): Platform {
+    return platforms[0] || 'facebook';
 }
 
 // ============================================================

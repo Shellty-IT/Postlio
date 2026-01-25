@@ -65,7 +65,9 @@ export default function CreatorPage() {
     // Aktualnie wybrana platforma (pierwsza z listy)
     const primaryPlatform = selectedPlatforms[0];
 
+    // ========================================
     // Generowanie tekstu z wybranym providerem
+    // ========================================
     const handleGenerateText = useCallback(async (topic: string, provider?: TextProvider) => {
         try {
             const result = await generateTextAsync({
@@ -94,7 +96,9 @@ export default function CreatorPage() {
         }
     }, [generateTextAsync, selectedPlatforms, selectedTone, selectedCategory, textProvider]);
 
+    // ========================================
     // Generowanie obrazu z wybranym providerem
+    // ========================================
     const handleGenerateImage = useCallback(async (prompt: string, provider?: ImageProvider) => {
         try {
             const isInstagram = selectedPlatforms.includes('instagram');
@@ -125,44 +129,59 @@ export default function CreatorPage() {
         }
     }, [generateImageAsync, selectedPlatforms, imageProvider]);
 
-    // Zapisz jako szkic
+    // ========================================
+    // POPRAWIONE: Zapisz jako szkic
+    // ========================================
     const handleSaveDraft = useCallback(async () => {
         if (!content.trim()) return;
 
+        // Dodaj hashtagi do treści jeśli istnieją
+        const fullContent = hashtags.length > 0
+            ? `${content}\n\n${hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}`
+            : content;
+
         await createPostMutation.mutateAsync({
-            content,
-            platforms: selectedPlatforms,
-            media_urls: imageUrl ? [imageUrl] : [],
-            hashtags,
-            status: 'draft',
-            brand_id: selectedBrand?.id,
+            content: fullContent,
+            platform: primaryPlatform,                                              // ← ZMIANA: singular
+            brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined,     // ← ZMIANA: number
+            image_url: imageUrl,
             ai_generated: true,
+            ai_model: textProvider,
+            // scheduled_at: undefined = backend ustawi status 'draft'
         });
 
         toast.success('Zapisano jako szkic!');
-    }, [content, selectedPlatforms, imageUrl, hashtags, selectedBrand, createPostMutation]);
+    }, [content, primaryPlatform, imageUrl, hashtags, selectedBrand, createPostMutation, textProvider]);
 
-    // Zaplanuj post
+    // ========================================
+    // POPRAWIONE: Zaplanuj post
+    // ========================================
     const handleSchedule = useCallback(async (scheduledAt: string) => {
         if (!content.trim()) return;
 
+        // Dodaj hashtagi do treści jeśli istnieją
+        const fullContent = hashtags.length > 0
+            ? `${content}\n\n${hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}`
+            : content;
+
         await createPostMutation.mutateAsync({
-            content,
-            platforms: selectedPlatforms,
-            media_urls: imageUrl ? [imageUrl] : [],
-            hashtags,
-            status: 'scheduled',
+            content: fullContent,
+            platform: primaryPlatform,                                              // ← ZMIANA: singular
+            brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined,     // ← ZMIANA: number
+            image_url: imageUrl,
             scheduled_at: scheduledAt,
-            brand_id: selectedBrand?.id,
             ai_generated: true,
+            ai_model: textProvider,
         });
 
         toast.success('Post zaplanowany!', {
             description: 'Możesz go zobaczyć w kalendarzu.',
         });
-    }, [content, selectedPlatforms, imageUrl, hashtags, selectedBrand, createPostMutation]);
+    }, [content, primaryPlatform, imageUrl, hashtags, selectedBrand, createPostMutation, textProvider]);
 
-    // NOWE: Otwórz modal ręcznej publikacji
+    // ========================================
+    // Otwórz modal ręcznej publikacji
+    // ========================================
     const handlePublishManually = useCallback(() => {
         if (!content.trim()) {
             toast.error('Dodaj treść posta');
@@ -190,18 +209,23 @@ export default function CreatorPage() {
         setIsManualPublishOpen(true);
     }, [content, hashtags, imageUrl, primaryPlatform]);
 
-    // NOWE: Oznacz jako opublikowane i wyczyść formularz
+    // ========================================
+    // POPRAWIONE: Oznacz jako opublikowane i wyczyść formularz
+    // ========================================
     const handleMarkAsPublished = useCallback(async () => {
-        // Opcjonalnie zapisz post jako "published" w bazie
+        // Zapisz post jako "published" w bazie
         try {
+            const fullContent = hashtags.length > 0
+                ? `${content}\n\n${hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}`
+                : content;
+
             await createPostMutation.mutateAsync({
-                content,
-                platforms: selectedPlatforms,
-                media_urls: imageUrl ? [imageUrl] : [],
-                hashtags,
-                status: 'published',
-                brand_id: selectedBrand?.id,
+                content: fullContent,
+                platform: primaryPlatform,                                          // ← ZMIANA: singular
+                brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined, // ← ZMIANA: number
+                image_url: imageUrl,
                 ai_generated: true,
+                ai_model: textProvider,
             });
         } catch {
             // Ignoruj błędy - post mógł już być zapisany
@@ -217,14 +241,18 @@ export default function CreatorPage() {
         toast.success('Post opublikowany! 🎉', {
             description: 'Formularz został wyczyszczony.',
         });
-    }, [content, selectedPlatforms, imageUrl, hashtags, selectedBrand, createPostMutation]);
+    }, [content, primaryPlatform, imageUrl, hashtags, selectedBrand, createPostMutation, textProvider]);
 
+    // ========================================
     // Aktualizacja contentu z chatu AI
+    // ========================================
     const handleContentFromChat = useCallback((newContent: string) => {
         setContent(newContent);
     }, []);
 
+    // ========================================
     // Aktualizacja obrazu z chatu AI
+    // ========================================
     const handleImageFromChat = useCallback((newImageUrl: string) => {
         setImageUrl(newImageUrl);
     }, []);

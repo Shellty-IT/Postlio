@@ -12,7 +12,6 @@ import type {
     CreatePostRequest,
     UpdatePostRequest,
     PostsListParams,
-    SchedulePostRequest,
     BulkActionRequest,
     CalendarEventsParams,
 } from '@/lib/api';
@@ -161,7 +160,7 @@ export function useUpdatePost(options?: UseUpdatePostOptions) {
         },
         onSuccess: (post) => {
             void queryClient.invalidateQueries({ queryKey: postsKeys.lists() });
-            void queryClient.invalidateQueries({ queryKey: postsKeys.detail(post.id) });
+            void queryClient.invalidateQueries({ queryKey: postsKeys.detail(String(post.id)) });
 
             toast.success('Post zaktualizowany!');
 
@@ -220,6 +219,11 @@ export function useDeletePost(options?: UseDeletePostOptions) {
 // HOOK: useSchedulePost
 // ============================================================
 
+interface SchedulePostParams {
+    postId: string;
+    scheduledAt: string;
+}
+
 /**
  * Planowanie posta
  */
@@ -227,10 +231,11 @@ export function useSchedulePost() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (data: SchedulePostRequest) => postsApi.schedulePost(data),
+        mutationFn: ({ postId, scheduledAt }: SchedulePostParams) =>
+            postsApi.schedulePost(postId, { scheduled_at: scheduledAt }),
         onSuccess: (post) => {
             void queryClient.invalidateQueries({ queryKey: postsKeys.lists() });
-            void queryClient.invalidateQueries({ queryKey: postsKeys.detail(post.id) });
+            void queryClient.invalidateQueries({ queryKey: postsKeys.detail(String(post.id)) });
 
             toast.success('Post zaplanowany!', {
                 description: post.scheduled_at
@@ -262,10 +267,10 @@ export function usePublishPost() {
         mutationFn: (id: string) => postsApi.publishPost(id),
         onSuccess: (post) => {
             void queryClient.invalidateQueries({ queryKey: postsKeys.lists() });
-            void queryClient.invalidateQueries({ queryKey: postsKeys.detail(post.id) });
+            void queryClient.invalidateQueries({ queryKey: postsKeys.detail(String(post.id)) });
 
             toast.success('Post opublikowany!', {
-                description: `Platformy: ${post.platforms.join(', ')}`,
+                description: `Platforma: ${post.platform}`,
             });
         },
         onError: (error: Error) => {
@@ -362,8 +367,7 @@ export function usePostsManager(params?: PostsListParams) {
     return {
         // Dane
         posts: posts.data?.posts || [],
-        total: posts.data?.total || 0,
-        totalPages: posts.data?.total_pages || 0,
+        count: posts.data?.count || 0,
         isLoading: posts.isLoading,
         isError: posts.isError,
         error: posts.error,

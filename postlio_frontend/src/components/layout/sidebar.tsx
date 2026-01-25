@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import {
     LayoutDashboard,
     PenTool,
+    FileText,  // ← NOWA IKONA
     Calendar,
     Building2,
     Settings,
@@ -21,6 +22,10 @@ import {
     LogOut,
     Zap,
 } from 'lucide-react';
+
+// ============================================================
+// NAWIGACJA - ZAKTUALIZOWANA
+// ============================================================
 
 const navigation = [
     {
@@ -33,6 +38,11 @@ const navigation = [
         href: '/creator',
         icon: PenTool,
         badge: 'AI',
+    },
+    {
+        title: 'Materiały',       // ← NOWA POZYCJA
+        href: '/saved-posts',
+        icon: FileText,
     },
     {
         title: 'Autopilot',
@@ -56,6 +66,10 @@ const navigation = [
         icon: Settings,
     },
 ];
+
+// ============================================================
+// KOMPONENT
+// ============================================================
 
 export function Sidebar() {
     const pathname = usePathname();
@@ -130,8 +144,8 @@ export function Sidebar() {
                                                         item.badge === 'AI' && 'bg-accent/20 text-accent',
                                                         item.badge === 'Pro' && 'bg-warning/20 text-warning'
                                                     )}>
-                            {item.badge}
-                          </span>
+                                                        {item.badge}
+                                                    </span>
                                                 )}
                                             </>
                                         )}
@@ -149,8 +163,8 @@ export function Sidebar() {
                                                     item.badge === 'AI' && 'bg-accent/20 text-accent',
                                                     item.badge === 'Pro' && 'bg-warning/20 text-warning'
                                                 )}>
-                          {item.badge}
-                        </span>
+                                                    {item.badge}
+                                                </span>
                                             )}
                                         </TooltipContent>
                                     </Tooltip>
@@ -196,9 +210,9 @@ export function Sidebar() {
                         ) : (
                             <div className="flex items-center gap-3 rounded-xl bg-secondary/50 p-3">
                                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                  <span className="text-sm font-medium">
-                    {user?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
-                  </span>
+                                    <span className="text-sm font-medium">
+                                        {user?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                                    </span>
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium truncate">

@@ -49,10 +49,12 @@ import { Platform } from '@/types';
 import { useCalendarStore } from '@/store/calendar-store';
 import { useCreatePost, useUpdatePost, useDeletePost, useBrands, useGenerateText } from '@/hooks';
 
-// Schema walidacji
+// Schema walidacji - zmienione na pojedynczą platformę
 const schedulePostSchema = z.object({
     content: z.string().min(1, 'Treść jest wymagana').max(2200, 'Maksymalnie 2200 znaków'),
-    platforms: z.array(z.enum(['facebook', 'instagram', 'linkedin'])).min(1, 'Wybierz co najmniej jedną platformę'),
+    platform: z.enum(['facebook', 'instagram', 'linkedin'], {
+        required_error: 'Wybierz platformę',
+    }),
     scheduledDate: z.string().min(1, 'Data jest wymagana'),
     scheduledTime: z.string().min(1, 'Godzina jest wymagana'),
     brandId: z.string().optional(),
@@ -75,7 +77,6 @@ export function ScheduleModal() {
     } = useCalendarStore();
 
     const [isGenerating, setIsGenerating] = useState(false);
-    const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(['facebook']);
     const [showDeleteAlert, setShowDeleteAlert] = useState(false);
 
     // API Hooks
@@ -100,11 +101,10 @@ export function ScheduleModal() {
         },
     });
 
-    // ✅ FIX: Usunięto explicit typ - TypeScript sam wydedukuje
     const generateText = useGenerateText({
-            onSuccess: (data) => {
-                setValue('content', data.data.content || '');
-                setIsGenerating(false);
+        onSuccess: (data) => {
+            setValue('content', data.data.content || '');
+            setIsGenerating(false);
         },
         onError: () => {
             setIsGenerating(false);
@@ -122,7 +122,7 @@ export function ScheduleModal() {
         resolver: zodResolver(schedulePostSchema),
         defaultValues: {
             content: '',
-            platforms: ['facebook'],
+            platform: 'facebook',
             scheduledDate: format(new Date(), 'yyyy-MM-dd'),
             scheduledTime: '12:00',
             brandId: '',
@@ -130,6 +130,7 @@ export function ScheduleModal() {
     });
 
     const content = watch('content');
+    const selectedPlatform = watch('platform');
     const isEditing = !!selectedPost;
     const isSubmitting = createPost.isPending || updatePost.isPending;
 
@@ -141,12 +142,12 @@ export function ScheduleModal() {
         }
         if (selectedPost) {
             setValue('content', selectedPost.content);
-            setSelectedPlatforms(selectedPost.platforms);
-            setValue('platforms', selectedPost.platforms);
+            // selectedPost.platform to string (z backendu)
+            setValue('platform', selectedPost.platform as Platform);
             setValue('scheduledDate', format(new Date(selectedPost.scheduledAt), 'yyyy-MM-dd'));
             setValue('scheduledTime', format(new Date(selectedPost.scheduledAt), 'HH:mm'));
             if (selectedPost.brandId) {
-                setValue('brandId', selectedPost.brandId);
+                setValue('brandId', String(selectedPost.brandId));
             }
         }
     }, [selectedDate, selectedPost, setValue]);
@@ -155,27 +156,18 @@ export function ScheduleModal() {
     useEffect(() => {
         if (!isScheduleModalOpen) {
             reset();
-            setSelectedPlatforms(['facebook']);
         }
     }, [isScheduleModalOpen, reset]);
 
-    const togglePlatform = (platform: Platform) => {
-        const newPlatforms = selectedPlatforms.includes(platform)
-            ? selectedPlatforms.filter(p => p !== platform)
-            : [...selectedPlatforms, platform];
-
-        if (newPlatforms.length > 0) {
-            setSelectedPlatforms(newPlatforms);
-            setValue('platforms', newPlatforms);
-        }
+    const handlePlatformSelect = (platform: Platform) => {
+        setValue('platform', platform);
     };
 
-    // ✅ FIX: Zmieniono 'prompt' na 'topic' + dodano wymagane 'tone'
     const handleAIGenerate = async () => {
         setIsGenerating(true);
         generateText.mutate({
             topic: 'Angażujący post do social media',
-            platform: selectedPlatforms[0],
+            platform: selectedPlatform,
             tone: 'professional',
         });
     };
@@ -186,28 +178,29 @@ export function ScheduleModal() {
         if (isEditing && selectedPost) {
             // Aktualizacja
             await updatePost.mutateAsync({
-                id: selectedPost.id,
+                id: String(selectedPost.id),
                 data: {
                     content: data.content,
-                    platforms: data.platforms,
+                    platform: data.platform,
                     scheduled_at: scheduledAt,
+                    brand_id: data.brandId ? Number(data.brandId) : undefined,
                 },
             });
         } else {
             // Nowy post
             await createPost.mutateAsync({
                 content: data.content,
-                platforms: data.platforms,
+                platform: data.platform,
                 scheduled_at: scheduledAt,
-                status: 'scheduled',
-                brand_id: data.brandId || undefined,
+                brand_id: data.brandId ? Number(data.brandId) : undefined,
+                ai_generated: false,
             });
         }
     };
 
     const handleDelete = async () => {
         if (selectedPost) {
-            await deletePost.mutateAsync(selectedPost.id);
+            await deletePost.mutateAsync(String(selectedPost.id));
         }
         setShowDeleteAlert(false);
     };
@@ -228,25 +221,25 @@ export function ScheduleModal() {
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                        {/* Platform Selector */}
+                        {/* Platform Selector - pojedynczy wybór */}
                         <div className="space-y-2">
-                            <Label>Platformy</Label>
+                            <Label>Platforma</Label>
                             <div className="flex gap-2">
                                 {(Object.entries(platformConfig) as [Platform, typeof platformConfig.facebook][]).map(
                                     ([platform, config]) => (
                                         <button
                                             key={platform}
                                             type="button"
-                                            onClick={() => togglePlatform(platform)}
+                                            onClick={() => handlePlatformSelect(platform)}
                                             className={cn(
                                                 "flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all",
-                                                selectedPlatforms.includes(platform)
+                                                selectedPlatform === platform
                                                     ? "border-current shadow-md"
                                                     : "border-transparent bg-muted hover:bg-muted/80"
                                             )}
                                             style={{
-                                                color: selectedPlatforms.includes(platform) ? config.color : undefined,
-                                                borderColor: selectedPlatforms.includes(platform) ? config.color : undefined,
+                                                color: selectedPlatform === platform ? config.color : undefined,
+                                                borderColor: selectedPlatform === platform ? config.color : undefined,
                                             }}
                                         >
                                             <div
@@ -260,8 +253,8 @@ export function ScheduleModal() {
                                     )
                                 )}
                             </div>
-                            {errors.platforms && (
-                                <p className="text-sm text-destructive">{errors.platforms.message}</p>
+                            {errors.platform && (
+                                <p className="text-sm text-destructive">{errors.platform.message}</p>
                             )}
                         </div>
 
@@ -274,7 +267,7 @@ export function ScheduleModal() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {brands.map((brand) => (
-                                        <SelectItem key={brand.id} value={brand.id}>
+                                        <SelectItem key={brand.id} value={String(brand.id)}>
                                             <div className="flex items-center gap-2">
                                                 <div
                                                     className="w-3 h-3 rounded-full"

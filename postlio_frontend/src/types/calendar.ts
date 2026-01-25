@@ -4,13 +4,13 @@ import { Platform, PostStatus } from './index';
 export type CalendarView = 'month' | 'week';
 
 export interface ScheduledPost {
-    id: string;
+    id: string | number;
     title: string;
     content: string;
-    platforms: Platform[];
-    scheduledAt: Date;
+    platform: Platform;          // ← ZMIANA: singular - zgodne z backendem
+    scheduledAt: Date | string;  // ← ZMIANA: może być string z API
     status: PostStatus;
-    brandId?: string;
+    brandId?: string | number;   // ← ZMIANA: może być number z backendu
     brandName?: string;
     imageUrl?: string;
     aiGenerated: boolean;

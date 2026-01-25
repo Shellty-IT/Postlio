@@ -32,13 +32,16 @@ function convertToScheduledPost(event: CalendarEvent): ScheduledPost {
         id: event.id,
         title: event.title,
         content: event.preview || '',
-        platforms: event.platforms as ScheduledPost['platforms'],
+        // Konwertuj platforms[] na platform (singular) - bierzemy pierwszy
+        platform: Array.isArray(event.platforms) && event.platforms.length > 0
+            ? event.platforms[0]
+            : (event.platforms as unknown as ScheduledPost['platform']) || 'facebook',
         scheduledAt: new Date(`${event.date}T${event.time}`),
         status: event.status as ScheduledPost['status'],
-        brandId: undefined, // API nie zwraca tego w CalendarEvent
+        brandId: event.brand_id,
         brandName: undefined,
         aiGenerated: false,
-        imageUrl: undefined,
+        imageUrl: event.image_url,
     };
 }
 
