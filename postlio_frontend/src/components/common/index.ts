@@ -2,3 +2,4 @@
 export { LoadingButton } from './loading-button';
 export { PasswordInput } from './password-input';
 export { FormField } from './form-field';
+export { FeatureLocked, CalendarLimitedBanner } from './feature-locked';

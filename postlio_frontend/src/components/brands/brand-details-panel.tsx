@@ -11,7 +11,7 @@ import {
     Calendar,
     MessageSquare,
     Hash,
-    Sparkles
+    PenTool,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
@@ -26,7 +26,7 @@ import {
     COMMUNICATION_STYLES
 } from '@/types/brand';
 import { useBrandsStore } from '@/store/brands-store';
-import { VoiceDNARadar } from './voice-dna-radar';
+import { WritingStyleRadar } from './writing-style-radar';
 
 interface BrandDetailsPanelProps {
     brand: Brand;
@@ -108,7 +108,7 @@ export function BrandDetailsPanel({ brand, onClose }: BrandDetailsPanelProps) {
                             <div className="text-xs text-muted-foreground">Utworzono</div>
                         </div>
                         <div className="text-center p-3 rounded-lg bg-muted/50">
-                            <Sparkles className="h-5 w-5 mx-auto text-violet-500 mb-1" />
+                            <PenTool className="h-5 w-5 mx-auto text-violet-500 mb-1" />
                             <div className="text-lg font-semibold">
                                 {brand.voiceDNA.personalityTraits.length}
                             </div>
@@ -118,16 +118,16 @@ export function BrandDetailsPanel({ brand, onClose }: BrandDetailsPanelProps) {
 
                     <Separator className="my-6" />
 
-                    {/* Voice DNA Section */}
+                    {/* Styl pisania Section */}
                     <div className="space-y-6">
                         <div className="flex items-center gap-2">
-                            <Sparkles className="h-5 w-5 text-violet-500" />
-                            <h3 className="font-semibold">Voice DNA</h3>
+                            <PenTool className="h-5 w-5 text-violet-500" />
+                            <h3 className="font-semibold">Styl pisania</h3>
                         </div>
 
                         {/* Radar Chart */}
                         <div className="flex justify-center">
-                            <VoiceDNARadar
+                            <WritingStyleRadar
                                 voiceDNA={brand.voiceDNA}
                                 primaryColor={brand.primaryColor}
                                 size={180}
@@ -176,8 +176,8 @@ export function BrandDetailsPanel({ brand, onClose }: BrandDetailsPanelProps) {
                         {/* Personality Traits */}
                         <div>
                             <div className="flex items-center gap-2 mb-3">
-                                <Sparkles className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm font-medium">Cechy osobowości</span>
+                                <PenTool className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm font-medium">Charakter treści</span>
                             </div>
                             <div className="flex flex-wrap gap-2">
                                 {brand.voiceDNA.personalityTraits.map((trait) => (

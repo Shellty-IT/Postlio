@@ -1,23 +1,27 @@
-// src/components/brands/voice-dna-radar.tsx
+// src/components/brands/writing-style-radar.tsx
 'use client';
 
 import { useRef, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { BrandVoiceDNA } from '@/types/brand';
 
-interface VoiceDNARadarProps {
+interface WritingStyleRadarProps {
     voiceDNA: BrandVoiceDNA;
     primaryColor?: string;
     size?: number;
     className?: string;
 }
 
-export function VoiceDNARadar({
-                                  voiceDNA,
-                                  primaryColor = '#8B5CF6',
-                                  size = 200,
-                                  className
-                              }: VoiceDNARadarProps) {
+/**
+ * Radar chart wizualizujący Styl pisania marki.
+ * Dawniej: VoiceDNARadar
+ */
+export function WritingStyleRadar({
+                                      voiceDNA,
+                                      primaryColor = '#8B5CF6',
+                                      size = 200,
+                                      className
+                                  }: WritingStyleRadarProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     const metrics = useMemo(() => [
@@ -140,3 +144,6 @@ export function VoiceDNARadar({
         </div>
     );
 }
+
+// Alias dla kompatybilności wstecznej
+export const VoiceDNARadar = WritingStyleRadar;

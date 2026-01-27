@@ -14,7 +14,8 @@ import {
     Send,
     Save,
     Loader2,
-    Trash2
+    Trash2,
+    Clock,
 } from 'lucide-react';
 import {
     Dialog,
@@ -26,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import {
     Select,
     SelectContent,
@@ -33,7 +35,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-
 import {
     AlertDialog,
     AlertDialogAction,
@@ -49,14 +50,15 @@ import { Platform } from '@/types';
 import { useCalendarStore } from '@/store/calendar-store';
 import { useCreatePost, useUpdatePost, useDeletePost, useBrands, useGenerateText } from '@/hooks';
 
-// Schema walidacji - zmienione na pojedynczą platformę
+// Schema walidacji
 const schedulePostSchema = z.object({
     content: z.string().min(1, 'Treść jest wymagana').max(2200, 'Maksymalnie 2200 znaków'),
     platform: z.enum(['facebook', 'instagram', 'linkedin'], {
         required_error: 'Wybierz platformę',
     }),
     scheduledDate: z.string().min(1, 'Data jest wymagana'),
-    scheduledTime: z.string().min(1, 'Godzina jest wymagana'),
+    scheduledHour: z.number().min(0).max(23),
+    scheduledMinute: z.number().min(0).max(59),
     brandId: z.string().optional(),
 });
 
@@ -67,6 +69,15 @@ const platformConfig: Record<Platform, { label: string; color: string; icon: str
     instagram: { label: 'Instagram', color: '#E4405F', icon: 'I' },
     linkedin: { label: 'LinkedIn', color: '#0A66C2', icon: 'L' },
 };
+
+// Quick time presets
+const TIME_PRESETS = [
+    { label: '9:00', hour: 9, minute: 0 },
+    { label: '12:00', hour: 12, minute: 0 },
+    { label: '15:00', hour: 15, minute: 0 },
+    { label: '18:00', hour: 18, minute: 0 },
+    { label: '20:00', hour: 20, minute: 0 },
+];
 
 export function ScheduleModal() {
     const {
@@ -124,13 +135,16 @@ export function ScheduleModal() {
             content: '',
             platform: 'facebook',
             scheduledDate: format(new Date(), 'yyyy-MM-dd'),
-            scheduledTime: '12:00',
+            scheduledHour: 12,
+            scheduledMinute: 0,
             brandId: '',
         },
     });
 
     const content = watch('content');
     const selectedPlatform = watch('platform');
+    const scheduledHour = watch('scheduledHour');
+    const scheduledMinute = watch('scheduledMinute');
     const isEditing = !!selectedPost;
     const isSubmitting = createPost.isPending || updatePost.isPending;
 
@@ -138,14 +152,16 @@ export function ScheduleModal() {
     useEffect(() => {
         if (selectedDate) {
             setValue('scheduledDate', format(selectedDate, 'yyyy-MM-dd'));
-            setValue('scheduledTime', format(selectedDate, 'HH:mm'));
+            setValue('scheduledHour', selectedDate.getHours());
+            setValue('scheduledMinute', selectedDate.getMinutes());
         }
         if (selectedPost) {
             setValue('content', selectedPost.content);
-            // selectedPost.platform to string (z backendu)
             setValue('platform', selectedPost.platform as Platform);
-            setValue('scheduledDate', format(new Date(selectedPost.scheduledAt), 'yyyy-MM-dd'));
-            setValue('scheduledTime', format(new Date(selectedPost.scheduledAt), 'HH:mm'));
+            const postDate = new Date(selectedPost.scheduledAt);
+            setValue('scheduledDate', format(postDate, 'yyyy-MM-dd'));
+            setValue('scheduledHour', postDate.getHours());
+            setValue('scheduledMinute', postDate.getMinutes());
             if (selectedPost.brandId) {
                 setValue('brandId', String(selectedPost.brandId));
             }
@@ -163,6 +179,11 @@ export function ScheduleModal() {
         setValue('platform', platform);
     };
 
+    const handleTimePreset = (hour: number, minute: number) => {
+        setValue('scheduledHour', hour);
+        setValue('scheduledMinute', minute);
+    };
+
     const handleAIGenerate = async () => {
         setIsGenerating(true);
         generateText.mutate({
@@ -173,10 +194,11 @@ export function ScheduleModal() {
     };
 
     const onSubmit = async (data: SchedulePostFormData) => {
-        const scheduledAt = new Date(`${data.scheduledDate}T${data.scheduledTime}`).toISOString();
+        const scheduledAt = new Date(
+            `${data.scheduledDate}T${String(data.scheduledHour).padStart(2, '0')}:${String(data.scheduledMinute).padStart(2, '0')}`
+        ).toISOString();
 
         if (isEditing && selectedPost) {
-            // Aktualizacja
             await updatePost.mutateAsync({
                 id: String(selectedPost.id),
                 data: {
@@ -187,7 +209,6 @@ export function ScheduleModal() {
                 },
             });
         } else {
-            // Nowy post
             await createPost.mutateAsync({
                 content: data.content,
                 platform: data.platform,
@@ -209,6 +230,9 @@ export function ScheduleModal() {
     const characterCount = content?.length || 0;
     const characterPercentage = (characterCount / characterLimit) * 100;
 
+    // Format time display
+    const formattedTime = `${String(scheduledHour).padStart(2, '0')}:${String(scheduledMinute).padStart(2, '0')}`;
+
     return (
         <>
             <Dialog open={isScheduleModalOpen} onOpenChange={closeScheduleModal}>
@@ -221,7 +245,7 @@ export function ScheduleModal() {
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                        {/* Platform Selector - pojedynczy wybór */}
+                        {/* Platform Selector */}
                         <div className="space-y-2">
                             <Label>Platforma</Label>
                             <div className="flex gap-2">
@@ -358,27 +382,100 @@ export function ScheduleModal() {
                             </div>
                         </div>
 
-                        {/* Date & Time */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Data</Label>
-                                <Input
-                                    type="date"
-                                    {...register('scheduledDate')}
-                                />
-                                {errors.scheduledDate && (
-                                    <p className="text-sm text-destructive">{errors.scheduledDate.message}</p>
-                                )}
+                        {/* Date & Time - ULEPSZONY */}
+                        <div className="space-y-4">
+                            <Label className="flex items-center gap-2">
+                                <Clock className="h-4 w-4" />
+                                Data i godzina publikacji
+                            </Label>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {/* Date picker */}
+                                <div className="space-y-2">
+                                    <Label className="text-xs text-muted-foreground">Data</Label>
+                                    <Input
+                                        type="date"
+                                        {...register('scheduledDate')}
+                                    />
+                                    {errors.scheduledDate && (
+                                        <p className="text-sm text-destructive">{errors.scheduledDate.message}</p>
+                                    )}
+                                </div>
+
+                                {/* Visual time display */}
+                                <div className="space-y-2">
+                                    <Label className="text-xs text-muted-foreground">Godzina</Label>
+                                    <div className="flex items-center justify-center h-10 rounded-md border bg-muted/30 text-2xl font-mono font-bold text-primary">
+                                        {formattedTime}
+                                    </div>
+                                </div>
                             </div>
+
+                            {/* Time presets */}
                             <div className="space-y-2">
-                                <Label>Godzina</Label>
-                                <Input
-                                    type="time"
-                                    {...register('scheduledTime')}
+                                <Label className="text-xs text-muted-foreground">Szybki wybór</Label>
+                                <div className="flex flex-wrap gap-2">
+                                    {TIME_PRESETS.map((preset) => (
+                                        <Button
+                                            key={preset.label}
+                                            type="button"
+                                            variant={
+                                                scheduledHour === preset.hour && scheduledMinute === preset.minute
+                                                    ? 'default'
+                                                    : 'outline'
+                                            }
+                                            size="sm"
+                                            onClick={() => handleTimePreset(preset.hour, preset.minute)}
+                                        >
+                                            {preset.label}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Hour slider */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-muted-foreground">Godzina</Label>
+                                    <span className="text-sm font-medium">{scheduledHour}:00</span>
+                                </div>
+                                <Slider
+                                    value={[scheduledHour]}
+                                    min={0}
+                                    max={23}
+                                    step={1}
+                                    onValueChange={([value]) => setValue('scheduledHour', value)}
+                                    className="w-full"
                                 />
-                                {errors.scheduledTime && (
-                                    <p className="text-sm text-destructive">{errors.scheduledTime.message}</p>
-                                )}
+                                <div className="flex justify-between text-xs text-muted-foreground">
+                                    <span>0:00</span>
+                                    <span>6:00</span>
+                                    <span>12:00</span>
+                                    <span>18:00</span>
+                                    <span>23:00</span>
+                                </div>
+                            </div>
+
+                            {/* Minute slider */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-muted-foreground">Minuta</Label>
+                                    <span className="text-sm font-medium">:{String(scheduledMinute).padStart(2, '0')}</span>
+                                </div>
+                                <Slider
+                                    value={[scheduledMinute]}
+                                    min={0}
+                                    max={59}
+                                    step={5}
+                                    onValueChange={([value]) => setValue('scheduledMinute', value)}
+                                    className="w-full"
+                                />
+                                <div className="flex justify-between text-xs text-muted-foreground">
+                                    <span>:00</span>
+                                    <span>:15</span>
+                                    <span>:30</span>
+                                    <span>:45</span>
+                                </div>
                             </div>
                         </div>
 

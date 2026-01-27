@@ -1,6 +1,6 @@
 // src/components/creator/post-editor.tsx
 /**
- * Edytor posta z obsługą AI i wyborem providerów
+ * Edytor posta z obsługą AI, wyborem providerów i edycją obrazu
  */
 
 'use client';
@@ -16,6 +16,8 @@ import {
     Wand2,
     RefreshCw,
     Upload,
+    Crop,
+    AlertTriangle,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -38,6 +40,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AIProviderSelector } from './ai-provider-selector';
+import { ImageCropModal } from './image-crop-modal';
+import { cn } from '@/lib/utils';
 import type { Platform } from '@/types';
 import type { TextProvider, ImageProvider } from '@/lib/api/ai';
 
@@ -73,6 +77,9 @@ const PLATFORM_LIMITS: Record<Platform, number> = {
     linkedin: 3000,
 };
 
+// Limit "soft" dla AI - sugerowany maksymalny rozmiar
+const SOFT_LIMIT = 700;
+
 // ============================================================
 // KOMPONENT
 // ============================================================
@@ -98,6 +105,7 @@ export function PostEditor({
     const [newHashtag, setNewHashtag] = useState('');
     const [isGenerateTextOpen, setIsGenerateTextOpen] = useState(false);
     const [isGenerateImageOpen, setIsGenerateImageOpen] = useState(false);
+    const [isCropModalOpen, setIsCropModalOpen] = useState(false);
     const [textPrompt, setTextPrompt] = useState('');
     const [imagePrompt, setImagePrompt] = useState('');
     const [isGeneratingLocal, setIsGeneratingLocal] = useState(false);
@@ -111,6 +119,19 @@ export function PostEditor({
     const charLimit = Math.min(...platforms.map((p) => PLATFORM_LIMITS[p]));
     const charCount = content.length;
     const isOverLimit = charCount > charLimit;
+    const isNearSoftLimit = charCount >= SOFT_LIMIT * 0.8 && charCount <= SOFT_LIMIT;
+    const isOverSoftLimit = charCount > SOFT_LIMIT && charCount <= charLimit;
+
+    // Określ kolor licznika
+    const getCounterColor = () => {
+        if (isOverLimit) return 'text-red-500';
+        if (isOverSoftLimit) return 'text-amber-500';
+        if (isNearSoftLimit) return 'text-yellow-500';
+        return 'text-muted-foreground';
+    };
+
+    // Procent wypełnienia (dla soft limitu)
+    const softLimitPercentage = Math.min((charCount / SOFT_LIMIT) * 100, 100);
 
     // Dodaj hashtag
     const handleAddHashtag = useCallback(() => {
@@ -165,6 +186,10 @@ export function PostEditor({
             const url = URL.createObjectURL(file);
             onImageChange(url);
         }
+        // Reset input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     }, [onImageChange]);
 
     // Handler zmiany providera obrazu
@@ -172,6 +197,11 @@ export function PostEditor({
         setSelectedImageProvider(provider as ImageProvider);
         setSelectedImageModel(model);
     };
+
+    // Handler cropped image
+    const handleCropComplete = useCallback((croppedUrl: string) => {
+        onImageChange(croppedUrl);
+    }, [onImageChange]);
 
     return (
         <div className="space-y-4">
@@ -182,9 +212,10 @@ export function PostEditor({
                     value={content}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder="Co chcesz opublikować? Napisz sam lub użyj AI..."
-                    className={`min-h-[200px] resize-none text-base leading-relaxed ${
-                        isOverLimit ? 'border-red-500 focus-visible:ring-red-500' : ''
-                    }`}
+                    className={cn(
+                        'min-h-[200px] resize-none text-base leading-relaxed pb-10',
+                        isOverLimit && 'border-red-500 focus-visible:ring-red-500'
+                    )}
                     disabled={isGenerating}
                 />
 
@@ -205,11 +236,48 @@ export function PostEditor({
                     )}
                 </AnimatePresence>
 
-                {/* Licznik znaków */}
-                <div className="absolute bottom-3 right-3 flex items-center gap-2">
-                    <span className={`text-xs ${isOverLimit ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
-                        {charCount.toLocaleString()} / {charLimit.toLocaleString()}
-                    </span>
+                {/* Character counter with visual indicator */}
+                <div className="absolute bottom-3 right-3 flex items-center gap-3">
+                    {/* Soft limit progress bar */}
+                    <div className="hidden sm:flex items-center gap-2">
+                        <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+                            <motion.div
+                                className={cn(
+                                    'h-full transition-colors duration-300',
+                                    isOverLimit ? 'bg-red-500' :
+                                        isOverSoftLimit ? 'bg-amber-500' :
+                                            isNearSoftLimit ? 'bg-yellow-500' :
+                                                'bg-primary'
+                                )}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${softLimitPercentage}%` }}
+                                transition={{ duration: 0.2 }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Character count */}
+                    <div className={cn('flex items-center gap-1.5 text-xs font-medium', getCounterColor())}>
+                        {isOverSoftLimit && !isOverLimit && (
+                            <Tooltip>
+                                <TooltipTrigger>
+                                    <AlertTriangle className="h-3.5 w-3.5" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Długi post może mieć mniejsze zaangażowanie</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        )}
+                        <span className={cn(
+                            isOverLimit && 'animate-pulse'
+                        )}>
+                            {charCount.toLocaleString()}
+                        </span>
+                        <span className="text-muted-foreground">/</span>
+                        <span className="text-muted-foreground">
+                            {charLimit.toLocaleString()}
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -346,6 +414,16 @@ export function PostEditor({
                             />
                         </div>
                         <div className="absolute top-2 right-2 flex gap-2">
+                            {/* Crop/Edit button */}
+                            <Button
+                                variant="secondary"
+                                size="icon"
+                                className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+                                onClick={() => setIsCropModalOpen(true)}
+                            >
+                                <Crop className="w-4 h-4" />
+                            </Button>
+                            {/* Regenerate button */}
                             <Button
                                 variant="secondary"
                                 size="icon"
@@ -354,6 +432,7 @@ export function PostEditor({
                             >
                                 <RefreshCw className="w-4 h-4" />
                             </Button>
+                            {/* Remove button */}
                             <Button
                                 variant="secondary"
                                 size="icon"
@@ -483,7 +562,7 @@ export function PostEditor({
                                 placeholder="np. Minimalistyczne zdjęcie kawy latte art na drewnianym stole, ciepłe światło poranne"
                                 className="min-h-[100px]"
                             />
-                            {/* Info o auto-tłumaczeniu - wszystkie nasze providery to obsługują */}
+                            {/* Info o auto-tłumaczeniu */}
                             <p className="text-xs text-blue-600 dark:text-blue-400">
                                 ℹ️ Prompt zostanie automatycznie przetłumaczony na angielski
                             </p>
@@ -544,6 +623,17 @@ export function PostEditor({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Image Crop Modal */}
+            {imageUrl && (
+                <ImageCropModal
+                    open={isCropModalOpen}
+                    onOpenChange={setIsCropModalOpen}
+                    imageSrc={imageUrl}
+                    onCropComplete={handleCropComplete}
+                    initialPlatform={platforms[0] || 'facebook'}
+                />
+            )}
         </div>
     );
 }

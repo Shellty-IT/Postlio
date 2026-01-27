@@ -20,7 +20,6 @@ import {
     Sparkles,
     LayoutGrid,
     List,
-    ChevronDown,
 } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
@@ -33,14 +32,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuCheckboxItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
     Popover,
     PopoverContent,

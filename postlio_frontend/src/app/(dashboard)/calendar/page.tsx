@@ -1,9 +1,19 @@
 // src/app/(dashboard)/calendar/page.tsx
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import {
+    DndContext,
+    DragOverlay,
+    DragStartEvent,
+    DragEndEvent,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    closestCenter,
+} from '@dnd-kit/core';
 import {
     format,
     startOfMonth,
@@ -16,12 +26,17 @@ import {
     MonthView,
     WeekView,
     ScheduleModal,
-    CalendarStats
+    CalendarStats,
+    DraftsSidebar,
+    DragOverlayContent,
 } from '@/components/calendar';
+import { FeatureLocked, CalendarLimitedBanner } from '@/components/common';
 import { useCalendarStore } from '@/store/calendar-store';
-import { useCalendarPosts, useUpdatePost } from '@/hooks';
+import { useAuthStore } from '@/store/auth-store';
+import { useCalendarPosts, useUpdatePost, usePosts } from '@/hooks';
 import type { ScheduledPost } from '@/types/calendar';
 import type { CalendarEvent } from '@/lib/api';
+import type { Post } from '@/types';
 
 // ============================================================
 // HELPER: Konwersja CalendarEvent -> ScheduledPost
@@ -32,7 +47,6 @@ function convertToScheduledPost(event: CalendarEvent): ScheduledPost {
         id: event.id,
         title: event.title,
         content: event.preview || '',
-        // Konwertuj platforms[] na platform (singular) - bierzemy pierwszy
         platform: Array.isArray(event.platforms) && event.platforms.length > 0
             ? event.platforms[0]
             : (event.platforms as unknown as ScheduledPost['platform']) || 'facebook',
@@ -51,6 +65,23 @@ function convertToScheduledPost(event: CalendarEvent): ScheduledPost {
 
 export default function CalendarPage() {
     const { view, currentDate } = useCalendarStore();
+    const { capabilities } = useAuthStore();
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [activeDraft, setActiveDraft] = useState<Post | null>(null);
+
+    // Sprawdź dostęp
+    const accessLevel = capabilities.access_level;
+    const canUseCalendar = capabilities.can_use_calendar;
+    const canAutoPublish = capabilities.can_auto_publish;
+
+    // DnD sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8,
+            },
+        })
+    );
 
     // Oblicz zakres dat dla API
     const dateRange = useMemo(() => {
@@ -65,12 +96,20 @@ export default function CalendarPage() {
         };
     }, [currentDate]);
 
-    // Pobierz posty z API
+    // Pobierz posty z API (kalendarz) - tylko jeśli ma dostęp
     const {
         data: apiEvents = [],
-        isLoading,
+        isLoading: isLoadingCalendar,
         isError
     } = useCalendarPosts(dateRange);
+
+    // Pobierz wszystkie posty (dla draftów)
+    const {
+        data: allPostsData,
+        isLoading: isLoadingPosts,
+    } = usePosts({ status: 'draft' });
+
+    const drafts = allPostsData?.posts || [];
 
     // Mutation do aktualizacji
     const updatePost = useUpdatePost();
@@ -80,9 +119,8 @@ export default function CalendarPage() {
         return apiEvents.map(convertToScheduledPost);
     }, [apiEvents]);
 
-    // Handler przenoszenia posta
+    // Handler przenoszenia posta (istniejącego w kalendarzu)
     const handlePostMove = useCallback(async (postId: string, newDate: Date) => {
-        // Znajdź oryginalny event
         const event = apiEvents.find(e => e.id === postId);
         if (!event) return;
 
@@ -102,10 +140,88 @@ export default function CalendarPage() {
         }
     }, [apiEvents, updatePost]);
 
-    // Loading state
-    if (isLoading) {
+    // DnD handlers
+    const handleDragStart = useCallback((event: DragStartEvent) => {
+        const { active } = event;
+        const draft = active.data.current?.draft as Post | undefined;
+        if (draft) {
+            setActiveDraft(draft);
+        }
+    }, []);
+
+    const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+        const { active, over } = event;
+        setActiveDraft(null);
+
+        if (!over) return;
+
+        const draft = active.data.current?.draft as Post | undefined;
+        const targetDate = over.data.current?.date as Date | undefined;
+
+        if (!draft || !targetDate) return;
+
+        // Ustaw domyślną godzinę na 12:00 jeśli to dzień
+        const scheduledDate = new Date(targetDate);
+        if (scheduledDate.getHours() === 0 && scheduledDate.getMinutes() === 0) {
+            scheduledDate.setHours(12, 0, 0, 0);
+        }
+
+        try {
+            await updatePost.mutateAsync({
+                id: String(draft.id),
+                data: {
+                    scheduled_at: scheduledDate.toISOString(),
+                    status: 'scheduled',
+                },
+            });
+
+            // Różny komunikat w zależności od możliwości auto-publish
+            if (canAutoPublish) {
+                toast.success('Post zaplanowany!', {
+                    description: `${format(scheduledDate, 'dd.MM.yyyy')} o ${format(scheduledDate, 'HH:mm')} - zostanie opublikowany automatycznie`,
+                });
+            } else {
+                toast.success('Przypomnienie ustawione!', {
+                    description: `${format(scheduledDate, 'dd.MM.yyyy')} o ${format(scheduledDate, 'HH:mm')} - otrzymasz powiadomienie`,
+                });
+            }
+        } catch {
+            toast.error('Nie udało się zaplanować posta');
+        }
+    }, [updatePost, canAutoPublish]);
+
+    const handleDragCancel = useCallback(() => {
+        setActiveDraft(null);
+    }, []);
+
+    // ============================================================
+    // BLOKADA - Brak konta (tryb demo)
+    // ============================================================
+    if (!canUseCalendar) {
         return (
-            <div className="space-y-6">
+            <div className="p-6">
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                >
+                    <h1 className="text-3xl font-bold">Kalendarz</h1>
+                    <p className="text-muted-foreground mt-1">
+                        Zarządzaj harmonogramem publikacji i planuj posty
+                    </p>
+                </motion.div>
+
+                <FeatureLocked
+                    feature="calendar"
+                    accessLevel={accessLevel}
+                />
+            </div>
+        );
+    }
+
+    // Loading state
+    if (isLoadingCalendar) {
+        return (
+            <div className="space-y-6 p-6">
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -129,7 +245,7 @@ export default function CalendarPage() {
     // Error state
     if (isError) {
         return (
-            <div className="space-y-6">
+            <div className="space-y-6 p-6">
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -156,40 +272,81 @@ export default function CalendarPage() {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Page Header */}
-            <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-            >
-                <h1 className="text-3xl font-bold">Kalendarz</h1>
-                <p className="text-muted-foreground mt-1">
-                    Zarządzaj harmonogramem publikacji i planuj posty
-                </p>
-            </motion.div>
+        <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
+        >
+            <div className="flex h-[calc(100vh-4rem)]">
+                {/* Main Calendar Area */}
+                <div className="flex-1 flex flex-col overflow-hidden">
+                    <div className="flex-1 overflow-auto p-6 space-y-6">
+                        {/* Page Header */}
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                        >
+                            <h1 className="text-3xl font-bold">Kalendarz</h1>
+                            <p className="text-muted-foreground mt-1">
+                                Zarządzaj harmonogramem publikacji i planuj posty
+                            </p>
+                        </motion.div>
 
-            {/* Stats */}
-            <CalendarStats posts={posts} />
+                        {/* Banner dla konta osobistego (limited) */}
+                        {accessLevel === 'limited' && (
+                            <CalendarLimitedBanner />
+                        )}
 
-            {/* Calendar Header with controls */}
-            <CalendarHeader />
+                        {/* Stats */}
+                        <CalendarStats posts={posts} />
 
-            {/* Calendar Views */}
-            <motion.div
-                key={view}
-                initial={{ opacity: 0, x: view === 'month' ? -20 : 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3 }}
-            >
-                {view === 'month' ? (
-                    <MonthView posts={posts} onPostMove={handlePostMove} />
-                ) : (
-                    <WeekView posts={posts} onPostMove={handlePostMove} />
-                )}
-            </motion.div>
+                        {/* Calendar Header with controls */}
+                        <CalendarHeader />
+
+                        {/* Calendar Views */}
+                        <motion.div
+                            key={view}
+                            initial={{ opacity: 0, x: view === 'month' ? -20 : 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            {view === 'month' ? (
+                                <MonthView
+                                    posts={posts}
+                                    onPostMove={handlePostMove}
+                                    enableDroppable
+                                />
+                            ) : (
+                                <WeekView
+                                    posts={posts}
+                                    onPostMove={handlePostMove}
+                                    enableDroppable
+                                />
+                            )}
+                        </motion.div>
+                    </div>
+                </div>
+
+                {/* Drafts Sidebar */}
+                <DraftsSidebar
+                    drafts={drafts}
+                    isLoading={isLoadingPosts}
+                    isCollapsed={isSidebarCollapsed}
+                    onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                />
+            </div>
 
             {/* Schedule Modal */}
             <ScheduleModal />
-        </div>
+
+            {/* Drag Overlay */}
+            <DragOverlay>
+                {activeDraft && (
+                    <DragOverlayContent draft={activeDraft} />
+                )}
+            </DragOverlay>
+        </DndContext>
     );
 }

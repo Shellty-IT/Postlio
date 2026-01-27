@@ -11,10 +11,10 @@ import {
     Copy,
     BarChart3,
     MessageSquare,
-    Sparkles,
     ExternalLink,
     Star,
     Loader2,
+    PenTool,
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -74,8 +74,8 @@ export const BrandCard = memo(function BrandCard({ brand, index = 0 }: BrandCard
         setDefaultBrand.mutate(brand.id);
     };
 
-    // Oblicz "siłę" Voice DNA (jak dobrze jest skonfigurowany)
-    const voiceStrength = calculateVoiceStrength(brand);
+    // Oblicz "siłę" Stylu pisania (jak dobrze jest skonfigurowany)
+    const styleStrength = calculateStyleStrength(brand);
 
     const isDeleting = deleteBrand.isPending;
     const isSettingDefault = setDefaultBrand.isPending;
@@ -193,7 +193,7 @@ export const BrandCard = memo(function BrandCard({ brand, index = 0 }: BrandCard
                         </p>
                     )}
 
-                    {/* Voice DNA Preview */}
+                    {/* Styl pisania Preview */}
                     <div className="space-y-3 mb-4">
                         {/* Personality Traits */}
                         <div className="flex flex-wrap gap-1.5">
@@ -221,18 +221,18 @@ export const BrandCard = memo(function BrandCard({ brand, index = 0 }: BrandCard
                             </span>
                         </div>
 
-                        {/* Voice DNA Strength */}
+                        {/* Styl pisania Strength */}
                         <div className="flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-violet-500" />
+                            <PenTool className="h-4 w-4 text-violet-500" />
                             <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                                 <motion.div
                                     initial={{ width: 0 }}
-                                    animate={{ width: `${voiceStrength}%` }}
+                                    animate={{ width: `${styleStrength}%` }}
                                     transition={{ delay: 0.3, duration: 0.5 }}
                                     className="h-full bg-gradient-to-r from-violet-500 to-primary rounded-full"
                                 />
                             </div>
-                            <span className="text-xs text-muted-foreground">{voiceStrength}%</span>
+                            <span className="text-xs text-muted-foreground">{styleStrength}%</span>
                         </div>
                     </div>
 
@@ -251,8 +251,8 @@ export const BrandCard = memo(function BrandCard({ brand, index = 0 }: BrandCard
                             onClick={handleEdit}
                             className="opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                            <Sparkles className="h-4 w-4 mr-2" />
-                            Voice DNA
+                            <PenTool className="h-4 w-4 mr-2" />
+                            Styl pisania
                         </Button>
                     </div>
 
@@ -272,7 +272,7 @@ export const BrandCard = memo(function BrandCard({ brand, index = 0 }: BrandCard
                         <AlertDialogTitle>Czy na pewno chcesz usunąć tę markę?</AlertDialogTitle>
                         <AlertDialogDescription>
                             Usunięcie marki <strong>&quot;{brand.name}&quot;</strong> jest nieodwracalne.
-                            Wszystkie ustawienia Voice DNA zostaną utracone.
+                            Wszystkie ustawienia Stylu pisania zostaną utracone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -301,8 +301,8 @@ export const BrandCard = memo(function BrandCard({ brand, index = 0 }: BrandCard
     );
 });
 
-// Helper function to calculate voice DNA strength
-function calculateVoiceStrength(brand: Brand): number {
+// Helper function to calculate writing style strength
+function calculateStyleStrength(brand: Brand): number {
     let score = 0;
     const dna = brand.voiceDNA;
 

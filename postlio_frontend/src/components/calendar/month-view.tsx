@@ -11,20 +11,23 @@ import {
     eachDayOfInterval,
     isSameMonth,
     isToday,
-    isSameDay
+    isSameDay,
+    format,
 } from 'date-fns';
 import { DayCell } from './day-cell';
+import { DroppableDay } from './droppable-day';
 import { CalendarDay, ScheduledPost } from '@/types/calendar';
 import { useCalendarStore } from '@/store/calendar-store';
 
 interface MonthViewProps {
     posts: ScheduledPost[];
     onPostMove?: (postId: string, newDate: Date) => void;
+    enableDroppable?: boolean;
 }
 
 const WEEKDAYS = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Ndz'];
 
-export function MonthView({ posts, onPostMove }: MonthViewProps) {
+export function MonthView({ posts, onPostMove, enableDroppable = false }: MonthViewProps) {
     const { currentDate } = useCalendarStore();
 
     const calendarDays = useMemo((): CalendarDay[] => {
@@ -52,7 +55,7 @@ export function MonthView({ posts, onPostMove }: MonthViewProps) {
             const oldTime = new Date(post.scheduledAt);
             newDateTime.setHours(oldTime.getHours(), oldTime.getMinutes());
 
-            onPostMove(post.id, newDateTime);
+            onPostMove(String(post.id), newDateTime);
         }
     };
 
@@ -76,13 +79,31 @@ export function MonthView({ posts, onPostMove }: MonthViewProps) {
 
             {/* Calendar grid */}
             <div className="grid grid-cols-7">
-                {calendarDays.map((day) => (
-                    <DayCell
-                        key={day.date.toISOString()}
-                        day={day}
-                        onDrop={handleDrop}
-                    />
-                ))}
+                {calendarDays.map((day) => {
+                    const dayContent = (
+                        <DayCell
+                            key={day.date.toISOString()}
+                            day={day}
+                            onDrop={handleDrop}
+                        />
+                    );
+
+                    // Jeśli enableDroppable, opakuj w DroppableDay
+                    if (enableDroppable) {
+                        return (
+                            <DroppableDay
+                                key={day.date.toISOString()}
+                                id={`day-${format(day.date, 'yyyy-MM-dd')}`}
+                                date={day.date}
+                                disabled={!day.isCurrentMonth}
+                            >
+                                {dayContent}
+                            </DroppableDay>
+                        );
+                    }
+
+                    return dayContent;
+                })}
             </div>
         </motion.div>
     );

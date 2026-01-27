@@ -1,34 +1,75 @@
 // src/store/auth-store.ts
 /**
  * Auth Store - Zustand
- *
- * Zarządzanie stanem autoryzacji użytkownika
+ * Zarządzanie stanem autoryzacji użytkownika z obsługą onboardingu i capabilities
  */
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { TokenManager } from '@/lib/api/client';
-import type { User } from '@/types';
+import type { User, UserCapabilities, AccessLevel, ConnectedAccount, SocialPlatform } from '@/types';
+import { DEFAULT_CAPABILITIES } from '@/types';
 
 // ============================================================
 // TYPY
 // ============================================================
 
 interface AuthState {
-    // Stan
+    // Stan użytkownika
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
     isInitialized: boolean;
 
-    // Akcje
+    // Capabilities (możliwości użytkownika)
+    capabilities: UserCapabilities;
+    connectedAccounts: ConnectedAccount[];
+
+    // Onboarding
+    showOnboarding: boolean;
+    onboardingStep: 'welcome' | 'connect' | 'success' | 'completed';
+
+    // Social Login / OAuth
+    pendingSocialLogin: {
+        platform: SocialPlatform;
+        isLogin: boolean; // true = login, false = connect account
+        context: 'onboarding' | 'settings' | 'login';
+    } | null;
+
+    // Ostatnio podłączone konto (do wyświetlenia w success)
+    lastConnectedAccount: ConnectedAccount | null;
+
+    // Akcje - User
     setUser: (user: User | null) => void;
     setIsAuthenticated: (value: boolean) => void;
     setIsLoading: (value: boolean) => void;
-    login: (user: User) => void;
+    login: (user: User, skipOnboarding?: boolean) => void;
     logout: () => void;
     reset: () => void;
     checkAuth: () => void;
+
+    // Akcje - Capabilities
+    setCapabilities: (capabilities: UserCapabilities) => void;
+    setConnectedAccounts: (accounts: ConnectedAccount[]) => void;
+    addConnectedAccount: (account: ConnectedAccount) => void;
+    updateAccessLevel: () => void;
+
+    // Akcje - Onboarding
+    setShowOnboarding: (show: boolean) => void;
+    setOnboardingStep: (step: 'welcome' | 'connect' | 'success' | 'completed') => void;
+    completeOnboarding: () => void;
+    skipOnboarding: () => void;
+
+    // Akcje - Social Login
+    startSocialLogin: (platform: SocialPlatform, isLogin: boolean, context: 'onboarding' | 'settings' | 'login') => void;
+    clearPendingSocialLogin: () => void;
+    setLastConnectedAccount: (account: ConnectedAccount | null) => void;
+
+    // Gettery pomocnicze
+    hasBusinessAccount: () => boolean;
+    canUseAutopilot: () => boolean;
+    canAutoPublish: () => boolean;
+    getAccessLevel: () => AccessLevel;
 }
 
 // ============================================================
@@ -40,7 +81,32 @@ const initialState = {
     isAuthenticated: false,
     isLoading: false,
     isInitialized: false,
+    capabilities: DEFAULT_CAPABILITIES,
+    connectedAccounts: [],
+    showOnboarding: false,
+    onboardingStep: 'welcome' as const,
+    pendingSocialLogin: null,
+    lastConnectedAccount: null,
 };
+
+// ============================================================
+// HELPER: Extract unique platforms from accounts
+// ============================================================
+
+function getUniquePlatforms(
+    accounts: ConnectedAccount[],
+    filter?: (acc: ConnectedAccount) => boolean
+): SocialPlatform[] {
+    const platformSet = new Set<SocialPlatform>();
+
+    for (const acc of accounts) {
+        if (!filter || filter(acc)) {
+            platformSet.add(acc.platform);
+        }
+    }
+
+    return Array.from(platformSet);
+}
 
 // ============================================================
 // STORE
@@ -48,30 +114,36 @@ const initialState = {
 
 export const useAuthStore = create<AuthState>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             // Stan początkowy
             ...initialState,
 
-            // Akcje
+            // === AKCJE USER ===
+
             setUser: (user) => set({ user }),
 
             setIsAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
 
             setIsLoading: (isLoading) => set({ isLoading }),
 
-            login: (user) => set({
-                user,
-                isAuthenticated: true,
-                isLoading: false,
-                isInitialized: true,
-            }),
+            login: (user, skipOnboarding = false) => {
+                const needsOnboarding = user.needs_onboarding && !skipOnboarding;
+
+                set({
+                    user,
+                    isAuthenticated: true,
+                    isLoading: false,
+                    isInitialized: true,
+                    showOnboarding: needsOnboarding,
+                    onboardingStep: needsOnboarding ? 'welcome' : 'completed',
+                });
+            },
 
             logout: () => {
                 TokenManager.clearTokens();
                 set({
-                    user: null,
-                    isAuthenticated: false,
-                    isLoading: false,
+                    ...initialState,
+                    isInitialized: true,
                 });
             },
 
@@ -81,20 +153,190 @@ export const useAuthStore = create<AuthState>()(
                 const hasTokens = TokenManager.hasTokens();
 
                 if (hasTokens) {
-                    // Mamy tokeny - użytkownik może być zalogowany
-                    // User zostanie pobrany przez useUser hook
                     set({
                         isAuthenticated: true,
                         isInitialized: true,
                     });
                 } else {
-                    // Brak tokenów - na pewno niezalogowany
                     set({
                         user: null,
                         isAuthenticated: false,
                         isInitialized: true,
+                        capabilities: DEFAULT_CAPABILITIES,
+                        connectedAccounts: [],
                     });
                 }
+            },
+
+            // === AKCJE CAPABILITIES ===
+
+            setCapabilities: (capabilities) => set({ capabilities }),
+
+            setConnectedAccounts: (accounts) => {
+                set({ connectedAccounts: accounts });
+                get().updateAccessLevel();
+            },
+
+            addConnectedAccount: (account) => {
+                const { connectedAccounts } = get();
+                // Sprawdź czy konto już istnieje (update) lub dodaj nowe
+                const existingIndex = connectedAccounts.findIndex(
+                    (acc) => acc.id === account.id ||
+                        (acc.platform === account.platform && acc.platform_user_id === account.platform_user_id)
+                );
+
+                let newAccounts: ConnectedAccount[];
+                if (existingIndex >= 0) {
+                    newAccounts = [...connectedAccounts];
+                    newAccounts[existingIndex] = account;
+                } else {
+                    newAccounts = [...connectedAccounts, account];
+                }
+
+                set({
+                    connectedAccounts: newAccounts,
+                    lastConnectedAccount: account,
+                });
+                get().updateAccessLevel();
+            },
+
+            updateAccessLevel: () => {
+                const { connectedAccounts } = get();
+
+                if (!connectedAccounts || connectedAccounts.length === 0) {
+                    set({
+                        capabilities: {
+                            ...DEFAULT_CAPABILITIES,
+                            access_level: 'demo',
+                        },
+                    });
+                    return;
+                }
+
+                const activeAccounts = connectedAccounts.filter((acc) => acc.is_active);
+
+                const hasBusinessAccount = activeAccounts.some(
+                    (acc) => acc.is_business_account
+                );
+
+                const hasPersonalAccount = activeAccounts.some(
+                    (acc) => !acc.is_business_account
+                );
+
+                const accessLevel: AccessLevel = hasBusinessAccount
+                    ? 'full'
+                    : hasPersonalAccount
+                        ? 'limited'
+                        : 'demo';
+
+                const connectedPlatforms = getUniquePlatforms(activeAccounts);
+                const businessPlatforms = getUniquePlatforms(activeAccounts, (acc) => acc.is_business_account);
+                const personalPlatforms = getUniquePlatforms(activeAccounts, (acc) => !acc.is_business_account);
+
+                set({
+                    capabilities: {
+                        access_level: accessLevel,
+                        can_use_creator: true,
+                        can_use_materials: true,
+                        can_use_brands: true,
+                        can_use_calendar: accessLevel !== 'demo',
+                        can_use_autopilot: accessLevel === 'full',
+                        can_auto_publish: accessLevel === 'full',
+                        connected_platforms: connectedPlatforms,
+                        business_platforms: businessPlatforms,
+                        personal_platforms: personalPlatforms,
+                        calendar_lock_message: accessLevel === 'demo'
+                            ? 'Podłącz konto social media aby korzystać z kalendarza'
+                            : undefined,
+                        autopilot_lock_message: accessLevel !== 'full'
+                            ? 'Podłącz konto firmowe aby korzystać z Autopilota'
+                            : undefined,
+                    },
+                });
+            },
+
+            // === AKCJE ONBOARDING ===
+
+            setShowOnboarding: (show) => set({ showOnboarding: show }),
+
+            setOnboardingStep: (step) => set({ onboardingStep: step }),
+
+            completeOnboarding: () => {
+                const { user } = get();
+                if (user) {
+                    set({
+                        user: {
+                            ...user,
+                            onboarding_completed_at: new Date().toISOString(),
+                            onboarding_skipped: false,
+                            needs_onboarding: false,
+                        },
+                        showOnboarding: false,
+                        onboardingStep: 'completed',
+                    });
+                }
+            },
+
+            skipOnboarding: () => {
+                const { user } = get();
+                if (user) {
+                    set({
+                        user: {
+                            ...user,
+                            onboarding_skipped: true,
+                            needs_onboarding: false,
+                        },
+                        showOnboarding: false,
+                        onboardingStep: 'completed',
+                    });
+                }
+            },
+
+            // === AKCJE SOCIAL LOGIN ===
+
+            startSocialLogin: (platform, isLogin, context) => {
+                set({
+                    pendingSocialLogin: { platform, isLogin, context },
+                });
+                // Zapisz też w sessionStorage dla callback
+                if (typeof window !== 'undefined') {
+                    sessionStorage.setItem('oauth_context', context);
+                    sessionStorage.setItem('oauth_is_login', String(isLogin));
+                }
+            },
+
+            clearPendingSocialLogin: () => {
+                set({ pendingSocialLogin: null });
+                if (typeof window !== 'undefined') {
+                    sessionStorage.removeItem('oauth_context');
+                    sessionStorage.removeItem('oauth_is_login');
+                }
+            },
+
+            setLastConnectedAccount: (account) => {
+                set({ lastConnectedAccount: account });
+            },
+
+            // === GETTERY ===
+
+            hasBusinessAccount: () => {
+                const { capabilities } = get();
+                return capabilities.access_level === 'full';
+            },
+
+            canUseAutopilot: () => {
+                const { capabilities } = get();
+                return capabilities.can_use_autopilot;
+            },
+
+            canAutoPublish: () => {
+                const { capabilities } = get();
+                return capabilities.can_auto_publish;
+            },
+
+            getAccessLevel: () => {
+                const { capabilities } = get();
+                return capabilities.access_level;
             },
         }),
         {
@@ -102,6 +344,9 @@ export const useAuthStore = create<AuthState>()(
             partialize: (state) => ({
                 user: state.user,
                 isAuthenticated: state.isAuthenticated,
+                capabilities: state.capabilities,
+                connectedAccounts: state.connectedAccounts,
+                onboardingStep: state.onboardingStep,
             }),
         }
     )

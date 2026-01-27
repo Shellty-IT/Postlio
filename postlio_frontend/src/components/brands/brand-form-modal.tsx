@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
     X,
-    Sparkles,
+    PenTool,
     Palette,
     MessageSquare,
     Hash,
@@ -50,7 +50,7 @@ import type {
 } from '@/types/brand';
 import { useBrandsStore } from '@/store/brands-store';
 import { useCreateBrand, useUpdateBrand, useAnalyzeBrandVoice } from '@/hooks/useBrands';
-import { VoiceDNARadar } from './voice-dna-radar';
+import { WritingStyleRadar } from './writing-style-radar';
 import { ToneSlider } from './tone-slider';
 
 const brandSchema = z.object({
@@ -65,8 +65,8 @@ type FormData = z.infer<typeof brandSchema>;
 
 const STEPS = [
     { id: 'basic', title: 'Podstawowe', icon: Palette },
-    { id: 'tone', title: 'Ton głosu', icon: MessageSquare },
-    { id: 'personality', title: 'Osobowość', icon: Sparkles },
+    { id: 'tone', title: 'Ton pisania', icon: MessageSquare },
+    { id: 'personality', title: 'Charakter', icon: PenTool },
     { id: 'keywords', title: 'Słowa kluczowe', icon: Hash },
 ];
 
@@ -223,7 +223,7 @@ export function BrandFormModal() {
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-violet-500" />
+                        <PenTool className="h-5 w-5 text-violet-500" />
                         {editingBrand ? 'Edytuj markę' : 'Utwórz nową markę'}
                     </DialogTitle>
                 </DialogHeader>
@@ -322,7 +322,7 @@ export function BrandFormModal() {
                                 </motion.div>
                             )}
 
-                            {/* Step 2: Tone of Voice */}
+                            {/* Step 2: Tone of Writing */}
                             {currentStep === 1 && (
                                 <motion.div
                                     key="tone"
@@ -338,7 +338,7 @@ export function BrandFormModal() {
                                             <span className="font-medium">Automatyczna analiza AI</span>
                                         </div>
                                         <p className="text-sm text-muted-foreground mb-3">
-                                            Wklej przykładowe posty lub teksty marki, a AI przeanalizuje styl komunikacji.
+                                            Wklej przykładowe posty lub teksty marki, a AI przeanalizuje styl pisania.
                                         </p>
                                         <div className="space-y-2">
                                             {sampleTexts.map((text, index) => (
@@ -418,7 +418,7 @@ export function BrandFormModal() {
                                         </div>
 
                                         <div className="flex items-center justify-center">
-                                            <VoiceDNARadar voiceDNA={voiceDNA} primaryColor={primaryColor} size={220} />
+                                            <WritingStyleRadar voiceDNA={voiceDNA} primaryColor={primaryColor} size={220} />
                                         </div>
                                     </div>
 
@@ -451,7 +451,7 @@ export function BrandFormModal() {
                                 </motion.div>
                             )}
 
-                            {/* Step 3: Personality */}
+                            {/* Step 3: Personality (Character) */}
                             {currentStep === 2 && (
                                 <motion.div
                                     key="personality"
@@ -461,9 +461,9 @@ export function BrandFormModal() {
                                     className="space-y-4"
                                 >
                                     <div>
-                                        <Label>Cechy osobowości marki</Label>
+                                        <Label>Charakter treści</Label>
                                         <p className="text-sm text-muted-foreground mt-1">
-                                            Wybierz cechy, które najlepiej opisują osobowość Twojej marki
+                                            Wybierz cechy, które najlepiej opisują charakter Twoich treści
                                         </p>
                                     </div>
 
@@ -490,7 +490,7 @@ export function BrandFormModal() {
 
                                     {voiceDNA.personalityTraits.length > 0 && (
                                         <div className="p-4 rounded-lg bg-muted/50">
-                                            <div className="text-sm font-medium mb-2">Wybrane cechy:</div>
+                                            <div className="text-sm font-medium mb-2">Wybrany charakter:</div>
                                             <div className="flex flex-wrap gap-2">
                                                 {voiceDNA.personalityTraits.map((trait) => (
                                                     <Badge key={trait} variant="secondary">

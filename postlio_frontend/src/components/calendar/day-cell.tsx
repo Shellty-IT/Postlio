@@ -16,7 +16,7 @@ interface DayCellProps {
 }
 
 export const DayCell = memo(function DayCell({ day, onDrop }: DayCellProps) {
-    const { openScheduleModal, isDragging, selectDate } = useCalendarStore();
+    const { openScheduleModal, selectDate } = useCalendarStore();
     const [isHovered, setIsHovered] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
 
@@ -53,8 +53,8 @@ export const DayCell = memo(function DayCell({ day, onDrop }: DayCellProps) {
         linkedin: '#0A66C2',
     };
 
-    // Używamy Array.from() zamiast spread operatora dla Set
-    const uniquePlatforms = Array.from(new Set(day.posts.flatMap(p => p.platforms)));
+    // NAPRAWIONE: używamy platform (singular) zamiast platforms (plural)
+    const uniquePlatforms = Array.from(new Set(day.posts.map(p => p.platform)));
 
     return (
         <motion.div
@@ -75,15 +75,15 @@ export const DayCell = memo(function DayCell({ day, onDrop }: DayCellProps) {
             {/* Day Header */}
             <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
-          <span
-              className={cn(
-                  "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
-                  day.isToday && "bg-primary text-primary-foreground",
-                  !day.isCurrentMonth && "text-muted-foreground"
-              )}
-          >
-            {format(day.date, 'd')}
-          </span>
+                    <span
+                        className={cn(
+                            "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
+                            day.isToday && "bg-primary text-primary-foreground",
+                            !day.isCurrentMonth && "text-muted-foreground"
+                        )}
+                    >
+                        {format(day.date, 'd')}
+                    </span>
 
                     {/* Platform dots */}
                     {uniquePlatforms.length > 0 && (
@@ -92,7 +92,7 @@ export const DayCell = memo(function DayCell({ day, onDrop }: DayCellProps) {
                                 <div
                                     key={platform}
                                     className="w-1.5 h-1.5 rounded-full"
-                                    style={{ backgroundColor: platformColors[platform] }}
+                                    style={{ backgroundColor: platformColors[platform] || '#888' }}
                                 />
                             ))}
                         </div>
@@ -137,17 +137,14 @@ export const DayCell = memo(function DayCell({ day, onDrop }: DayCellProps) {
                 )}
             </div>
 
-            {/* Drop zone overlay */}
+            {/* Drop zone overlay - pokazuje się gdy coś jest przeciągane nad komórką */}
             <AnimatePresence>
-                {isDragging && (
+                {isDragOver && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className={cn(
-                            "absolute inset-0 border-2 border-dashed rounded-lg pointer-events-none",
-                            isDragOver ? "border-primary bg-primary/10" : "border-transparent"
-                        )}
+                        className="absolute inset-0 border-2 border-dashed rounded-lg pointer-events-none border-primary bg-primary/10"
                     />
                 )}
             </AnimatePresence>

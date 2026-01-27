@@ -1,6 +1,6 @@
 // src/components/creator/action-bar.tsx
 /**
- * Pasek akcji w kreatorze - z opcją ręcznej publikacji
+ * Pasek akcji w kreatorze - z opcją ręcznej publikacji i szybkiego udostępnienia
  */
 
 'use client';
@@ -13,6 +13,7 @@ import {
     Clock,
     ChevronDown,
     Hand,
+    Zap,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
+    DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
     Dialog,
@@ -32,6 +34,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 // ============================================================
 // TYPY
@@ -40,11 +48,12 @@ import { Label } from '@/components/ui/label';
 interface ActionBarProps {
     onSaveDraft: () => Promise<void>;
     onSchedule: (scheduledAt: string) => Promise<void>;
-    onPublishManually: () => void;  // ← NOWE
+    onPublishManually: () => void;
+    onShareNow?: () => void;
     isSaving: boolean;
     hasContent: boolean;
-    hasImage?: boolean;  // ← NOWE - dla Instagram
-    selectedPlatform?: string;  // ← NOWE - info o platformie
+    hasImage?: boolean;
+    selectedPlatform?: string;
 }
 
 // ============================================================
@@ -82,6 +91,7 @@ export function ActionBar({
                               onSaveDraft,
                               onSchedule,
                               onPublishManually,
+                              onShareNow,
                               isSaving,
                               hasContent,
                               hasImage = false,
@@ -158,58 +168,100 @@ export function ActionBar({
 
                 {/* Right side - actions */}
                 <div className="flex items-center gap-2">
-                    {/* Save draft */}
-                    <Button
-                        variant="outline"
-                        onClick={handleSaveDraft}
-                        disabled={!hasContent || isLoading}
-                    >
-                        {isLoading ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                            <Save className="w-4 h-4 mr-2" />
-                        )}
-                        Zapisz szkic
-                    </Button>
-
-                    {/* Schedule dropdown */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant="outline"
-                                disabled={!canPublish || isLoading}
-                            >
-                                <Calendar className="w-4 h-4 mr-2" />
-                                Zaplanuj
-                                <ChevronDown className="w-4 h-4 ml-2" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                            {QUICK_SCHEDULE.map((option) => (
-                                <DropdownMenuItem
-                                    key={option.label}
-                                    onClick={() => handleQuickSchedule(option.hours)}
+                    <TooltipProvider delayDuration={300}>
+                        {/* Save draft */}
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    onClick={handleSaveDraft}
+                                    disabled={!hasContent || isLoading}
                                 >
-                                    <Clock className="w-4 h-4 mr-2" />
-                                    {option.label}
-                                </DropdownMenuItem>
-                            ))}
-                            <DropdownMenuItem onClick={() => setIsScheduleOpen(true)}>
-                                <Calendar className="w-4 h-4 mr-2" />
-                                Wybierz datę...
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                                    {isLoading ? (
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <Save className="w-4 h-4 mr-2" />
+                                    )}
+                                    <span className="hidden sm:inline">Zapisz szkic</span>
+                                    <span className="sm:hidden">Zapisz</span>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Zapisz jako szkic do późniejszej edycji</TooltipContent>
+                        </Tooltip>
 
-                    {/* Publish manually - NOWY PRZYCISK */}
-                    <Button
-                        onClick={onPublishManually}
-                        disabled={!canPublish || isLoading}
-                        className="bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90"
-                    >
-                        <Hand className="w-4 h-4 mr-2" />
-                        Opublikuj ręcznie
-                    </Button>
+                        {/* Schedule dropdown */}
+                        <DropdownMenu>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            disabled={!canPublish || isLoading}
+                                        >
+                                            <Calendar className="w-4 h-4 mr-2" />
+                                            <span className="hidden sm:inline">Zaplanuj</span>
+                                            <ChevronDown className="w-4 h-4 ml-1" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>Zaplanuj publikację na później</TooltipContent>
+                            </Tooltip>
+                            <DropdownMenuContent align="end" className="w-48">
+                                {QUICK_SCHEDULE.map((option) => (
+                                    <DropdownMenuItem
+                                        key={option.label}
+                                        onClick={() => handleQuickSchedule(option.hours)}
+                                    >
+                                        <Clock className="w-4 h-4 mr-2" />
+                                        {option.label}
+                                    </DropdownMenuItem>
+                                ))}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => setIsScheduleOpen(true)}>
+                                    <Calendar className="w-4 h-4 mr-2" />
+                                    Wybierz datę...
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        {/* Share Now - NOWY PRZYCISK */}
+                        {onShareNow && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        onClick={onShareNow}
+                                        disabled={!canPublish || isLoading}
+                                        className="gap-2 border-violet-300 text-violet-600 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-400 dark:hover:bg-violet-950"
+                                    >
+                                        <Zap className="w-4 h-4" />
+                                        <span className="hidden lg:inline">Udostępnij teraz</span>
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    Natychmiastowe udostępnienie przez Share Dialog
+                                </TooltipContent>
+                            </Tooltip>
+                        )}
+
+                        {/* Publish manually - GŁÓWNY PRZYCISK */}
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    onClick={onPublishManually}
+                                    disabled={!canPublish || isLoading}
+                                    className="bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90"
+                                >
+                                    <Hand className="w-4 h-4 mr-2" />
+                                    <span className="hidden sm:inline">Opublikuj ręcznie</span>
+                                    <span className="sm:hidden">Publikuj</span>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                Otwórz modal z instrukcjami ręcznej publikacji
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </div>
             </div>
 

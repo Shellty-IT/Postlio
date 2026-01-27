@@ -5,6 +5,65 @@
  */
 
 // ============================================================
+// RE-EXPORT USER TYPES
+// ============================================================
+
+export type {
+    User,
+    AccessLevel,
+    UserCapabilities,
+    LoginRequest,
+    RegisterRequest,
+    SocialLoginRequest,
+    AuthTokens,
+    AuthResponse,
+    OnboardingCompleteRequest,
+    SocialLoginConfig,
+} from './user';
+
+export {
+    ACCESS_LEVEL_INFO,
+    DEFAULT_CAPABILITIES,
+    SOCIAL_LOGIN_CONFIG,
+} from './user';
+
+// ============================================================
+// RE-EXPORT SOCIAL TYPES
+// ============================================================
+
+export type {
+    SocialPlatform,
+    AccountType,
+    ConnectionStatus,
+    PublishMethod,
+    AccountCapabilities,
+    PlatformInfo,
+    FacebookPageInfo,
+    InstagramAccountInfo,
+    ConnectedAccount,
+    ListAccountsResponse,
+    OAuthInitResponse,
+    OAuthCallbackResponse,
+    PublishPostRequest,
+    PublishPostResponse,
+    RefreshTokenResponse,
+    ManualPublishInfo,
+} from './social';
+
+export {
+    BUSINESS_ACCOUNT_TYPES,
+    PERSONAL_ACCOUNT_TYPES,
+    ACCOUNT_CAPABILITIES,
+    PLATFORMS,
+    isBusinessAccountType,
+    isPersonalAccountType,
+    getAccountCapabilities,
+    getPlatformColor,
+    getPlatformName,
+    getAccountTypeLabel,
+} from './social';
+
+// ============================================================
 // RE-EXPORT BRAND TYPES
 // ============================================================
 
@@ -36,13 +95,15 @@ export {
 // PODSTAWOWE ENUMY
 // ============================================================
 
+// Platform - alias dla SocialPlatform (kompatybilność wsteczna)
+// UWAGA: Używaj SocialPlatform w nowym kodzie
 export type Platform = 'facebook' | 'instagram' | 'linkedin';
 
 export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed' | 'archived';
 
 export type UserRole = 'user' | 'admin' | 'premium';
 
-// AI Providers - ZAKTUALIZOWANE
+// AI Providers
 export type TextProvider = 'gemini' | 'groq';
 export type ImageProvider = 'pollinations' | 'gemini' | 'huggingface' | 'clipdrop';
 export type AIProvider = TextProvider | ImageProvider;
@@ -50,7 +111,7 @@ export type AIProvider = TextProvider | ImageProvider;
 export type ContentType = 'post' | 'story' | 'reel' | 'article';
 
 // ============================================================
-// AI PROVIDER DEFINITIONS - ZAKTUALIZOWANE
+// AI PROVIDER DEFINITIONS
 // ============================================================
 
 export interface ProviderInfo {
@@ -120,20 +181,8 @@ export const IMAGE_PROVIDERS: ProviderInfo[] = [
 ];
 
 // ============================================================
-// USER
+// USER PREFERENCES
 // ============================================================
-
-export interface User {
-    id: string;
-    email: string;
-    full_name: string;
-    avatar_url?: string;
-    role: UserRole;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
-    preferences?: UserPreferences;
-}
 
 export interface UserPreferences {
     default_platform?: Platform;
@@ -147,7 +196,7 @@ export interface UserPreferences {
 }
 
 // ============================================================
-// SOCIAL ACCOUNTS
+// SOCIAL ACCOUNTS (zachowane dla kompatybilności)
 // ============================================================
 
 export interface SocialAccount {
@@ -168,7 +217,7 @@ export interface SocialAccount {
 }
 
 // ============================================================
-// POSTS - ZGODNE Z BACKENDEM
+// POSTS
 // ============================================================
 
 export interface PostMedia {
@@ -192,66 +241,37 @@ export interface PostAnalytics {
     engagement_rate?: number;
 }
 
-/**
- * Post - ZGODNY Z BACKENDEM (PostResponse)
- *
- * Backend zwraca:
- * - platform: string (singular)
- * - image_url: string | null
- * - image_prompt: string | null
- * - platform_post_id: string | null
- * - likes, comments, shares: int
- */
 export interface Post {
     id: number | string;
     user_id: number | string;
     brand_id?: number | null;
     content: string;
-    platform: Platform;                    // ← SINGULAR - zgodne z backendem
+    platform: Platform;
     status: PostStatus;
     scheduled_at?: string | null;
     published_at?: string | null;
-
-    // Media - backend używa image_url, nie media[]
     image_url?: string | null;
     image_prompt?: string | null;
-
-    // Platform-specific
     platform_post_id?: string | null;
-
-    // AI metadata
     ai_generated: boolean;
     ai_model?: string | null;
     ai_provider?: string | null;
     generation_params?: Record<string, unknown> | null;
-
-    // Analytics - backend zwraca jako osobne pola
     likes: number;
     comments: number;
     shares: number;
-
-    // Timestamps
     created_at: string;
     updated_at: string;
-
-    // Opcjonalne pola dla kompatybilności z UI
     hashtags?: string[];
     media?: PostMedia[];
     analytics?: PostAnalytics;
     ai_prompt?: string;
 }
 
-/**
- * Helper: Konwersja Post z backendu na format z platforms[]
- * Użyj gdy potrzebujesz tablicy platform w UI
- */
 export function postToPlatformsArray(post: Post): Platform[] {
     return [post.platform];
 }
 
-/**
- * Helper: Pobierz pierwszy platform z tablicy
- */
 export function platformsToSingle(platforms: Platform[]): Platform {
     return platforms[0] || 'facebook';
 }
@@ -313,6 +333,8 @@ export interface NavItem {
     disabled?: boolean;
     external?: boolean;
     children?: NavItem[];
+    requiresAuth?: boolean;
+    requiresBusinessAccount?: boolean;
 }
 
 export interface BreadcrumbItem {

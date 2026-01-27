@@ -17,16 +17,18 @@ import { cn } from '@/lib/utils';
 import { ScheduledPost } from '@/types/calendar';
 import { useCalendarStore } from '@/store/calendar-store';
 import { PostCard } from './post-card';
+import { DroppableDay } from './droppable-day';
 
 interface WeekViewProps {
     posts: ScheduledPost[];
     onPostMove?: (postId: string, newDate: Date) => void;
+    enableDroppable?: boolean;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const WORKING_HOURS = { start: 6, end: 22 }; // Widoczne domyślnie 6:00 - 22:00
 
-export function WeekView({ posts, onPostMove }: WeekViewProps) {
+export function WeekView({ posts, onPostMove, enableDroppable = false }: WeekViewProps) {
     const { currentDate, openScheduleModal, selectDate } = useCalendarStore();
 
     const weekDays = useMemo(() => {
@@ -56,7 +58,7 @@ export function WeekView({ posts, onPostMove }: WeekViewProps) {
             // Zachowaj minuty z oryginalnego czasu
             const originalMinutes = new Date(post.scheduledAt).getMinutes();
             newDate.setMinutes(originalMinutes);
-            onPostMove?.(post.id, newDate);
+            onPostMove?.(String(post.id), newDate);
         } catch (error) {
             console.error('Drop error:', error);
         }
@@ -74,27 +76,34 @@ export function WeekView({ posts, onPostMove }: WeekViewProps) {
                 <div className="p-2 border-r" />
 
                 {/* Dni tygodnia */}
-                {weekDays.map((day) => (
-                    <div
-                        key={day.toISOString()}
-                        className={cn(
-                            "p-3 text-center border-r last:border-r-0",
-                            isToday(day) && "bg-primary/10"
-                        )}
-                    >
-                        <div className="text-xs text-muted-foreground uppercase">
-                            {format(day, 'EEE', { locale: pl })}
-                        </div>
+                {weekDays.map((day) => {
+                    const headerContent = (
                         <div
                             className={cn(
-                                "text-lg font-semibold mt-1",
-                                isToday(day) && "text-primary"
+                                "p-3 text-center border-r last:border-r-0",
+                                isToday(day) && "bg-primary/10"
                             )}
                         >
-                            {format(day, 'd')}
+                            <div className="text-xs text-muted-foreground uppercase">
+                                {format(day, 'EEE', { locale: pl })}
+                            </div>
+                            <div
+                                className={cn(
+                                    "text-lg font-semibold mt-1",
+                                    isToday(day) && "text-primary"
+                                )}
+                            >
+                                {format(day, 'd')}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+
+                    return (
+                        <div key={day.toISOString()}>
+                            {headerContent}
+                        </div>
+                    );
+                })}
             </div>
 
             {/* Siatka godzinowa */}
@@ -113,15 +122,15 @@ export function WeekView({ posts, onPostMove }: WeekViewProps) {
                         {weekDays.map((day) => {
                             const cellPosts = getPostsForHour(day, hour);
                             const isCurrentHour = isToday(day) && new Date().getHours() === hour;
+                            const cellDate = setHours(new Date(day), hour);
 
-                            return (
+                            const cellContent = (
                                 <div
-                                    key={`${day.toISOString()}-${hour}`}
                                     onClick={() => handleCellClick(day, hour)}
                                     onDragOver={(e) => e.preventDefault()}
                                     onDrop={(e) => handleDrop(e, day, hour)}
                                     className={cn(
-                                        "min-h-[60px] p-1 border-r last:border-r-0 cursor-pointer",
+                                        "min-h-[60px] h-full p-1 border-r last:border-r-0 cursor-pointer",
                                         "hover:bg-muted/50 transition-colors",
                                         isCurrentHour && "bg-primary/5 ring-1 ring-inset ring-primary/20"
                                     )}
@@ -129,6 +138,25 @@ export function WeekView({ posts, onPostMove }: WeekViewProps) {
                                     {cellPosts.map((post) => (
                                         <PostCard key={post.id} post={post} compact />
                                     ))}
+                                </div>
+                            );
+
+                            // Jeśli enableDroppable, opakuj w DroppableDay
+                            if (enableDroppable) {
+                                return (
+                                    <DroppableDay
+                                        key={`${day.toISOString()}-${hour}`}
+                                        id={`hour-${format(day, 'yyyy-MM-dd')}-${hour}`}
+                                        date={cellDate}
+                                    >
+                                        {cellContent}
+                                    </DroppableDay>
+                                );
+                            }
+
+                            return (
+                                <div key={`${day.toISOString()}-${hour}`}>
+                                    {cellContent}
                                 </div>
                             );
                         })}

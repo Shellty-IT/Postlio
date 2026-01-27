@@ -1,13 +1,18 @@
 // src/types/brand.ts
 /**
- * Typy dla Brand i Brand Voice DNA.
+ * Typy dla Brand i Styl pisania (dawniej Brand Voice DNA).
  *
  * Frontend używa camelCase.
  * Transformacja z/do API (snake_case) przez funkcje transform*.
+ *
+ * TERMINOLOGIA:
+ * - "Voice DNA" (wewnętrzna nazwa) → "Styl pisania" (UI)
+ * - "Głos marki" → "Charakter treści" (UI)
+ * - "Personality Traits" → "Charakter treści" (UI)
  */
 
 // ============================================================
-// VOICE DNA TYPES
+// STYL PISANIA TYPES (dawniej VOICE DNA)
 // ============================================================
 
 export type PersonalityTrait =
@@ -38,6 +43,11 @@ export type CommunicationStyle =
 
 export type EmojiUsage = 'none' | 'minimal' | 'moderate' | 'frequent';
 
+/**
+ * Styl pisania marki.
+ * Wewnętrznie nazywany VoiceDNA dla kompatybilności z backendem.
+ * W UI wyświetlany jako "Styl pisania".
+ */
 export interface BrandVoiceDNA {
     toneFormality: number;
     toneEnergy: number;
@@ -53,6 +63,9 @@ export interface BrandVoiceDNA {
     preferredEmojis: string[];
 }
 
+// Alias dla czytelności - używaj w nowym kodzie
+export type WritingStyle = BrandVoiceDNA;
+
 // ============================================================
 // BRAND TYPE (FRONTEND - camelCase)
 // ============================================================
@@ -66,7 +79,7 @@ export interface Brand {
     secondaryColor?: string;
     industry?: string;
     targetAudience?: string;
-    voiceDNA: BrandVoiceDNA;
+    voiceDNA: BrandVoiceDNA;  // Wewnętrznie voiceDNA, w UI "Styl pisania"
     isActive: boolean;
     isDefault: boolean;
     postsCount: number;
@@ -215,6 +228,10 @@ export function transformBrandToApi(brand: Partial<Brand> & { name: string }): R
 // CONSTANTS
 // ============================================================
 
+/**
+ * Cechy charakteru treści (dawniej Personality Traits).
+ * W UI wyświetlane jako "Charakter treści".
+ */
 export const PERSONALITY_TRAITS: Record<PersonalityTrait, { label: string; icon: string }> = {
     innovative: { label: 'Innowacyjny', icon: '💡' },
     traditional: { label: 'Tradycyjny', icon: '🏛️' },
@@ -293,3 +310,6 @@ export const DEFAULT_VOICE_DNA: BrandVoiceDNA = {
     emojiUsage: 'moderate',
     preferredEmojis: [],
 };
+
+// Alias dla nowej terminologii
+export const DEFAULT_WRITING_STYLE = DEFAULT_VOICE_DNA;

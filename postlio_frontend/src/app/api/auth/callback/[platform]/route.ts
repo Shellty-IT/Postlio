@@ -5,11 +5,18 @@
  * Flow:
  * 1. Użytkownik kliknął "Połącz" -> redirect do platformy
  * 2. Platforma po autoryzacji redirect tutaj z ?code=xxx&state=xxx
- * 3. Ten endpoint redirect do frontend z parametrami
+ * 3. Ten endpoint redirect do odpowiedniej strony frontend z parametrami
  * 4. Frontend wywołuje API backend /social/oauth/callback
+ *
+ * Konteksty:
+ * - 'onboarding' -> redirect do /onboarding z parametrami
+ * - 'settings' -> redirect do /settings z parametrami
+ * - 'login' -> redirect do /login z parametrami (social login)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+
+type OAuthContext = 'onboarding' | 'settings' | 'login';
 
 export async function GET(
     request: NextRequest,
@@ -23,37 +30,67 @@ export async function GET(
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
 
-    // Base URL for redirect
+    // Base URL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const settingsUrl = `${baseUrl}/settings`;
+
+    // Pobierz kontekst z state
+    // State może zawierać kontekst jako prefix: "onboarding_abc123" lub "settings_abc123"
+    let context: OAuthContext = 'settings';
+
+    if (state) {
+        if (state.startsWith('onboarding_')) {
+            context = 'onboarding';
+        } else if (state.startsWith('login_')) {
+            context = 'login';
+        } else if (state.startsWith('settings_')) {
+            context = 'settings';
+        }
+    }
+
+    // Określ docelowy URL na podstawie kontekstu
+    const getRedirectUrl = (ctx: OAuthContext): string => {
+        switch (ctx) {
+            case 'onboarding':
+                return `${baseUrl}/onboarding`;
+            case 'login':
+                return `${baseUrl}/login`;
+            case 'settings':
+            default:
+                return `${baseUrl}/settings`;
+        }
+    };
+
+    const redirectBaseUrl = getRedirectUrl(context);
 
     // Handle error from OAuth provider
     if (error) {
-        const errorUrl = new URL(settingsUrl);
+        const errorUrl = new URL(redirectBaseUrl);
         errorUrl.searchParams.set('oauth_error', error);
         if (errorDescription) {
             errorUrl.searchParams.set('oauth_error_description', errorDescription);
         }
         errorUrl.searchParams.set('platform', platform);
+        errorUrl.searchParams.set('oauth_context', context);
         return NextResponse.redirect(errorUrl.toString());
     }
 
     // Validate required params
     if (!code || !state) {
-        const errorUrl = new URL(settingsUrl);
+        const errorUrl = new URL(redirectBaseUrl);
         errorUrl.searchParams.set('oauth_error', 'missing_params');
         errorUrl.searchParams.set('oauth_error_description', 'Brak wymaganych parametrów autoryzacji');
         errorUrl.searchParams.set('platform', platform);
+        errorUrl.searchParams.set('oauth_context', context);
         return NextResponse.redirect(errorUrl.toString());
     }
 
-    // Redirect to settings page with success params
-    // Frontend będzie obsługiwał wymianę kodu na token
-    const successUrl = new URL(settingsUrl);
+    // Redirect with success params
+    const successUrl = new URL(redirectBaseUrl);
     successUrl.searchParams.set('oauth_success', 'true');
     successUrl.searchParams.set('oauth_code', code);
     successUrl.searchParams.set('oauth_state', state);
     successUrl.searchParams.set('platform', platform);
+    successUrl.searchParams.set('oauth_context', context);
 
     return NextResponse.redirect(successUrl.toString());
 }

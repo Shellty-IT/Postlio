@@ -104,16 +104,25 @@ export {
 // ============================================================
 
 export {
+    // Queries
     useConnectedAccounts,
     useAccount,
     useAvailablePlatforms,
+    useUserCapabilities,
+    // Mutations
     useInitOAuth,
     useOAuthCallback,
+    useOAuthCallbackHandler,
     useDisconnectAccount,
     useRefreshToken,
     usePublishToSocial,
+    // Keys
     socialKeys,
+    // Helpers
     getPlatformInfo,
     getStatusText,
     getStatusColor,
+    getAccountTypeText,
+    supportsAutoPublish,
+    isBusinessAccountType,
 } from './useSocial';
