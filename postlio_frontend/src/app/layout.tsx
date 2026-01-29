@@ -32,7 +32,6 @@ export const metadata: Metadata = {
         telephone: false,
     },
 
-    // Icons - używamy favicon.svg
     icons: {
         icon: [
             { url: '/favicon.svg', type: 'image/svg+xml' },
