@@ -1,5 +1,5 @@
 // postlio_frontend/public/sw.js
-const CACHE_VERSION = 'postlio-v1';
+const CACHE_VERSION = 'postlio-v2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const IMAGE_CACHE = `${CACHE_VERSION}-images`;
@@ -26,6 +26,7 @@ const CACHE_STRATEGIES = {
             const networkResponse = await fetch(request);
             if (networkResponse.ok) {
                 const cache = await caches.open(cacheName);
+                // Clone PRZED użyciem
                 cache.put(request, networkResponse.clone());
             }
             return networkResponse;
@@ -40,6 +41,7 @@ const CACHE_STRATEGIES = {
             const networkResponse = await fetch(request);
             if (networkResponse.ok) {
                 const cache = await caches.open(cacheName);
+                // Clone PRZED użyciem
                 cache.put(request, networkResponse.clone());
             }
             return networkResponse;
@@ -49,19 +51,23 @@ const CACHE_STRATEGIES = {
         }
     },
 
-    // Stale While Revalidate
+    // Stale While Revalidate - NAPRAWIONE
     staleWhileRevalidate: async (request, cacheName = DYNAMIC_CACHE) => {
         const cachedResponse = await caches.match(request);
 
-        const fetchPromise = fetch(request).then((networkResponse) => {
-            if (networkResponse.ok) {
-                caches.open(cacheName).then((cache) => {
-                    cache.put(request, networkResponse.clone());
-                });
-            }
-            return networkResponse;
-        }).catch(() => null);
+        // Revalidate w tle
+        const fetchPromise = fetch(request)
+            .then(async (networkResponse) => {
+                if (networkResponse.ok) {
+                    const cache = await caches.open(cacheName);
+                    // Clone PRZED cache.put
+                    await cache.put(request, networkResponse.clone());
+                }
+                return networkResponse;
+            })
+            .catch(() => null);
 
+        // Zwróć cache od razu, lub czekaj na network
         return cachedResponse || fetchPromise;
     }
 };
@@ -102,7 +108,7 @@ self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Ignoruj zewnętrzne domeny i API backend
+    // Ignoruj zewnętrzne domeny
     if (!url.origin.includes(self.location.origin)) {
         return;
     }
@@ -112,11 +118,22 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // Ignoruj _next/webpack-hmr (dev)
+    if (url.pathname.includes('webpack-hmr') || url.pathname.includes('_next/static/webpack')) {
+        return;
+    }
+
+    // Ignoruj RSC requests (Next.js Server Components) - to powodowało problemy!
+    if (url.searchParams.has('_rsc')) {
+        return;
+    }
+
     // Obrazy - Cache First
     if (request.destination === 'image') {
         event.respondWith(
             CACHE_STRATEGIES.cacheFirst(request, IMAGE_CACHE)
                 .then((response) => response || fetch(request))
+                .catch(() => null)
         );
         return;
     }
@@ -129,14 +146,26 @@ self.addEventListener('fetch', (event) => {
                     if (response) return response;
                     return caches.match('/offline');
                 })
+                .catch(() => caches.match('/offline'))
         );
         return;
     }
 
-    // Pozostałe - Stale While Revalidate
+    // Statyczne assety Next.js - Cache First
+    if (url.pathname.startsWith('/_next/static/')) {
+        event.respondWith(
+            CACHE_STRATEGIES.cacheFirst(request, STATIC_CACHE)
+                .then((response) => response || fetch(request))
+                .catch(() => null)
+        );
+        return;
+    }
+
+    // Pozostałe - Network First (bezpieczniejsze niż staleWhileRevalidate)
     event.respondWith(
-        CACHE_STRATEGIES.staleWhileRevalidate(request)
+        CACHE_STRATEGIES.networkFirst(request)
             .then((response) => response || fetch(request))
+            .catch(() => null)
     );
 });
 
@@ -147,20 +176,24 @@ self.addEventListener('message', (event) => {
     }
 });
 
-// Push notifications (przygotowane)
+// Push notifications
 self.addEventListener('push', (event) => {
     if (!event.data) return;
 
-    const data = event.data.json();
+    try {
+        const data = event.data.json();
 
-    event.waitUntil(
-        self.registration.showNotification(data.title || 'Postlio', {
-            body: data.body || 'Nowe powiadomienie',
-            icon: '/icon-192.png',
-            badge: '/icon-192.png',
-            data: { url: data.url || '/' }
-        })
-    );
+        event.waitUntil(
+            self.registration.showNotification(data.title || 'Postlio', {
+                body: data.body || 'Nowe powiadomienie',
+                icon: '/icon-192.png',
+                badge: '/icon-192.png',
+                data: { url: data.url || '/' }
+            })
+        );
+    } catch (e) {
+        console.error('[SW] Push error:', e);
+    }
 });
 
 self.addEventListener('notificationclick', (event) => {
