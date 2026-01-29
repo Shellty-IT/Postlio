@@ -61,7 +61,7 @@ export function useUser() {
 export function useLogin() {
     const queryClient = useQueryClient();
     const router = useRouter();
-    const { setUser, setIsAuthenticated, setIsLoading } = useAuthStore();
+    const { login: authLogin, setIsLoading } = useAuthStore();
 
     return useMutation({
         mutationFn: async (credentials: LoginRequest) => {
@@ -69,8 +69,8 @@ export function useLogin() {
             return authApi.login(credentials);
         },
         onSuccess: (data) => {
-            setUser(data.user);
-            setIsAuthenticated(true);
+            // Użyj login z auth store
+            authLogin(data.user);
             setIsLoading(false);
 
             // Invalidate queries żeby pobrać świeże dane
@@ -80,7 +80,12 @@ export function useLogin() {
                 description: `Witaj, ${data.user.full_name || data.user.email}!`,
             });
 
-            router.push('/dashboard');
+            // Przekieruj na podstawie onboarding
+            if (data.user.needs_onboarding) {
+                router.push('/onboarding');
+            } else {
+                router.push('/dashboard');
+            }
         },
         onError: (error: Error) => {
             setIsLoading(false);
@@ -118,7 +123,7 @@ export function useLogin() {
 export function useRegister() {
     const queryClient = useQueryClient();
     const router = useRouter();
-    const { setUser, setIsAuthenticated, setIsLoading } = useAuthStore();
+    const { login: authLogin, setIsLoading } = useAuthStore();
 
     return useMutation({
         mutationFn: async (data: RegisterRequest) => {
@@ -126,17 +131,22 @@ export function useRegister() {
             return authApi.register(data);
         },
         onSuccess: (data) => {
-            setUser(data.user);
-            setIsAuthenticated(true);
+            // Użyj login z auth store - obsługuje onboarding
+            authLogin(data.user);
             setIsLoading(false);
 
             queryClient.invalidateQueries({ queryKey: authKeys.user() });
 
             toast.success('Konto utworzone!', {
-                description: 'Witaj w Postlio! Rozpocznij tworzenie treści.',
+                description: 'Witaj w Postlio!',
             });
 
-            router.push('/dashboard');
+            // Przekieruj na podstawie onboarding
+            if (data.user.needs_onboarding) {
+                router.push('/onboarding');
+            } else {
+                router.push('/dashboard');
+            }
         },
         onError: (error: Error) => {
             setIsLoading(false);
@@ -210,7 +220,7 @@ export function useAuth() {
         user: user.data,
         isAuthenticated,
         isLoading: isLoading || user.isLoading,
-        isInitialized, // ← DODANE!
+        isInitialized,
         isError: user.isError,
         error: user.error,
 

@@ -29,6 +29,7 @@ const PUBLIC_PATHS = [
     '/register',
     '/forgot-password',
     '/reset-password',
+    '/onboarding',  // ← DODAJ TO
 ];
 
 // Ścieżki tylko dla niezalogowanych
