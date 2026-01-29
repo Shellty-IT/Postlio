@@ -90,6 +90,9 @@ const PLATFORMS: PlatformConfig[] = [
 
 // ==================== Main Component ====================
 
+// src/components/settings/connected-accounts-section.tsx
+// ... (linie 100-120)
+
 export function ConnectedAccountsSection() {
     const { data, isLoading, error } = useConnectedAccounts();
     const initOAuth = useInitOAuth();
@@ -107,8 +110,9 @@ export function ConnectedAccountsSection() {
         accounts: accounts.filter(a => a.platform === platform.platform),
     }));
 
+    // POPRAWKA: przekazujemy obiekt zamiast stringa
     const handleConnect = (platform: SocialPlatform) => {
-        initOAuth.mutate(platform);
+        initOAuth.mutate({ platform, context: 'settings' });
     };
 
     const handleDisconnect = (accountId: number) => {
@@ -500,22 +504,22 @@ function AccountItem({
                     {/* Capabilities */}
                     {capabilities && (
                         <div className="flex items-center gap-2 mt-2">
-                            {capabilities.supportsImages && (
+                            {capabilities.supports_images && (
                                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <ImageIcon className="w-3 h-3" />
-                                    Obrazy
-                                </span>
+                <ImageIcon className="w-3 h-3" />
+                Obrazy
+            </span>
                             )}
-                            {capabilities.supportsLinks && (
+                            {capabilities.supports_links && (
                                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <LinkIcon className="w-3 h-3" />
-                                    Linki
-                                </span>
+                <LinkIcon className="w-3 h-3" />
+                Linki
+            </span>
                             )}
                             <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Type className="w-3 h-3" />
-                                Max {capabilities.maxTextLength} znaków
-                            </span>
+            <Type className="w-3 h-3" />
+            Max {capabilities.max_text_length} znaków
+        </span>
                         </div>
                     )}
 

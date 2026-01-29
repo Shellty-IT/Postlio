@@ -93,15 +93,12 @@ function PostCard({ post, index }: PostCardProps) {
         >
             {/* Content Preview */}
             <div className="flex-1 min-w-0">
-                {/* Platforms & Status */}
+                {/* Platform & Status */}
                 <div className="flex items-center gap-2 mb-2">
-                    <div className="flex items-center gap-1">
-                        {post.platforms.map((platform) => (
-                            <span key={platform} className={cn(platformColors[platform])}>
-                {platformIcons[platform]}
-              </span>
-                        ))}
-                    </div>
+                    {/* POPRAWKA: pojedyncza platforma zamiast tablicy */}
+                    <span className={cn(platformColors[post.platform])}>
+                        {platformIcons[post.platform]}
+                    </span>
 
                     <Badge variant="outline" className={cn('text-xs', status.className)}>
                         {status.icon}
@@ -164,15 +161,18 @@ interface RecentPostsProps {
 }
 
 export function RecentPosts({ posts }: RecentPostsProps) {
-    // Mock data
+    // Mock data - POPRAWKA: platform zamiast platforms
     const mockPosts: Post[] = posts || [
         {
             id: '1',
             user_id: '1',
             content: 'Nowy wpis na blogu o AI w marketingu! 🚀 Sprawdźcie jak sztuczna inteligencja zmienia sposób tworzenia treści w social media...',
-            platforms: ['facebook', 'linkedin'],
+            platform: 'facebook',
             status: 'published',
             ai_generated: true,
+            likes: 0,
+            comments: 0,
+            shares: 0,
             created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
             updated_at: new Date().toISOString(),
         },
@@ -180,10 +180,13 @@ export function RecentPosts({ posts }: RecentPostsProps) {
             id: '2',
             user_id: '1',
             content: 'Zapraszamy na webinar o automatyzacji social media! 📅 Dołącz do nas w czwartek o 18:00.',
-            platforms: ['instagram', 'facebook'],
+            platform: 'instagram',
             status: 'scheduled',
             scheduled_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
             ai_generated: false,
+            likes: 0,
+            comments: 0,
+            shares: 0,
             created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
             updated_at: new Date().toISOString(),
         },
@@ -191,9 +194,12 @@ export function RecentPosts({ posts }: RecentPostsProps) {
             id: '3',
             user_id: '1',
             content: 'Tips & tricks dla content creatorów - nowa seria postów już wkrótce! ✨',
-            platforms: ['instagram'],
+            platform: 'linkedin',
             status: 'draft',
             ai_generated: true,
+            likes: 0,
+            comments: 0,
+            shares: 0,
             created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
             updated_at: new Date().toISOString(),
         },

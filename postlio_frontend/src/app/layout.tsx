@@ -10,6 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+    metadataBase: new URL('https://postlio.netlify.app'),
     title: {
         default: 'Postlio - AI Social Media Manager',
         template: '%s | Postlio',

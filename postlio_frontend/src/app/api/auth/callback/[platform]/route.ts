@@ -16,6 +16,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 type OAuthContext = 'onboarding' | 'settings' | 'login';
 
 export async function GET(
@@ -30,11 +34,10 @@ export async function GET(
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
 
-    // Base URL
+
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-    // Pobierz kontekst z state
-    // State może zawierać kontekst jako prefix: "onboarding_abc123" lub "settings_abc123"
+
     let context: OAuthContext = 'settings';
 
     if (state) {
@@ -47,7 +50,7 @@ export async function GET(
         }
     }
 
-    // Określ docelowy URL na podstawie kontekstu
+
     const getRedirectUrl = (ctx: OAuthContext): string => {
         switch (ctx) {
             case 'onboarding':
@@ -62,7 +65,7 @@ export async function GET(
 
     const redirectBaseUrl = getRedirectUrl(context);
 
-    // Handle error from OAuth provider
+
     if (error) {
         const errorUrl = new URL(redirectBaseUrl);
         errorUrl.searchParams.set('oauth_error', error);
@@ -74,7 +77,7 @@ export async function GET(
         return NextResponse.redirect(errorUrl.toString());
     }
 
-    // Validate required params
+
     if (!code || !state) {
         const errorUrl = new URL(redirectBaseUrl);
         errorUrl.searchParams.set('oauth_error', 'missing_params');
@@ -84,7 +87,7 @@ export async function GET(
         return NextResponse.redirect(errorUrl.toString());
     }
 
-    // Redirect with success params
+
     const successUrl = new URL(redirectBaseUrl);
     successUrl.searchParams.set('oauth_success', 'true');
     successUrl.searchParams.set('oauth_code', code);

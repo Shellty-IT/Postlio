@@ -62,7 +62,8 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
     const [isHovered, setIsHovered] = useState(false);
 
     const StatusIcon = statusConfig[post.status].icon;
-    const primaryPlatform = post.platforms[0];
+    // POPRAWKA: używamy post.platform (singular) zamiast post.platforms[0]
+    const primaryPlatform = post.platform;
     const platformStyle = platformConfig[primaryPlatform];
 
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
@@ -113,8 +114,8 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
 
                         {/* Title */}
                         <span className="truncate font-medium">
-              {post.title || post.content.slice(0, 30)}
-            </span>
+                            {post.title || post.content.slice(0, 30)}
+                        </span>
                     </div>
 
                     {/* Time */}
@@ -142,6 +143,7 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
                                         fill
                                         className="object-cover"
                                         sizes="256px"
+                                        unoptimized
                                     />
                                 </div>
                             )}
@@ -167,19 +169,14 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
                 {/* Header */}
                 <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2">
-                        {/* Platforms */}
-                        <div className="flex -space-x-1">
-                            {post.platforms.map((platform) => (
-                                <div
-                                    key={platform}
-                                    className="w-5 h-5 rounded-full flex items-center justify-center ring-2 ring-background"
-                                    style={{ backgroundColor: platformConfig[platform].color }}
-                                >
-                  <span className="text-[10px] text-white font-bold uppercase">
-                    {platform[0]}
-                  </span>
-                                </div>
-                            ))}
+                        {/* Platform - POPRAWKA: pojedyncza platforma zamiast tablicy */}
+                        <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center"
+                            style={{ backgroundColor: platformConfig[post.platform].color }}
+                        >
+                            <span className="text-[10px] text-white font-bold uppercase">
+                                {post.platform[0]}
+                            </span>
                         </div>
 
                         {/* AI Badge */}
@@ -189,8 +186,8 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
                                     <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-violet-500/10">
                                         <Sparkles className="h-3 w-3 text-violet-500" />
                                         <span className="text-[10px] text-violet-600 dark:text-violet-400 font-medium">
-                      AI
-                    </span>
+                                            AI
+                                        </span>
                                     </div>
                                 </TooltipTrigger>
                                 <TooltipContent>Wygenerowany przez AI</TooltipContent>
@@ -239,6 +236,7 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
                             fill
                             className="object-cover"
                             sizes="(max-width: 768px) 100vw, 300px"
+                            unoptimized
                         />
                     </div>
                 )}
@@ -259,9 +257,9 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
                 {/* Brand badge */}
                 {post.brandName && (
                     <div className="mt-2 pt-2 border-t">
-            <span className="text-xs text-muted-foreground">
-              Marka: <span className="font-medium text-foreground">{post.brandName}</span>
-            </span>
+                        <span className="text-xs text-muted-foreground">
+                            Marka: <span className="font-medium text-foreground">{post.brandName}</span>
+                        </span>
                     </div>
                 )}
             </div>

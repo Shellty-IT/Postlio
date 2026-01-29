@@ -7,6 +7,8 @@ import { apiClient } from './client';
 import type {
     SocialPlatform,
     AccountType,
+    ConnectionStatus,
+    PublishMethod,
     AccountCapabilities,
     ConnectedAccount,
     ListAccountsResponse,
@@ -18,6 +20,8 @@ import type {
     PlatformInfo,
     ManualPublishInfo,
     UserCapabilities,
+    FacebookPageInfo,
+    InstagramAccountInfo,
 } from '@/types';
 
 import {
@@ -31,6 +35,8 @@ import {
 export type {
     SocialPlatform,
     AccountType,
+    ConnectionStatus,
+    PublishMethod,
     AccountCapabilities,
     ConnectedAccount,
     ListAccountsResponse,
@@ -41,6 +47,8 @@ export type {
     RefreshTokenResponse,
     PlatformInfo,
     ManualPublishInfo,
+    FacebookPageInfo,
+    InstagramAccountInfo,
 };
 
 // Re-export constants
@@ -127,7 +135,7 @@ export function supportsShareDialog(accountType: AccountType): boolean {
     return ACCOUNT_CAPABILITIES[accountType]?.supports_share_dialog ?? false;
 }
 
-export function getPublishMethod(accountType: AccountType): 'auto' | 'share_dialog' | 'manual_copy' {
+export function getPublishMethod(accountType: AccountType): PublishMethod {
     return ACCOUNT_CAPABILITIES[accountType]?.publish_method ?? 'manual_copy';
 }
 

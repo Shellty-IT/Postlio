@@ -10,6 +10,7 @@
 
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 import {
     Copy,
     Download,
@@ -316,6 +317,7 @@ export function ManualPublishModal({
                     </Button>
 
                     {/* Zdjęcie */}
+                    {/* Zdjęcie */}
                     {data.image_url && (
                         <>
                             <Separator />
@@ -325,10 +327,12 @@ export function ManualPublishModal({
                                     Zdjęcie
                                 </label>
                                 <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
-                                    <img
+                                    <Image
                                         src={data.image_url}
                                         alt="Post image"
-                                        className="w-full h-full object-cover"
+                                        fill
+                                        className="object-cover"
+                                        unoptimized
                                     />
                                 </div>
                                 <Button

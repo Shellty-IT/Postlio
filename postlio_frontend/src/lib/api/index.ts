@@ -36,12 +36,16 @@ export {
     getPlatformName,
     getAccountTypeLabel,
     ACCOUNT_CAPABILITIES,
+    BUSINESS_ACCOUNT_TYPES,
+    PERSONAL_ACCOUNT_TYPES,
+    PLATFORMS,
 } from './social';
 
 export type {
     SocialPlatform,
     AccountType,
     ConnectionStatus,
+    PublishMethod,
     AccountCapabilities,
     FacebookPageInfo,
     InstagramAccountInfo,
@@ -53,6 +57,7 @@ export type {
     PublishPostResponse,
     RefreshTokenResponse,
     PlatformInfo,
+    ManualPublishInfo,
 } from './social';
 
 // ============================================================
