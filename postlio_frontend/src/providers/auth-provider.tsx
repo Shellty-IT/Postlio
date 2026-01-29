@@ -29,7 +29,8 @@ const PUBLIC_PATHS = [
     '/register',
     '/forgot-password',
     '/reset-password',
-    '/onboarding',  // ← DODAJ TO
+    '/onboarding',
+    '/features',
 ];
 
 // Ścieżki tylko dla niezalogowanych
@@ -76,7 +77,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const [isInitialized, setIsInitialized] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
-    const { isLoading } = useAuthStore();
+    const { isLoading, user } = useAuthStore();
 
     // Pobierz dane użytkownika jeśli jest token
     const { isLoading: isLoadingUser, isError } = useUser();
@@ -112,16 +113,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     if (!isPublicPath) {
                         router.replace('/login');
                     }
-                } else if (isAuthOnlyPath) {
-                    // Zalogowany użytkownik na stronie logowania - przekieruj do dashboard
-                    router.replace('/dashboard');
+                } else if (isAuthOnlyPath && user) {
+                    // Zalogowany użytkownik na stronie auth (login/register)
+                    // Przekieruj odpowiednio na podstawie onboarding
+                    if (user.needs_onboarding) {
+                        router.replace('/onboarding');
+                    } else {
+                        router.replace('/dashboard');
+                    }
                 }
                 setIsInitialized(true);
             }
         };
 
         checkAuth();
-    }, [pathname, isLoadingUser, isError, isPublicPath, isAuthOnlyPath, router]);
+    }, [pathname, isLoadingUser, isError, isPublicPath, isAuthOnlyPath, router, user]);
 
     // Pokaż loading podczas inicjalizacji
     if (!isInitialized || isLoading || (authApi.isAuthenticated() && isLoadingUser)) {
