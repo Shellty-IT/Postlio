@@ -3,10 +3,10 @@
  * Hook do zarządzania autoryzacją
  *
  * Obsługuje: login, register, logout, dane użytkownika
+ * UWAGA: Przekierowania są obsługiwane przez auth-provider.tsx
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { authApi, ApiException } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
@@ -40,9 +40,8 @@ export function useUser() {
             return user;
         },
         enabled: authApi.isAuthenticated(),
-        staleTime: 5 * 60 * 1000, // 5 minut
+        staleTime: 5 * 60 * 1000,
         retry: (failureCount, error) => {
-            // Nie ponawiaj przy 401
             if (error instanceof ApiException && error.status === 401) {
                 return false;
             }
@@ -57,10 +56,10 @@ export function useUser() {
 
 /**
  * Mutacja do logowania
+ * Przekierowanie obsługuje auth-provider
  */
 export function useLogin() {
     const queryClient = useQueryClient();
-    const router = useRouter();
     const { login: authLogin, setIsLoading } = useAuthStore();
 
     return useMutation({
@@ -69,23 +68,16 @@ export function useLogin() {
             return authApi.login(credentials);
         },
         onSuccess: (data) => {
-            // Użyj login z auth store
             authLogin(data.user);
             setIsLoading(false);
 
-            // Invalidate queries żeby pobrać świeże dane
             queryClient.invalidateQueries({ queryKey: authKeys.user() });
 
             toast.success('Zalogowano pomyślnie!', {
                 description: `Witaj, ${data.user.full_name || data.user.email}!`,
             });
 
-            // Przekieruj na podstawie onboarding
-            if (data.user.needs_onboarding) {
-                router.push('/onboarding');
-            } else {
-                router.push('/dashboard');
-            }
+            // NIE PRZEKIEROWUJ TUTAJ - auth-provider to zrobi
         },
         onError: (error: Error) => {
             setIsLoading(false);
@@ -119,10 +111,10 @@ export function useLogin() {
 
 /**
  * Mutacja do rejestracji
+ * Przekierowanie obsługuje auth-provider
  */
 export function useRegister() {
     const queryClient = useQueryClient();
-    const router = useRouter();
     const { login: authLogin, setIsLoading } = useAuthStore();
 
     return useMutation({
@@ -131,7 +123,6 @@ export function useRegister() {
             return authApi.register(data);
         },
         onSuccess: (data) => {
-            // Użyj login z auth store - obsługuje onboarding
             authLogin(data.user);
             setIsLoading(false);
 
@@ -141,12 +132,7 @@ export function useRegister() {
                 description: 'Witaj w Postlio!',
             });
 
-            // Przekieruj na podstawie onboarding
-            if (data.user.needs_onboarding) {
-                router.push('/onboarding');
-            } else {
-                router.push('/dashboard');
-            }
+            // NIE PRZEKIEROWUJ TUTAJ - auth-provider to zrobi
         },
         onError: (error: Error) => {
             setIsLoading(false);
@@ -156,8 +142,6 @@ export function useRegister() {
             if (error instanceof ApiException) {
                 switch (error.status) {
                     case 400:
-                        message = 'Konto z tym adresem email już istnieje';
-                        break;
                     case 409:
                         message = 'Konto z tym adresem email już istnieje';
                         break;
@@ -178,21 +162,13 @@ export function useRegister() {
 // HOOK: useLogout
 // ============================================================
 
-/**
- * Funkcja wylogowania
- */
 export function useLogout() {
     const queryClient = useQueryClient();
     const { reset } = useAuthStore();
 
     return () => {
-        // Wyczyść store
         reset();
-
-        // Wyczyść cache React Query
         queryClient.clear();
-
-        // Wyloguj przez API (czyści tokeny i przekierowuje)
         authApi.logout();
 
         toast.success('Wylogowano', {
@@ -205,9 +181,6 @@ export function useLogout() {
 // HOOK: useAuth (kombinowany)
 // ============================================================
 
-/**
- * Główny hook auth - łączy wszystkie funkcjonalności
- */
 export function useAuth() {
     const user = useUser();
     const login = useLogin();
@@ -216,7 +189,6 @@ export function useAuth() {
     const { isAuthenticated, isLoading, isInitialized } = useAuthStore();
 
     return {
-        // Stan
         user: user.data,
         isAuthenticated,
         isLoading: isLoading || user.isLoading,
@@ -224,7 +196,6 @@ export function useAuth() {
         isError: user.isError,
         error: user.error,
 
-        // Akcje
         login: login.mutate,
         loginAsync: login.mutateAsync,
         isLoginPending: login.isPending,
@@ -234,8 +205,6 @@ export function useAuth() {
         isRegisterPending: register.isPending,
 
         logout,
-
-        // Refetch user
         refetchUser: user.refetch,
     };
 }
