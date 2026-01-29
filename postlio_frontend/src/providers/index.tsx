@@ -18,7 +18,7 @@ import { Toaster } from 'sonner';
 import { InstallPrompt } from '@/components/pwa/install-prompt';
 import { OfflineIndicator } from '@/components/pwa/offline-indicator';
 import { UpdateNotification } from '@/components/pwa/update-notification';
-import { initReminders } from '@/lib/reminders'; // ← NOWE
+import { initReminders } from '@/lib/reminders';
 
 interface ProvidersProps {
     children: ReactNode;
@@ -33,6 +33,7 @@ const PUBLIC_PATHS = [
     '/reset-password',
     '/offline',
     '/features',
+    '/onboarding',  // ← DODANE
 ];
 
 // Ścieżki tylko dla niezalogowanych
@@ -48,7 +49,6 @@ const AUTH_ONLY_PATHS = [
  */
 function ReminderInitializer() {
     useEffect(() => {
-        // Inicjalizuj przypomnienia po załadowaniu aplikacji
         initReminders();
     }, []);
 
@@ -65,6 +65,7 @@ function AuthInitializer({ children }: { children: ReactNode }) {
     const checkAuth = useAuthStore((state) => state.checkAuth);
     const isInitialized = useAuthStore((state) => state.isInitialized);
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+    const user = useAuthStore((state) => state.user);
 
     // Sprawdź czy ścieżka jest publiczna
     const isPublicPath = PUBLIC_PATHS.some(path =>
@@ -76,6 +77,9 @@ function AuthInitializer({ children }: { children: ReactNode }) {
         pathname === path || pathname.startsWith(`${path}/`)
     );
 
+    // Sprawdź czy to strona onboardingu
+    const isOnboardingPath = pathname === '/onboarding' || pathname.startsWith('/onboarding/');
+
     useEffect(() => {
         checkAuth();
     }, [checkAuth]);
@@ -84,12 +88,30 @@ function AuthInitializer({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (!isInitialized) return;
 
+        // Niezalogowany na chronionej stronie -> login
         if (!isAuthenticated && !isPublicPath) {
             router.replace('/login');
-        } else if (isAuthenticated && isAuthOnlyPath) {
-            router.replace('/dashboard');
+            return;
         }
-    }, [isInitialized, isAuthenticated, isPublicPath, isAuthOnlyPath, router]);
+
+        // Zalogowany na stronie auth (login/register)
+        if (isAuthenticated && isAuthOnlyPath && user) {
+            // Sprawdź czy potrzebuje onboardingu
+            if (user.needs_onboarding) {
+                router.replace('/onboarding');
+            } else {
+                router.replace('/dashboard');
+            }
+            return;
+        }
+
+        // Zalogowany bez potrzeby onboardingu na stronie onboarding -> dashboard
+        if (isAuthenticated && isOnboardingPath && user && !user.needs_onboarding) {
+            router.replace('/dashboard');
+            return;
+        }
+
+    }, [isInitialized, isAuthenticated, isPublicPath, isAuthOnlyPath, isOnboardingPath, router, user]);
 
     // Loading screen podczas inicjalizacji
     if (!isInitialized) {
@@ -142,7 +164,7 @@ export function Providers({ children }: ProvidersProps) {
                         <OfflineIndicator />
                         <UpdateNotification />
 
-                        {/* Reminder System - NOWE */}
+                        {/* Reminder System */}
                         <ReminderInitializer />
                     </AuthInitializer>
                 </TooltipProvider>
