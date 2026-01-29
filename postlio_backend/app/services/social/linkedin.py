@@ -1,13 +1,16 @@
-﻿# postlio_backend/app/services/social/linkedin.py
-"""
+﻿"""
 LinkedIn API integration.
+
+Automatycznie wykrywa typ konta:
+- linkedin_company: Użytkownik jest adminem firmy/organizacji
+- linkedin_personal: Profil osobisty (bez strony firmowej)
 
 Dokumentacja: https://docs.microsoft.com/en-us/linkedin/marketing/
 """
 
 import httpx
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from urllib.parse import urlencode
 
 from app.config import settings
@@ -24,30 +27,29 @@ class LinkedInService(BaseSocialService):
     """
     Serwis do integracji z LinkedIn API.
 
-    LinkedIn używa OAuth 2.0 z następującymi endpointami:
-    - Authorization: https://www.linkedin.com/oauth/v2/authorization
-    - Token: https://www.linkedin.com/oauth/v2/accessToken
-    - API: https://api.linkedin.com/v2/
-
-    WAŻNE:
-    - Access token ważny 60 dni
-    - Refresh token ważny 365 dni
-    - Do publikacji używamy UGC Posts API lub Shares API
+    Automatyczne wykrywanie typu konta:
+    - Sprawdza /organizationAcls po autoryzacji
+    - Jeśli użytkownik jest adminem organizacji → linkedin_company
+    - Jeśli nie → linkedin_personal
     """
 
     platform = SocialPlatform.LINKEDIN
 
-    # API endpoints
     AUTH_URL = "https://www.linkedin.com/oauth/v2"
     API_URL = "https://api.linkedin.com/v2"
 
-    # Wymagane uprawnienia
-    # https://docs.microsoft.com/en-us/linkedin/shared/references/v2/profile/lite-profile
-    REQUIRED_SCOPES = [
-        "openid",  # OpenID Connect
-        "profile",  # Podstawowy profil
-        "email",  # Email
-        "w_member_social",  # Publikacja postów
+    # Uprawnienia podstawowe
+    BASE_SCOPES = [
+        "openid",
+        "profile",
+        "email",
+        "w_member_social",
+    ]
+
+    # Dodatkowe uprawnienia dla stron firmowych
+    COMPANY_SCOPES = [
+        "w_organization_social",  # Publikacja na stronach firmowych
+        "r_organization_social",  # Odczyt statystyk
     ]
 
     def __init__(self):
@@ -62,6 +64,11 @@ class LinkedInService(BaseSocialService):
                 "Set LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET in .env"
             )
 
+    @property
+    def all_scopes(self) -> List[str]:
+        """Wszystkie uprawnienia (base + company)."""
+        return self.BASE_SCOPES + self.COMPANY_SCOPES
+
     # ==================== OAuth ====================
 
     def get_authorization_url(self, state: str) -> str:
@@ -74,13 +81,16 @@ class LinkedInService(BaseSocialService):
             "client_id": self.client_id,
             "redirect_uri": self.redirect_uri,
             "state": state,
-            "scope": " ".join(self.REQUIRED_SCOPES),
+            "scope": " ".join(self.all_scopes),
         }
 
         return f"{self.AUTH_URL}/authorization?{urlencode(params)}"
 
     async def exchange_code_for_token(self, code: str) -> OAuthResult:
-        """Wymienia authorization code na access token."""
+        """
+        Wymienia authorization code na access token.
+        Automatycznie wykrywa typ konta (company vs personal).
+        """
         if not self.client_id or not self.client_secret:
             return OAuthResult(
                 success=False,
@@ -119,22 +129,64 @@ class LinkedInService(BaseSocialService):
 
                 token_data = response.json()
                 access_token = token_data.get("access_token")
-                expires_in = token_data.get("expires_in", 5184000)  # 60 dni
+                expires_in = token_data.get("expires_in", 5184000)
                 refresh_token = token_data.get("refresh_token")
 
                 # 2. Pobierz profil użytkownika
                 profile = await self._get_user_profile(client, access_token)
+                user_id = profile.get("sub") or profile.get("id")
 
-                return OAuthResult(
-                    success=True,
-                    platform=self.platform,
-                    access_token=access_token,
-                    refresh_token=refresh_token,
-                    expires_at=datetime.utcnow() + timedelta(seconds=expires_in),
-                    platform_user_id=profile.get("sub") or profile.get("id"),
-                    platform_username=profile.get("name") or profile.get("localizedFirstName"),
-                    profile_data=profile
-                )
+                # 3. === KLUCZOWE: Wykryj typ konta ===
+                organizations = await self._get_admin_organizations(client, access_token)
+
+                if organizations:
+                    # Ma organizacje → linkedin_company
+                    first_org = organizations[0]
+
+                    return OAuthResult(
+                        success=True,
+                        platform=self.platform,
+                        access_token=access_token,
+                        refresh_token=refresh_token,
+                        expires_at=datetime.utcnow() + timedelta(seconds=expires_in),
+                        platform_user_id=user_id,
+                        platform_username=profile.get("name") or profile.get("localizedFirstName"),
+                        profile_data={
+                            **profile,
+                            "organizations": organizations,
+                        },
+                        # Typ konta
+                        account_type="linkedin_company",
+                        is_business_account=True,
+                        supports_auto_publish=True,
+                        supports_autopilot=True,
+                        # Dane organizacji
+                        organization_id=first_org.get("organization_id"),
+                        organization_name=first_org.get("organization_name"),
+                    )
+                else:
+                    # Brak organizacji → linkedin_personal
+                    return OAuthResult(
+                        success=True,
+                        platform=self.platform,
+                        access_token=access_token,
+                        refresh_token=refresh_token,
+                        expires_at=datetime.utcnow() + timedelta(seconds=expires_in),
+                        platform_user_id=user_id,
+                        platform_username=profile.get("name") or profile.get("localizedFirstName"),
+                        profile_data=profile,
+                        # Typ konta - osobiste
+                        account_type="linkedin_personal",
+                        is_business_account=False,
+                        supports_auto_publish=False,  # LinkedIn personal ma ograniczenia
+                        supports_autopilot=False,
+                        # Komunikat dla UI
+                        upgrade_message=(
+                            "Wykryto profil osobisty LinkedIn. "
+                            "Automatyczna publikacja wymaga strony firmowej LinkedIn. "
+                            "Możesz publikować przez okno udostępniania."
+                        ),
+                    )
 
             except httpx.RequestError as e:
                 self._log_error("LinkedIn API request failed", e)
@@ -184,6 +236,60 @@ class LinkedInService(BaseSocialService):
             return response.json()
 
         return {}
+
+    async def _get_admin_organizations(
+            self,
+            client: httpx.AsyncClient,
+            access_token: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Pobiera listę organizacji, których użytkownik jest administratorem.
+        Używane do wykrycia czy to konto firmowe.
+
+        Endpoint: GET /organizationAcls
+        """
+        try:
+            response = await client.get(
+                f"{self.API_URL}/organizationAcls",
+                params={
+                    "q": "roleAssignee",
+                    "role": "ADMINISTRATOR",
+                    "projection": "(elements*(organization~(localizedName,vanityName,logoV2(original~:playableStreams))))"
+                },
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "X-Restli-Protocol-Version": "2.0.0"
+                }
+            )
+
+            self._log_api_call("GET", "/organizationAcls", response.status_code)
+
+            if response.status_code == 200:
+                data = response.json()
+                elements = data.get("elements", [])
+
+                organizations = []
+                for elem in elements:
+                    org = elem.get("organization~", {})
+                    org_urn = elem.get("organization", "")
+                    # Wyciągnij ID z URN (np. "urn:li:organization:12345" -> "12345")
+                    org_id = org_urn.split(":")[-1] if org_urn else None
+
+                    if org_id:
+                        organizations.append({
+                            "organization_id": org_id,
+                            "organization_urn": org_urn,
+                            "organization_name": org.get("localizedName", ""),
+                            "vanity_name": org.get("vanityName"),
+                        })
+
+                return organizations
+
+            return []
+
+        except Exception as e:
+            self._log_error("Failed to get organizations", e)
+            return []
 
     async def refresh_access_token(self, refresh_token: str) -> OAuthResult:
         """Odświeża access token używając refresh token."""
@@ -243,14 +349,13 @@ class LinkedInService(BaseSocialService):
     # ==================== Account Info ====================
 
     async def get_account_info(self, access_token: str) -> Optional[AccountInfo]:
-        """Pobiera informacje o koncie LinkedIn."""
+        """Pobiera informacje o koncie LinkedIn z wykryciem typu."""
         async with httpx.AsyncClient(timeout=30.0) as client:
             profile = await self._get_user_profile(client, access_token)
 
             if not profile:
                 return None
 
-            # OpenID Connect format
             user_id = profile.get("sub") or profile.get("id")
             name = profile.get("name")
 
@@ -259,15 +364,43 @@ class LinkedInService(BaseSocialService):
                 last_name = profile.get("family_name") or profile.get("localizedLastName", "")
                 name = f"{first_name} {last_name}".strip()
 
-            return AccountInfo(
-                platform=self.platform,
-                platform_user_id=user_id or "",
-                username=name or "LinkedIn User",
-                name=name,
-                avatar_url=profile.get("picture"),
-                is_business=False,
-                permissions=self.REQUIRED_SCOPES
-            )
+            # Wykryj typ konta
+            organizations = await self._get_admin_organizations(client, access_token)
+            has_organizations = len(organizations) > 0
+
+            if has_organizations:
+                first_org = organizations[0]
+                return AccountInfo(
+                    platform=self.platform,
+                    platform_user_id=user_id or "",
+                    username=name or "LinkedIn User",
+                    name=name,
+                    avatar_url=profile.get("picture"),
+                    permissions=self.all_scopes,
+                    # Typ konta
+                    account_type="linkedin_company",
+                    is_business=True,
+                    supports_auto_publish=True,
+                    supports_autopilot=True,
+                    # Dane organizacji
+                    organization_id=first_org.get("organization_id"),
+                    organization_name=first_org.get("organization_name"),
+                    available_organizations=organizations,
+                )
+            else:
+                return AccountInfo(
+                    platform=self.platform,
+                    platform_user_id=user_id or "",
+                    username=name or "LinkedIn User",
+                    name=name,
+                    avatar_url=profile.get("picture"),
+                    permissions=self.BASE_SCOPES,
+                    # Typ konta - osobiste
+                    account_type="linkedin_personal",
+                    is_business=False,
+                    supports_auto_publish=False,
+                    supports_autopilot=False,
+                )
 
     # ==================== Publishing ====================
 
@@ -278,23 +411,25 @@ class LinkedInService(BaseSocialService):
             image_url: Optional[str] = None,
             link_url: Optional[str] = None,
             author_urn: Optional[str] = None,
+            organization_id: Optional[str] = None,
+            account_type: Optional[str] = None,
             **kwargs
     ) -> PublishResult:
         """
         Publikuje post na LinkedIn.
 
-        LinkedIn używa UGC Posts API:
-        https://docs.microsoft.com/en-us/linkedin/marketing/integrations/community-management/shares/ugc-post-api
-
-        Args:
-            access_token: Access token
-            content: Treść posta
-            image_url: URL do obrazka (opcjonalnie)
-            link_url: URL linku (opcjonalnie)
-            author_urn: URN autora (np. "urn:li:person:ABC123")
+        Dla linkedin_company: Automatyczna publikacja na stronie firmowej
+        Dla linkedin_personal: Zwraca instrukcje (Share Dialog)
         """
-        if not author_urn:
-            # Pobierz URN z profilu
+        # Sprawdź czy to konto osobiste
+        if account_type == "linkedin_personal":
+            return self._generate_manual_publish_result(content, link_url)
+
+        # Dla company - potrzebujemy organization URN
+        if account_type == "linkedin_company" and organization_id:
+            author_urn = f"urn:li:organization:{organization_id}"
+        elif not author_urn:
+            # Fallback - pobierz URN z profilu
             async with httpx.AsyncClient(timeout=30.0) as client:
                 profile = await self._get_user_profile(client, access_token)
                 user_id = profile.get("sub") or profile.get("id")
@@ -310,11 +445,7 @@ class LinkedInService(BaseSocialService):
 
         async with httpx.AsyncClient(timeout=60.0) as client:
             try:
-                if image_url:
-                    # Post ze zdjęciem wymaga upload przez LinkedIn API
-                    # Na razie nie obsługujemy - używamy linku do zdjęcia
-                    return await self._publish_text_post(client, access_token, author_urn, content)
-                elif link_url:
+                if link_url:
                     return await self._publish_link_post(client, access_token, author_urn, content, link_url)
                 else:
                     return await self._publish_text_post(client, access_token, author_urn, content)
@@ -327,6 +458,35 @@ class LinkedInService(BaseSocialService):
                     error=str(e),
                     error_code="REQUEST_ERROR"
                 )
+
+    def _generate_manual_publish_result(
+            self,
+            content: str,
+            link_url: Optional[str] = None
+    ) -> PublishResult:
+        """
+        Generuje wynik dla ręcznej publikacji (konta osobiste).
+        """
+        from urllib.parse import quote
+
+        # LinkedIn Share URL
+        share_url = f"https://www.linkedin.com/sharing/share-offsite/?text={quote(content[:500])}"
+        if link_url:
+            share_url += f"&url={quote(link_url)}"
+
+        return PublishResult(
+            success=True,
+            platform=self.platform,
+            requires_manual_publish=True,
+            share_dialog_url=share_url,
+            deeplink_url="linkedin://feed",
+            manual_instructions=[
+                "1. Kliknij 'Otwórz LinkedIn' lub skopiuj treść",
+                "2. Wklej treść w nowy post",
+                "3. Dodaj zdjęcie jeśli potrzebujesz",
+                "4. Opublikuj post",
+            ],
+        )
 
     async def _publish_text_post(
             self,
@@ -414,10 +574,8 @@ class LinkedInService(BaseSocialService):
     def _parse_publish_response(self, response: httpx.Response) -> PublishResult:
         """Parsuje odpowiedź z publikacji LinkedIn."""
         if response.status_code == 201:
-            # Sukces - LinkedIn zwraca ID w headerze
             post_id = response.headers.get("x-restli-id", "")
 
-            # Dekoduj URN do ID
             if post_id.startswith("urn:li:share:"):
                 share_id = post_id.replace("urn:li:share:", "")
                 post_url = f"https://www.linkedin.com/feed/update/{post_id}"

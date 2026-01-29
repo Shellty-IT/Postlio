@@ -1,4 +1,7 @@
-﻿from pydantic import BaseModel, EmailStr, Field
+﻿"""
+Schematy Pydantic dla użytkownika.
+"""
+from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 from typing import Optional
 
@@ -16,9 +19,35 @@ class UserLogin(BaseModel):
     password: str
 
 
+class OnboardingComplete(BaseModel):
+    """Request do oznaczenia onboardingu jako ukończonego."""
+    skipped: bool = False
+
+
 # === RESPONSE SCHEMAS ===
 
 class UserResponse(BaseModel):
+    id: int
+    email: str
+    full_name: Optional[str]
+    is_active: bool
+    is_verified: bool
+    created_at: datetime
+
+    # Trial & Onboarding
+    trial_ends_at: Optional[datetime] = None
+    is_trial_active: bool = True
+    trial_days_remaining: int = 14
+    onboarding_completed_at: Optional[datetime] = None
+    onboarding_skipped: bool = False
+    needs_onboarding: bool = True
+
+    class Config:
+        from_attributes = True
+
+
+class UserBasicResponse(BaseModel):
+    """Uproszczona odpowiedź użytkownika (bez pól onboardingu)."""
     id: int
     email: str
     full_name: Optional[str]

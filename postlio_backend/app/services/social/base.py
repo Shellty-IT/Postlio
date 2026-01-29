@@ -1,10 +1,9 @@
-﻿# postlio_backend/app/services/social/base.py
-"""
+﻿"""
 Bazowa klasa dla serwisów social media.
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Optional, Dict, Any, List
@@ -34,17 +33,45 @@ class OAuthResult:
     error: Optional[str] = None
     error_description: Optional[str] = None
 
+    # === NOWE POLA - Typ konta ===
+    account_type: Optional[str] = None  # np. "facebook_page", "instagram_personal"
+    is_business_account: bool = False
+    supports_auto_publish: bool = False
+    supports_autopilot: bool = False
+
+    # Dla kont firmowych - dodatkowe dane
+    page_id: Optional[str] = None
+    page_name: Optional[str] = None
+    page_access_token: Optional[str] = None
+
+    # Dla Instagram
+    instagram_account_id: Optional[str] = None
+    instagram_account_type: Optional[str] = None  # BUSINESS lub CREATOR
+
+    # Dla LinkedIn Company
+    organization_id: Optional[str] = None
+    organization_name: Optional[str] = None
+
+    # Komunikat dla UI (np. jeśli konto osobiste)
+    upgrade_message: Optional[str] = None
+
 
 @dataclass
 class PublishResult:
     """Wynik publikacji posta."""
     success: bool
     platform: SocialPlatform
-    post_id: Optional[str] = None  # ID posta na platformie
-    post_url: Optional[str] = None  # URL do posta
+    post_id: Optional[str] = None
+    post_url: Optional[str] = None
     error: Optional[str] = None
     error_code: Optional[str] = None
     raw_response: Optional[Dict[str, Any]] = None
+
+    # Dla kont osobistych - instrukcje ręcznej publikacji
+    requires_manual_publish: bool = False
+    share_dialog_url: Optional[str] = None
+    deeplink_url: Optional[str] = None
+    manual_instructions: Optional[List[str]] = None
 
 
 @dataclass
@@ -65,14 +92,30 @@ class AccountInfo:
     name: Optional[str] = None
     avatar_url: Optional[str] = None
     followers_count: Optional[int] = None
-    is_business: bool = False
-    page_id: Optional[str] = None  # Dla FB Pages
-    page_name: Optional[str] = None
-    permissions: List[str] = None
+    permissions: List[str] = field(default_factory=list)
 
-    def __post_init__(self):
-        if self.permissions is None:
-            self.permissions = []
+    # === NOWE POLA - Typ konta ===
+    account_type: Optional[str] = None  # np. "facebook_page", "linkedin_personal"
+    is_business: bool = False
+    supports_auto_publish: bool = False
+    supports_autopilot: bool = False
+
+    # Dla FB Pages
+    page_id: Optional[str] = None
+    page_name: Optional[str] = None
+
+    # Dla Instagram
+    instagram_account_id: Optional[str] = None
+    instagram_account_type: Optional[str] = None  # BUSINESS, CREATOR
+    connected_fb_page_id: Optional[str] = None
+
+    # Dla LinkedIn Company
+    organization_id: Optional[str] = None
+    organization_name: Optional[str] = None
+
+    # Lista dostępnych stron/organizacji (dla wyboru)
+    available_pages: List[Dict[str, Any]] = field(default_factory=list)
+    available_organizations: List[Dict[str, Any]] = field(default_factory=list)
 
 
 class BaseSocialService(ABC):
@@ -108,11 +151,14 @@ class BaseSocialService(ABC):
         """
         Wymienia authorization code na access token.
 
+        WAŻNE: Ta metoda automatycznie wykrywa typ konta
+        (firmowe vs osobiste) i ustawia odpowiednie flagi.
+
         Args:
             code: Authorization code z callback URL
 
         Returns:
-            OAuthResult z tokenami lub błędem
+            OAuthResult z tokenami, typem konta lub błędem
         """
         pass
 
@@ -147,13 +193,13 @@ class BaseSocialService(ABC):
     @abstractmethod
     async def get_account_info(self, access_token: str) -> Optional[AccountInfo]:
         """
-        Pobiera informacje o koncie.
+        Pobiera informacje o koncie wraz z wykryciem typu.
 
         Args:
             access_token: Access token użytkownika
 
         Returns:
-            AccountInfo lub None jeśli błąd
+            AccountInfo z typem konta lub None jeśli błąd
         """
         pass
 

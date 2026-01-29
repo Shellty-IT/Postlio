@@ -1,6 +1,9 @@
-﻿# postlio_backend/app/services/social/facebook.py
-"""
+﻿"""
 Facebook Graph API integration.
+
+Automatycznie wykrywa typ konta:
+- facebook_page: Użytkownik ma strony Facebook (pełny dostęp)
+- facebook_personal: Brak stron (ograniczony dostęp, ręczna publikacja)
 
 Dokumentacja: https://developers.facebook.com/docs/graph-api/
 """
@@ -25,15 +28,10 @@ class FacebookService(BaseSocialService):
     """
     Serwis do integracji z Facebook Graph API.
 
-    Obsługuje:
-    - OAuth 2.0 flow
-    - Publikację na strony Facebook
-    - Pobieranie informacji o koncie
-    - Zarządzanie tokenami
-
-    WAŻNE:
-    - Do publikacji potrzebny jest Page Access Token (nie User Access Token)
-    - User Access Token służy do uzyskania Page Access Token
+    Automatyczne wykrywanie typu konta:
+    - Sprawdza /me/accounts po autoryzacji
+    - Jeśli użytkownik ma strony → facebook_page (pełny dostęp)
+    - Jeśli nie ma stron → facebook_personal (Share Dialog)
     """
 
     platform = SocialPlatform.FACEBOOK
@@ -43,14 +41,13 @@ class FacebookService(BaseSocialService):
     OAUTH_URL = "https://www.facebook.com"
 
     # Wymagane uprawnienia
-    # https://developers.facebook.com/docs/permissions/reference
     REQUIRED_SCOPES = [
-        "public_profile",  # Podstawowe info o użytkowniku
-        "email",  # Email użytkownika
-        "pages_show_list",  # Lista stron użytkownika
-        "pages_read_engagement",  # Odczyt statystyk strony
-        "pages_manage_posts",  # Publikacja na stronach
-        "pages_read_user_content",  # Odczyt treści strony
+        "public_profile",
+        "email",
+        "pages_show_list",
+        "pages_read_engagement",
+        "pages_manage_posts",
+        "pages_read_user_content",
     ]
 
     def __init__(self):
@@ -74,15 +71,7 @@ class FacebookService(BaseSocialService):
     # ==================== OAuth ====================
 
     def get_authorization_url(self, state: str) -> str:
-        """
-        Generuje URL do autoryzacji Facebook OAuth.
-
-        Args:
-            state: CSRF token
-
-        Returns:
-            URL do przekierowania użytkownika
-        """
+        """Generuje URL do autoryzacji Facebook OAuth."""
         if not self.app_id:
             raise ValueError("Facebook App ID not configured")
 
@@ -99,6 +88,7 @@ class FacebookService(BaseSocialService):
     async def exchange_code_for_token(self, code: str) -> OAuthResult:
         """
         Wymienia authorization code na access token.
+        Automatycznie wykrywa typ konta (page vs personal).
         """
         if not self.app_id or not self.app_secret:
             return OAuthResult(
@@ -146,20 +136,62 @@ class FacebookService(BaseSocialService):
                     )
 
                 access_token = long_lived_result["access_token"]
-                expires_in = long_lived_result.get("expires_in", 5184000)  # 60 dni domyślnie
+                expires_in = long_lived_result.get("expires_in", 5184000)
 
                 # 3. Pobierz informacje o użytkowniku
                 user_info = await self._get_user_info(client, access_token)
 
-                return OAuthResult(
-                    success=True,
-                    platform=self.platform,
-                    access_token=access_token,
-                    expires_at=datetime.utcnow() + timedelta(seconds=expires_in),
-                    platform_user_id=user_info.get("id"),
-                    platform_username=user_info.get("name"),
-                    profile_data=user_info
-                )
+                # 4. === KLUCZOWE: Wykryj typ konta ===
+                pages = await self._get_user_pages(client, access_token)
+
+                if pages:
+                    # Ma strony → facebook_page
+                    # Wybierz pierwszą stronę jako domyślną
+                    first_page = pages[0]
+
+                    return OAuthResult(
+                        success=True,
+                        platform=self.platform,
+                        access_token=access_token,
+                        expires_at=datetime.utcnow() + timedelta(seconds=expires_in),
+                        platform_user_id=user_info.get("id"),
+                        platform_username=user_info.get("name"),
+                        profile_data={
+                            **user_info,
+                            "pages": pages,
+                        },
+                        # Typ konta
+                        account_type="facebook_page",
+                        is_business_account=True,
+                        supports_auto_publish=True,
+                        supports_autopilot=True,
+                        # Dane strony
+                        page_id=first_page.get("id"),
+                        page_name=first_page.get("name"),
+                        page_access_token=first_page.get("access_token"),
+                    )
+                else:
+                    # Brak stron → facebook_personal
+                    return OAuthResult(
+                        success=True,
+                        platform=self.platform,
+                        access_token=access_token,
+                        expires_at=datetime.utcnow() + timedelta(seconds=expires_in),
+                        platform_user_id=user_info.get("id"),
+                        platform_username=user_info.get("name"),
+                        profile_data=user_info,
+                        # Typ konta - osobiste
+                        account_type="facebook_personal",
+                        is_business_account=False,
+                        supports_auto_publish=False,
+                        supports_autopilot=False,
+                        # Komunikat dla UI
+                        upgrade_message=(
+                            "Wykryto profil osobisty Facebook. "
+                            "Automatyczna publikacja wymaga Strony Facebook. "
+                            "Możesz publikować przez okno udostępniania."
+                        ),
+                    )
 
             except httpx.RequestError as e:
                 self._log_error("Facebook API request failed", e)
@@ -212,7 +244,7 @@ class FacebookService(BaseSocialService):
             f"{self._graph_base}/me",
             params={
                 "access_token": access_token,
-                "fields": "id,name,email,picture"
+                "fields": "id,name,email,picture.width(200)"
             }
         )
 
@@ -222,13 +254,34 @@ class FacebookService(BaseSocialService):
             return response.json()
         return {}
 
+    async def _get_user_pages(
+            self,
+            client: httpx.AsyncClient,
+            access_token: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Pobiera listę stron Facebook użytkownika.
+        Używane do wykrycia czy to konto firmowe.
+        """
+        response = await client.get(
+            f"{self._graph_base}/me/accounts",
+            params={
+                "access_token": access_token,
+                "fields": "id,name,access_token,picture,fan_count,category"
+            }
+        )
+
+        self._log_api_call("GET", "/me/accounts", response.status_code)
+
+        if response.status_code == 200:
+            return response.json().get("data", [])
+        return []
+
     async def refresh_access_token(self, refresh_token: str) -> OAuthResult:
         """
         Facebook nie używa refresh tokenów w tradycyjny sposób.
         Long-lived tokeny można tylko ponownie wymienić przed wygaśnięciem.
         """
-        # Dla Facebook, "refresh" oznacza wymianę istniejącego ważnego tokena
-        # na nowy long-lived token
         async with httpx.AsyncClient(timeout=30.0) as client:
             result = await self._exchange_for_long_lived_token(client, refresh_token)
 
@@ -254,7 +307,7 @@ class FacebookService(BaseSocialService):
                 f"{self._graph_base}/debug_token",
                 params={
                     "input_token": access_token,
-                    "access_token": f"{self.app_id}|{self.app_secret}"  # App token
+                    "access_token": f"{self.app_id}|{self.app_secret}"
                 }
             )
 
@@ -266,7 +319,7 @@ class FacebookService(BaseSocialService):
     # ==================== Account Info ====================
 
     async def get_account_info(self, access_token: str) -> Optional[AccountInfo]:
-        """Pobiera informacje o koncie Facebook."""
+        """Pobiera informacje o koncie Facebook z wykryciem typu."""
         async with httpx.AsyncClient(timeout=30.0) as client:
             # Pobierz info o użytkowniku
             user_response = await client.get(
@@ -282,40 +335,50 @@ class FacebookService(BaseSocialService):
 
             user_data = user_response.json()
 
-            # Pobierz listę stron użytkownika
-            pages = await self.get_user_pages(access_token)
+            # Wykryj typ konta
+            pages = await self._get_user_pages(client, access_token)
+            has_pages = len(pages) > 0
 
-            return AccountInfo(
-                platform=self.platform,
-                platform_user_id=user_data.get("id", ""),
-                username=user_data.get("name", ""),
-                name=user_data.get("name"),
-                avatar_url=user_data.get("picture", {}).get("data", {}).get("url"),
-                is_business=len(pages) > 0,
-                permissions=self.REQUIRED_SCOPES
-            )
+            if has_pages:
+                first_page = pages[0]
+                return AccountInfo(
+                    platform=self.platform,
+                    platform_user_id=user_data.get("id", ""),
+                    username=user_data.get("name", ""),
+                    name=user_data.get("name"),
+                    avatar_url=user_data.get("picture", {}).get("data", {}).get("url"),
+                    permissions=self.REQUIRED_SCOPES,
+                    # Typ konta
+                    account_type="facebook_page",
+                    is_business=True,
+                    supports_auto_publish=True,
+                    supports_autopilot=True,
+                    # Dane strony
+                    page_id=first_page.get("id"),
+                    page_name=first_page.get("name"),
+                    available_pages=pages,
+                )
+            else:
+                return AccountInfo(
+                    platform=self.platform,
+                    platform_user_id=user_data.get("id", ""),
+                    username=user_data.get("name", ""),
+                    name=user_data.get("name"),
+                    avatar_url=user_data.get("picture", {}).get("data", {}).get("url"),
+                    permissions=self.REQUIRED_SCOPES,
+                    # Typ konta - osobiste
+                    account_type="facebook_personal",
+                    is_business=False,
+                    supports_auto_publish=False,
+                    supports_autopilot=False,
+                )
 
     async def get_user_pages(self, access_token: str) -> List[Dict[str, Any]]:
         """
-        Pobiera listę stron Facebook, którymi użytkownik zarządza.
-
-        Returns:
-            Lista stron z ich access tokenami
+        Publiczna metoda do pobierania stron użytkownika.
         """
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(
-                f"{self._graph_base}/me/accounts",
-                params={
-                    "access_token": access_token,
-                    "fields": "id,name,access_token,picture,fan_count,category"
-                }
-            )
-
-            self._log_api_call("GET", "/me/accounts", response.status_code)
-
-            if response.status_code == 200:
-                return response.json().get("data", [])
-            return []
+            return await self._get_user_pages(client, access_token)
 
     # ==================== Publishing ====================
 
@@ -326,20 +389,28 @@ class FacebookService(BaseSocialService):
             image_url: Optional[str] = None,
             link_url: Optional[str] = None,
             page_id: Optional[str] = None,
+            account_type: Optional[str] = None,
             **kwargs
     ) -> PublishResult:
         """
         Publikuje post na stronie Facebook.
 
-        WAŻNE: access_token musi być Page Access Token, nie User Access Token!
+        Dla facebook_page: Automatyczna publikacja przez API
+        Dla facebook_personal: Zwraca instrukcje ręcznej publikacji
 
         Args:
-            access_token: Page Access Token
+            access_token: Page Access Token (dla stron) lub User Token
             content: Treść posta
             image_url: URL do obrazka (opcjonalnie)
             link_url: URL linku (opcjonalnie)
-            page_id: ID strony (wymagane)
+            page_id: ID strony (wymagane dla facebook_page)
+            account_type: Typ konta ("facebook_page" lub "facebook_personal")
         """
+        # Sprawdź czy to konto osobiste
+        if account_type == "facebook_personal":
+            return self._generate_manual_publish_result(content, image_url, link_url)
+
+        # Standardowa publikacja dla stron
         if not page_id:
             return PublishResult(
                 success=False,
@@ -351,17 +422,14 @@ class FacebookService(BaseSocialService):
         async with httpx.AsyncClient(timeout=60.0) as client:
             try:
                 if image_url:
-                    # Post ze zdjęciem
                     result = await self._publish_photo_post(
                         client, access_token, page_id, content, image_url
                     )
                 elif link_url:
-                    # Post z linkiem
                     result = await self._publish_link_post(
                         client, access_token, page_id, content, link_url
                     )
                 else:
-                    # Zwykły post tekstowy
                     result = await self._publish_text_post(
                         client, access_token, page_id, content
                     )
@@ -376,6 +444,36 @@ class FacebookService(BaseSocialService):
                     error=str(e),
                     error_code="REQUEST_ERROR"
                 )
+
+    def _generate_manual_publish_result(
+            self,
+            content: str,
+            image_url: Optional[str] = None,
+            link_url: Optional[str] = None
+    ) -> PublishResult:
+        """
+        Generuje wynik dla ręcznej publikacji (konta osobiste).
+        """
+        from urllib.parse import quote
+
+        # Share Dialog URL
+        share_url = f"https://www.facebook.com/sharer/sharer.php?quote={quote(content[:500])}"
+        if link_url:
+            share_url += f"&u={quote(link_url)}"
+
+        return PublishResult(
+            success=True,  # "Sukces" w sensie przygotowania do publikacji
+            platform=self.platform,
+            requires_manual_publish=True,
+            share_dialog_url=share_url,
+            deeplink_url="fb://feed",
+            manual_instructions=[
+                "1. Kliknij 'Otwórz Facebook' lub skopiuj treść",
+                "2. Wklej treść w nowy post",
+                "3. Dodaj zdjęcie jeśli potrzebujesz" if image_url else None,
+                "4. Opublikuj post",
+            ],
+        )
 
     async def _publish_text_post(
             self,
@@ -409,7 +507,7 @@ class FacebookService(BaseSocialService):
         response = await client.post(
             f"{self._graph_base}/{page_id}/photos",
             data={
-                "url": image_url,  # URL do zdjęcia
+                "url": image_url,
                 "caption": content,
                 "access_token": access_token
             }

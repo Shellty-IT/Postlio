@@ -1,12 +1,10 @@
-﻿# postlio_backend/app/services/social/instagram.py
-"""
+﻿"""
 Instagram Graph API integration.
 
-WAŻNE: Instagram API działa przez Facebook Graph API.
-Wymaga:
-- Facebook Business/Creator account
-- Instagram Business/Creator account połączone z FB Page
-- Facebook App z odpowiednimi uprawnieniami
+Automatycznie wykrywa typ konta:
+- instagram_business: Konto biznesowe Instagram
+- instagram_creator: Konto twórcy Instagram
+- instagram_personal: Brak konta Business/Creator (ręczna publikacja)
 
 Dokumentacja: https://developers.facebook.com/docs/instagram-api/
 """
@@ -30,32 +28,26 @@ class InstagramService(BaseSocialService):
     """
     Serwis do integracji z Instagram Graph API.
 
-    Instagram API wymaga:
-    1. Facebook Page połączonej z Instagram Business/Creator Account
-    2. User Access Token z odpowiednimi uprawnieniami
-    3. Instagram Business Account ID
-
-    Flow publikacji:
-    1. Upload media (zdjęcie) -> otrzymujemy creation_id
-    2. Publikacja media z creation_id -> post jest widoczny
+    Automatyczne wykrywanie typu konta:
+    - Sprawdza instagram_business_account dla każdej strony FB
+    - Jeśli znaleziono → instagram_business lub instagram_creator
+    - Jeśli nie → instagram_personal (ręczna publikacja)
     """
 
     platform = SocialPlatform.INSTAGRAM
 
-    # API endpoints (używamy Facebook Graph API)
     GRAPH_URL = "https://graph.facebook.com"
     OAUTH_URL = "https://www.facebook.com"
 
-    # Wymagane uprawnienia (rozszerzenie FB o Instagram)
     REQUIRED_SCOPES = [
         "public_profile",
         "email",
         "pages_show_list",
         "pages_read_engagement",
         "pages_manage_posts",
-        "instagram_basic",  # Podstawowy dostęp do IG
-        "instagram_content_publish",  # Publikacja na IG
-        "instagram_manage_insights",  # Statystyki IG
+        "instagram_basic",
+        "instagram_content_publish",
+        "instagram_manage_insights",
     ]
 
     def __init__(self):
@@ -73,16 +65,12 @@ class InstagramService(BaseSocialService):
 
     @property
     def _graph_base(self) -> str:
-        """Bazowy URL dla Graph API z wersją."""
         return f"{self.GRAPH_URL}/{self.api_version}"
 
     # ==================== OAuth ====================
 
     def get_authorization_url(self, state: str) -> str:
-        """
-        Generuje URL do autoryzacji (przez Facebook OAuth).
-        Instagram nie ma osobnego OAuth - używamy Facebook z dodatkowymi scope'ami.
-        """
+        """Generuje URL do autoryzacji (przez Facebook OAuth)."""
         if not self.app_id:
             raise ValueError("Facebook App ID not configured")
 
@@ -99,7 +87,7 @@ class InstagramService(BaseSocialService):
     async def exchange_code_for_token(self, code: str) -> OAuthResult:
         """
         Wymienia authorization code na access token.
-        Następnie pobiera Instagram Business Account ID.
+        Automatycznie wykrywa typ konta Instagram.
         """
         if not self.app_id or not self.app_secret:
             return OAuthResult(
@@ -111,7 +99,7 @@ class InstagramService(BaseSocialService):
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:
-                # 1. Wymiana kodu na token (jak w Facebook)
+                # 1. Wymiana kodu na token
                 response = await client.get(
                     f"{self._graph_base}/oauth/access_token",
                     params={
@@ -155,27 +143,66 @@ class InstagramService(BaseSocialService):
                     access_token = short_lived_token
                     expires_in = 3600
 
-                # 3. Pobierz Instagram Business Account
+                # 3. Pobierz info o użytkowniku FB
+                user_info = await self._get_fb_user_info(client, access_token)
+
+                # 4. === KLUCZOWE: Wykryj typ konta Instagram ===
                 ig_account = await self._get_instagram_business_account(client, access_token)
 
-                if not ig_account:
-                    return OAuthResult(
-                        success=False,
-                        platform=self.platform,
-                        error="no_instagram_account",
-                        error_description="No Instagram Business/Creator account found. "
-                                          "Make sure your Instagram is connected to a Facebook Page."
-                    )
+                if ig_account:
+                    # Znaleziono konto Business/Creator
+                    ig_type = ig_account.get("account_type", "BUSINESS")
 
-                return OAuthResult(
-                    success=True,
-                    platform=self.platform,
-                    access_token=access_token,
-                    expires_at=datetime.utcnow() + timedelta(seconds=expires_in),
-                    platform_user_id=ig_account.get("id"),
-                    platform_username=ig_account.get("username"),
-                    profile_data=ig_account
-                )
+                    if ig_type == "CREATOR":
+                        account_type = "instagram_creator"
+                    else:
+                        account_type = "instagram_business"
+
+                    return OAuthResult(
+                        success=True,
+                        platform=self.platform,
+                        access_token=access_token,
+                        expires_at=datetime.utcnow() + timedelta(seconds=expires_in),
+                        platform_user_id=ig_account.get("id"),
+                        platform_username=ig_account.get("username"),
+                        profile_data={
+                            "fb_user": user_info,
+                            "instagram": ig_account,
+                        },
+                        # Typ konta
+                        account_type=account_type,
+                        is_business_account=True,
+                        supports_auto_publish=True,
+                        supports_autopilot=True,
+                        # Dane Instagram
+                        instagram_account_id=ig_account.get("id"),
+                        instagram_account_type=ig_type,
+                        page_id=ig_account.get("connected_page_id"),
+                        page_name=ig_account.get("connected_page_name"),
+                    )
+                else:
+                    # Brak konta Business/Creator → instagram_personal
+                    return OAuthResult(
+                        success=True,
+                        platform=self.platform,
+                        access_token=access_token,
+                        expires_at=datetime.utcnow() + timedelta(seconds=expires_in),
+                        platform_user_id=user_info.get("id"),
+                        platform_username=user_info.get("name"),
+                        profile_data=user_info,
+                        # Typ konta - osobiste
+                        account_type="instagram_personal",
+                        is_business_account=False,
+                        supports_auto_publish=False,
+                        supports_autopilot=False,
+                        # Komunikat dla UI
+                        upgrade_message=(
+                            "Wykryto konto osobiste Instagram. "
+                            "Automatyczna publikacja wymaga konta Instagram Business lub Creator "
+                            "połączonego ze Stroną Facebook. "
+                            "Możesz kopiować treść i publikować ręcznie w aplikacji Instagram."
+                        ),
+                    )
 
             except httpx.RequestError as e:
                 self._log_error("Instagram API request failed", e)
@@ -194,6 +221,24 @@ class InstagramService(BaseSocialService):
                     error_description=str(e)
                 )
 
+    async def _get_fb_user_info(
+            self,
+            client: httpx.AsyncClient,
+            access_token: str
+    ) -> Dict[str, Any]:
+        """Pobiera info o użytkowniku Facebook."""
+        response = await client.get(
+            f"{self._graph_base}/me",
+            params={
+                "access_token": access_token,
+                "fields": "id,name,email,picture.width(200)"
+            }
+        )
+
+        if response.status_code == 200:
+            return response.json()
+        return {}
+
     async def _get_instagram_business_account(
             self,
             client: httpx.AsyncClient,
@@ -201,11 +246,7 @@ class InstagramService(BaseSocialService):
     ) -> Optional[Dict[str, Any]]:
         """
         Pobiera Instagram Business Account ID.
-
-        Flow:
-        1. Pobierz strony użytkownika (/me/accounts)
-        2. Dla każdej strony sprawdź instagram_business_account
-        3. Zwróć pierwsze znalezione konto IG
+        Zwraca None jeśli użytkownik nie ma konta Business/Creator.
         """
         # Pobierz strony FB
         pages_response = await client.get(
@@ -226,13 +267,12 @@ class InstagramService(BaseSocialService):
         for page in pages:
             ig_account = page.get("instagram_business_account")
             if ig_account:
-                # Pobierz szczegóły konta IG
                 ig_id = ig_account.get("id")
                 ig_response = await client.get(
                     f"{self._graph_base}/{ig_id}",
                     params={
                         "access_token": access_token,
-                        "fields": "id,username,name,profile_picture_url,followers_count,media_count"
+                        "fields": "id,username,name,profile_picture_url,followers_count,media_count,account_type"
                     }
                 )
 
@@ -292,25 +332,51 @@ class InstagramService(BaseSocialService):
     # ==================== Account Info ====================
 
     async def get_account_info(self, access_token: str) -> Optional[AccountInfo]:
-        """Pobiera informacje o koncie Instagram."""
+        """Pobiera informacje o koncie Instagram z wykryciem typu."""
         async with httpx.AsyncClient(timeout=30.0) as client:
             ig_account = await self._get_instagram_business_account(client, access_token)
 
-            if not ig_account:
-                return None
+            if ig_account:
+                ig_type = ig_account.get("account_type", "BUSINESS")
+                account_type = "instagram_creator" if ig_type == "CREATOR" else "instagram_business"
 
-            return AccountInfo(
-                platform=self.platform,
-                platform_user_id=ig_account.get("id", ""),
-                username=ig_account.get("username", ""),
-                name=ig_account.get("name"),
-                avatar_url=ig_account.get("profile_picture_url"),
-                followers_count=ig_account.get("followers_count"),
-                is_business=True,
-                page_id=ig_account.get("connected_page_id"),
-                page_name=ig_account.get("connected_page_name"),
-                permissions=self.REQUIRED_SCOPES
-            )
+                return AccountInfo(
+                    platform=self.platform,
+                    platform_user_id=ig_account.get("id", ""),
+                    username=ig_account.get("username", ""),
+                    name=ig_account.get("name"),
+                    avatar_url=ig_account.get("profile_picture_url"),
+                    followers_count=ig_account.get("followers_count"),
+                    permissions=self.REQUIRED_SCOPES,
+                    # Typ konta
+                    account_type=account_type,
+                    is_business=True,
+                    supports_auto_publish=True,
+                    supports_autopilot=True,
+                    # Dane Instagram
+                    instagram_account_id=ig_account.get("id"),
+                    instagram_account_type=ig_type,
+                    connected_fb_page_id=ig_account.get("connected_page_id"),
+                    page_id=ig_account.get("connected_page_id"),
+                    page_name=ig_account.get("connected_page_name"),
+                )
+            else:
+                # Konto osobiste - pobierz podstawowe info z FB
+                user_info = await self._get_fb_user_info(client, access_token)
+
+                return AccountInfo(
+                    platform=self.platform,
+                    platform_user_id=user_info.get("id", ""),
+                    username=user_info.get("name", "Instagram User"),
+                    name=user_info.get("name"),
+                    avatar_url=user_info.get("picture", {}).get("data", {}).get("url"),
+                    permissions=self.REQUIRED_SCOPES,
+                    # Typ konta - osobiste
+                    account_type="instagram_personal",
+                    is_business=False,
+                    supports_auto_publish=False,
+                    supports_autopilot=False,
+                )
 
     # ==================== Publishing ====================
 
@@ -321,23 +387,20 @@ class InstagramService(BaseSocialService):
             image_url: Optional[str] = None,
             link_url: Optional[str] = None,
             instagram_account_id: Optional[str] = None,
+            account_type: Optional[str] = None,
             **kwargs
     ) -> PublishResult:
         """
         Publikuje post na Instagram.
 
-        WAŻNE: Instagram wymaga zdjęcia! Nie można opublikować samego tekstu.
-
-        Flow:
-        1. POST /{ig-user-id}/media - tworzy "container" z media
-        2. POST /{ig-user-id}/media_publish - publikuje container
-
-        Args:
-            access_token: User Access Token
-            content: Caption (podpis)
-            image_url: URL do obrazka (WYMAGANE!)
-            instagram_account_id: Instagram Business Account ID
+        Dla instagram_business/creator: Automatyczna publikacja przez API
+        Dla instagram_personal: Zwraca instrukcje ręcznej publikacji
         """
+        # Sprawdź czy to konto osobiste
+        if account_type == "instagram_personal":
+            return self._generate_manual_publish_result(content, image_url)
+
+        # Standardowa walidacja dla kont business
         if not instagram_account_id:
             return PublishResult(
                 success=False,
@@ -418,6 +481,34 @@ class InstagramService(BaseSocialService):
                     error=str(e),
                     error_code="REQUEST_ERROR"
                 )
+
+    def _generate_manual_publish_result(
+            self,
+            content: str,
+            image_url: Optional[str] = None
+    ) -> PublishResult:
+        """
+        Generuje wynik dla ręcznej publikacji (konta osobiste).
+        Instagram nie ma Share Dialog - tylko deeplink do aplikacji.
+        """
+        instructions = [
+            "1. Skopiuj treść posta",
+            "2. Otwórz aplikację Instagram",
+            "3. Utwórz nowy post i wybierz zdjęcie",
+            "4. Wklej skopiowaną treść jako opis",
+            "5. Opublikuj post",
+        ]
+
+        if image_url:
+            instructions.insert(0, "0. Pobierz zdjęcie z aplikacji Postlio")
+
+        return PublishResult(
+            success=True,
+            platform=self.platform,
+            requires_manual_publish=True,
+            deeplink_url="instagram://camera",
+            manual_instructions=instructions,
+        )
 
 
 # Globalna instancja
