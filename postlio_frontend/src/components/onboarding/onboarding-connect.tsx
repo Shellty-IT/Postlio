@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
     Facebook,
@@ -23,8 +24,10 @@ import { toast } from 'sonner';
 import type { SocialPlatform } from '@/types';
 
 export function OnboardingConnect() {
+    const router = useRouter();
     const { setOnboardingStep, startSocialLogin, skipOnboarding } = useAuthStore();
     const [isConnecting, setIsConnecting] = useState<SocialPlatform | null>(null);
+    const [isSkipping, setIsSkipping] = useState(false);
 
     const handleConnect = async (platform: SocialPlatform) => {
         try {
@@ -33,13 +36,10 @@ export function OnboardingConnect() {
 
             const response = await initOAuth(platform);
 
-            // Dodaj kontekst do state (backend powinien zwrócić state z prefixem)
-            // Alternatywnie, możemy zapisać w sessionStorage
             sessionStorage.setItem('oauth_state', response.state);
             sessionStorage.setItem('oauth_platform', platform);
             sessionStorage.setItem('oauth_context', 'onboarding');
 
-            // Przekieruj do OAuth
             window.location.href = response.authorization_url;
 
         } catch (error) {
@@ -49,10 +49,16 @@ export function OnboardingConnect() {
         }
     };
 
-    const handleSkip = () => {
-        skipOnboarding();
-        // Router.push jest obsługiwany przez skipOnboarding w store
-        window.location.href = '/dashboard';
+    const handleSkip = async () => {
+        setIsSkipping(true);
+        try {
+            await skipOnboarding();
+            router.push('/dashboard');
+        } catch (error) {
+            console.error('Skip error:', error);
+            toast.error('Wystąpił błąd. Spróbuj ponownie.');
+            setIsSkipping(false);
+        }
     };
 
     const platforms = [
@@ -90,6 +96,7 @@ export function OnboardingConnect() {
                     size="sm"
                     className="w-fit -ml-2 text-muted-foreground"
                     onClick={() => setOnboardingStep('welcome')}
+                    disabled={isSkipping || isConnecting !== null}
                 >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Wstecz
@@ -161,7 +168,7 @@ export function OnboardingConnect() {
                                 size="lg"
                                 className="w-full h-auto py-4 px-6 justify-between group hover:border-primary/50"
                                 onClick={() => handleConnect(platform.id)}
-                                disabled={isConnecting !== null}
+                                disabled={isConnecting !== null || isSkipping}
                             >
                                 <div className="flex items-center gap-4">
                                     <div
@@ -185,8 +192,8 @@ export function OnboardingConnect() {
                                     <Loader2 className="w-5 h-5 animate-spin text-primary" />
                                 ) : (
                                     <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
-                    Połącz →
-                  </span>
+                                        Połącz →
+                                    </span>
                                 )}
                             </Button>
                         </motion.div>
@@ -199,9 +206,16 @@ export function OnboardingConnect() {
                         variant="ghost"
                         className="text-muted-foreground"
                         onClick={handleSkip}
-                        disabled={isConnecting !== null}
+                        disabled={isConnecting !== null || isSkipping}
                     >
-                        Pomiń i przejdź do aplikacji
+                        {isSkipping ? (
+                            <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Pomijanie...
+                            </>
+                        ) : (
+                            'Pomiń i przejdź do aplikacji'
+                        )}
                     </Button>
                 </div>
             </CardContent>

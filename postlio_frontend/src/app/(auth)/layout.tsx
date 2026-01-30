@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -12,14 +12,23 @@ export default function AuthLayout({
     children: React.ReactNode;
 }) {
     const router = useRouter();
-    const { isAuthenticated, isInitialized } = useAuthStore();
+    const pathname = usePathname();
+    const { isAuthenticated, isInitialized, user } = useAuthStore();
 
-    // Przekieruj zalogowanych do dashboard
+    // Sprawdź czy to strona onboardingu
+    const isOnboardingPage = pathname === '/onboarding';
+
+    // Przekieruj zalogowanych do dashboard (ALE nie z onboardingu!)
     useEffect(() => {
-        if (isInitialized && isAuthenticated) {
-            router.push('/dashboard');
+        if (isInitialized && isAuthenticated && !isOnboardingPage) {
+            // Zalogowany na login/register - przekieruj
+            if (user?.needs_onboarding) {
+                router.push('/onboarding');
+            } else {
+                router.push('/dashboard');
+            }
         }
-    }, [isAuthenticated, isInitialized, router]);
+    }, [isAuthenticated, isInitialized, isOnboardingPage, user, router]);
 
     // Pokaż loading podczas sprawdzania auth
     if (!isInitialized) {
@@ -33,11 +42,19 @@ export default function AuthLayout({
         );
     }
 
-    // Nie pokazuj formularza jeśli zalogowany
-    if (isAuthenticated) {
-        return null;
+    // Dla onboardingu - zawsze renderuj (strona sama sprawdzi auth)
+    if (isOnboardingPage) {
+        return <>{children}</>;
     }
 
-    // Po prostu renderuj children - strony mają własny layout
+    // Dla login/register - nie pokazuj jeśli zalogowany (przekierowanie w toku)
+    if (isAuthenticated) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-background">
+                <Sparkles className="h-8 w-8 animate-pulse text-primary" />
+            </div>
+        );
+    }
+
     return <>{children}</>;
 }

@@ -255,15 +255,31 @@ export const useAuthStore = create<AuthState>()(
                 });
             },
 
-            // === AKCJE ONBOARDING ===
+// W sekcji akcji onboarding (około linii 150-180)
+
+// === AKCJE ONBOARDING ===
 
             setShowOnboarding: (show) => set({ showOnboarding: show }),
 
             setOnboardingStep: (step) => set({ onboardingStep: step }),
 
-            completeOnboarding: () => {
+            completeOnboarding: async () => {
                 const { user } = get();
-                if (user) {
+                if (!user) return;
+
+                try {
+                    // Wywołaj API
+                    const { authApi } = await import('@/lib/api/auth');
+                    const updatedUser = await authApi.completeOnboarding(false);
+
+                    set({
+                        user: updatedUser,
+                        showOnboarding: false,
+                        onboardingStep: 'completed',
+                    });
+                } catch (error) {
+                    console.error('Failed to complete onboarding:', error);
+                    // Lokalny fallback
                     set({
                         user: {
                             ...user,
@@ -277,9 +293,23 @@ export const useAuthStore = create<AuthState>()(
                 }
             },
 
-            skipOnboarding: () => {
+            skipOnboarding: async () => {
                 const { user } = get();
-                if (user) {
+                if (!user) return;
+
+                try {
+                    // Wywołaj API
+                    const { authApi } = await import('@/lib/api/auth');
+                    const updatedUser = await authApi.completeOnboarding(true);
+
+                    set({
+                        user: updatedUser,
+                        showOnboarding: false,
+                        onboardingStep: 'completed',
+                    });
+                } catch (error) {
+                    console.error('Failed to skip onboarding:', error);
+                    // Lokalny fallback
                     set({
                         user: {
                             ...user,

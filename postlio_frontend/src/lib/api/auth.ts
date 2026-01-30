@@ -1,16 +1,13 @@
 // src/lib/api/auth.ts
 /**
  * Auth API Layer
- *
- * Funkcje do komunikacji z endpointami autoryzacji.
- * Obsługuje logowanie, rejestrację, odświeżanie tokenów.
  */
 
 import { apiClient, TokenManager } from './client';
 import type { User } from '@/types';
 
 // ============================================================
-// TYPY REQUESTÓW I RESPONSE
+// TYPY
 // ============================================================
 
 export interface LoginRequest {
@@ -34,16 +31,18 @@ export interface AuthResponse extends AuthTokens {
     user: User;
 }
 
+export interface OnboardingCompleteRequest {
+    skipped: boolean;
+}
+
 // ============================================================
 // API FUNCTIONS
 // ============================================================
 
 /**
  * Logowanie użytkownika
- * Backend oczekuje JSON z email i password
  */
 export async function login(credentials: LoginRequest): Promise<AuthResponse> {
-    // Wysyłamy JSON z email i password
     const tokens = await apiClient.post<AuthTokens>('/auth/login', {
         email: credentials.email,
         password: credentials.password,
@@ -51,10 +50,7 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
         skipAuth: true,
     });
 
-    // Zapisz tokeny
     TokenManager.setTokens(tokens.access_token, tokens.refresh_token);
-
-    // Pobierz dane użytkownika
     const user = await getMe();
 
     return {
@@ -67,12 +63,10 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
  * Rejestracja nowego użytkownika
  */
 export async function register(data: RegisterRequest): Promise<AuthResponse> {
-    // Rejestracja
     await apiClient.post<User>('/auth/register', data, {
         skipAuth: true,
     });
 
-    // Automatyczne logowanie po rejestracji
     return login({
         email: data.email,
         password: data.password,
@@ -85,7 +79,6 @@ export async function register(data: RegisterRequest): Promise<AuthResponse> {
 export function logout(): void {
     TokenManager.clearTokens();
 
-    // Przekierowanie do strony logowania
     if (typeof window !== 'undefined') {
         window.location.href = '/login';
     }
@@ -106,7 +99,7 @@ export function isAuthenticated(): boolean {
 }
 
 /**
- * Odświeżenie tokenu (używane wewnętrznie przez client.ts)
+ * Odświeżenie tokenu
  */
 export async function refreshToken(): Promise<AuthTokens | null> {
     const refreshTokenValue = TokenManager.getRefreshToken();
@@ -130,6 +123,13 @@ export async function refreshToken(): Promise<AuthTokens | null> {
     }
 }
 
+/**
+ * Ukończenie lub pominięcie onboardingu
+ */
+export async function completeOnboarding(skipped: boolean): Promise<User> {
+    return apiClient.post<User>('/auth/onboarding', { skipped });
+}
+
 // ============================================================
 // EXPORT ZBIORCZY
 // ============================================================
@@ -141,6 +141,7 @@ export const authApi = {
     getMe,
     isAuthenticated,
     refreshToken,
+    completeOnboarding,
 };
 
 export default authApi;

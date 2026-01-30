@@ -1,18 +1,17 @@
 // src/app/(auth)/onboarding/page.tsx
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 import { useAuthStore } from '@/store/auth-store';
-import { useOAuthCallbackHandler } from '@/hooks';
 import { OnboardingWelcome } from '@/components/onboarding/onboarding-welcome';
 import { OnboardingConnect } from '@/components/onboarding/onboarding-connect';
 import { OnboardingSuccess } from '@/components/onboarding/onboarding-success';
 
-function OnboardingContent() {
+export default function OnboardingPage() {
     const router = useRouter();
     const {
         user,
@@ -21,51 +20,60 @@ function OnboardingContent() {
         onboardingStep,
     } = useAuthStore();
 
-    // Obsłuż OAuth callback
-    const { isProcessing, hasOAuthParams } = useOAuthCallbackHandler({
-        onSuccess: () => {
-            // Hook automatycznie ustawia onboardingStep na 'success' jeśli context === 'onboarding'
-        },
-        onError: (error) => {
-            console.error('OAuth error:', error);
-            // Wróć do connect jeśli błąd
-            useAuthStore.getState().setOnboardingStep('connect');
-        },
-    });
+    // Debug
+    console.log('[Onboarding Page]', { isInitialized, isAuthenticated, user: user?.email, onboardingStep });
 
-    // Przekieruj niezalogowanych do logowania
+    // Przekieruj niezalogowanych
     useEffect(() => {
         if (isInitialized && !isAuthenticated) {
-            router.push('/login');
+            router.replace('/login');
         }
-    }, [isAuthenticated, isInitialized, router]);
+    }, [isInitialized, isAuthenticated, router]);
 
     // Przekieruj jeśli onboarding ukończony
     useEffect(() => {
-        if (isInitialized && isAuthenticated && user && !user.needs_onboarding && !hasOAuthParams) {
-            router.push('/dashboard');
+        if (isInitialized && isAuthenticated && user && !user.needs_onboarding) {
+            router.replace('/dashboard');
         }
-    }, [isInitialized, isAuthenticated, user, hasOAuthParams, router]);
+    }, [isInitialized, isAuthenticated, user, router]);
 
     // Loading
-    if (!isInitialized || isProcessing) {
+    if (!isInitialized) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
-                <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="text-muted-foreground">
-                        {isProcessing ? 'Łączenie konta...' : 'Ładowanie...'}
-                    </p>
-                </div>
+                <Sparkles className="h-8 w-8 animate-pulse text-primary" />
             </div>
         );
     }
 
-    // Nie pokazuj jeśli niezalogowany
-    if (!isAuthenticated || !user) {
-        return null;
+    // Niezalogowany - pokaż loading (przekierowanie w toku)
+    if (!isAuthenticated) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-background">
+                <Sparkles className="h-8 w-8 animate-pulse text-primary" />
+            </div>
+        );
     }
 
+    // Brak usera - pokaż loading
+    if (!user) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-background">
+                <Sparkles className="h-8 w-8 animate-pulse text-primary" />
+            </div>
+        );
+    }
+
+    // User nie potrzebuje onboardingu - pokaż loading (przekierowanie w toku)
+    if (!user.needs_onboarding) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-background">
+                <Sparkles className="h-8 w-8 animate-pulse text-primary" />
+            </div>
+        );
+    }
+
+    // RENDERUJ ONBOARDING
     return (
         <div className="min-h-screen bg-gradient-to-br from-background via-background to-violet-500/5">
             {/* Background decoration */}
@@ -115,17 +123,5 @@ function OnboardingContent() {
                 </AnimatePresence>
             </div>
         </div>
-    );
-}
-
-export default function OnboardingPage() {
-    return (
-        <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-background">
-                <Sparkles className="h-8 w-8 animate-pulse text-primary" />
-            </div>
-        }>
-            <OnboardingContent />
-        </Suspense>
     );
 }
