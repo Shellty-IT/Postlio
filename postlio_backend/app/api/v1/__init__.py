@@ -2,6 +2,6 @@
 """
 API v1 endpoints.
 """
-from . import auth, posts, brands, ai, autopilot
+from . import auth, posts, brands, ai, autopilot, social  # ← DODANE: social
 
-__all__ = ["auth", "posts", "brands", "ai", "autopilot"]
+__all__ = ["auth", "posts", "brands", "ai", "autopilot", "social"]  # ← DODANE: social

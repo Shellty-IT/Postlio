@@ -6,7 +6,7 @@ import logging
 
 from app.config import settings
 from app.database import init_db, close_db
-from app.api.v1 import auth, posts, brands, ai, autopilot
+from app.api.v1 import auth, posts, brands, ai, autopilot, social  # ← DODANE: social
 from app.services.scheduler_service import start_scheduler, stop_scheduler
 
 # Konfiguracja logowania
@@ -82,6 +82,9 @@ app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["
 app.include_router(posts.router, prefix=f"{settings.API_V1_PREFIX}/posts", tags=["Posts"])
 app.include_router(brands.router, prefix=f"{settings.API_V1_PREFIX}/brands", tags=["Brand Voice"])
 app.include_router(ai.router, prefix=f"{settings.API_V1_PREFIX}/ai", tags=["AI Generation"])
+
+# Social Media  ← DODANE
+app.include_router(social.router, prefix=settings.API_V1_PREFIX, tags=["Social Media"])
 
 # Autopilot
 app.include_router(autopilot.router, prefix=settings.API_V1_PREFIX, tags=["Autopilot"])

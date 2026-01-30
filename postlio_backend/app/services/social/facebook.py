@@ -43,11 +43,12 @@ class FacebookService(BaseSocialService):
     # Wymagane uprawnienia
     REQUIRED_SCOPES = [
         "public_profile",
-        "email",
-        "pages_show_list",
-        "pages_read_engagement",
-        "pages_manage_posts",
-        "pages_read_user_content",
+        # Poniższe wymagają App Review lub statusu testera:
+        # "email",
+        # "pages_show_list",
+        # "pages_read_engagement",
+        # "pages_manage_posts",
+        # "pages_read_user_content",
     ]
 
     def __init__(self):
