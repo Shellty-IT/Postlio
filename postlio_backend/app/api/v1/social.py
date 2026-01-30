@@ -1,16 +1,20 @@
 ﻿# postlio_backend/app/api/v1/social.py
 """
 API endpoints dla Social Media integration.
-Tylko oficjalnie wspierane typy kont (Facebook Pages, Instagram Business/Creator, LinkedIn).
 """
 
-import secrets
+import hmac
+import hashlib
+import base64
+import json
+import time
 from datetime import datetime
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
@@ -36,8 +40,66 @@ from app.schemas.social import (
 
 router = APIRouter(prefix="/social", tags=["social"])
 
-# Przechowywanie state tokenów (w produkcji użyj Redis)
-_oauth_states: dict = {}
+
+# ==================== State Token Helpers ====================
+
+def generate_state_token(user_id: int, platform: str) -> str:
+    """
+    Generuje bezpieczny state token z zakodowanymi danymi.
+    Nie wymaga przechowywania w pamięci/bazie - dane są w samym tokenie.
+    """
+    data = {
+        "user_id": user_id,
+        "platform": platform,
+        "exp": int(time.time()) + 600  # 10 minut ważności
+    }
+    payload = base64.urlsafe_b64encode(json.dumps(data).encode()).decode().rstrip("=")
+    signature = hmac.new(
+        settings.SECRET_KEY.encode(),
+        payload.encode(),
+        hashlib.sha256
+    ).hexdigest()[:32]
+    return f"{payload}.{signature}"
+
+
+def verify_state_token(state: str, user_id: int) -> dict:
+    """
+    Weryfikuje i dekoduje state token.
+    Zwraca dane lub None jeśli nieprawidłowy.
+    """
+    try:
+        if "." not in state:
+            return None
+
+        payload, signature = state.rsplit(".", 1)
+
+        # Weryfikuj podpis
+        expected_sig = hmac.new(
+            settings.SECRET_KEY.encode(),
+            payload.encode(),
+            hashlib.sha256
+        ).hexdigest()[:32]
+
+        if not hmac.compare_digest(signature, expected_sig):
+            return None
+
+        # Dekoduj payload (dodaj padding jeśli potrzebny)
+        padding = 4 - len(payload) % 4
+        if padding != 4:
+            payload += "=" * padding
+        data = json.loads(base64.urlsafe_b64decode(payload))
+
+        # Sprawdź wygaśnięcie
+        if data.get("exp", 0) < time.time():
+            return None
+
+        # Sprawdź user_id
+        if data.get("user_id") != user_id:
+            return None
+
+        return data
+    except Exception:
+        return None
 
 
 # ==================== OAuth Flow ====================
@@ -52,15 +114,8 @@ async def init_oauth(
     Zwraca URL do przekierowania użytkownika.
     """
     try:
-        # Generuj bezpieczny state token
-        state = secrets.token_urlsafe(32)
-
-        # Zapisz state
-        _oauth_states[state] = {
-            "user_id": current_user.id,
-            "platform": request.platform.value,
-            "created_at": datetime.utcnow()
-        }
+        # Generuj self-contained state token
+        state = generate_state_token(current_user.id, request.platform.value)
 
         # Pobierz URL autoryzacji
         platform = SocialPlatform(request.platform.value)
@@ -88,18 +143,19 @@ async def oauth_callback(
     Obsługuje callback z OAuth.
     Zapisuje tokeny w bazie.
     """
-    # Weryfikuj state
-    state_data = _oauth_states.pop(request.state, None)
+    # Weryfikuj state token
+    state_data = verify_state_token(request.state, current_user.id)
     if not state_data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired state token"
         )
 
-    if state_data["user_id"] != current_user.id:
+    # Sprawdź platformę
+    if state_data.get("platform") != request.platform.value:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="State token belongs to different user"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Platform mismatch in state token"
         )
 
     # Wymień kod na token
@@ -420,23 +476,19 @@ async def _get_user_account(
 def _determine_account_type(platform: SocialPlatform, profile_data: dict) -> AccountType:
     """Określa typ konta na podstawie platformy i danych profilu."""
     if platform == SocialPlatform.FACEBOOK:
-        # Facebook zawsze jako Page (nie wspieramy profili osobistych)
         return AccountType.FACEBOOK_PAGE
 
     elif platform == SocialPlatform.INSTAGRAM:
-        # Sprawdź typ konta IG
         ig_type = profile_data.get("account_type", "").upper() if profile_data else ""
         if ig_type == "CREATOR":
             return AccountType.INSTAGRAM_CREATOR
         return AccountType.INSTAGRAM_BUSINESS
 
     elif platform == SocialPlatform.LINKEDIN:
-        # Sprawdź czy to company page czy profil
         if profile_data and profile_data.get("organization_id"):
             return AccountType.LINKEDIN_COMPANY
         return AccountType.LINKEDIN_PROFILE
 
-    # Domyślnie
     return AccountType.FACEBOOK_PAGE
 
 
