@@ -1,6 +1,9 @@
 // src/app/(dashboard)/creator/page.tsx
 /**
  * Kreator Postów z integracją AI i ręczną publikacją
+ *
+ * NAPRAWIONE:
+ * - Wymiar height zmieniony z 630 na 624 (podzielne przez 8 dla HuggingFace FLUX)
  */
 
 'use client';
@@ -98,12 +101,14 @@ export default function CreatorPage() {
 
     // ========================================
     // Generowanie obrazu z wybranym providerem
+    // ✅ NAPRAWIONE: Wymiary podzielne przez 8
     // ========================================
     const handleGenerateImage = useCallback(async (prompt: string, provider?: ImageProvider) => {
         try {
             const isInstagram = selectedPlatforms.includes('instagram');
             const width = isInstagram ? 1080 : 1200;
-            const height = isInstagram ? 1080 : 630;
+            // ✅ NAPRAWIONE: 630 → 624 (624 ÷ 8 = 78, podzielne przez 8)
+            const height = isInstagram ? 1080 : 624;
 
             const result = await generateImageAsync({
                 prompt,
@@ -130,44 +135,41 @@ export default function CreatorPage() {
     }, [generateImageAsync, selectedPlatforms, imageProvider]);
 
     // ========================================
-    // POPRAWIONE: Zapisz jako szkic
+    // Zapisz jako szkic
     // ========================================
     const handleSaveDraft = useCallback(async () => {
         if (!content.trim()) return;
 
-        // Dodaj hashtagi do treści jeśli istnieją
         const fullContent = hashtags.length > 0
             ? `${content}\n\n${hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}`
             : content;
 
         await createPostMutation.mutateAsync({
             content: fullContent,
-            platform: primaryPlatform,                                              // ← ZMIANA: singular
-            brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined,     // ← ZMIANA: number
+            platform: primaryPlatform,
+            brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined,
             image_url: imageUrl,
             ai_generated: true,
             ai_model: textProvider,
-            // scheduled_at: undefined = backend ustawi status 'draft'
         });
 
         toast.success('Zapisano jako szkic!');
     }, [content, primaryPlatform, imageUrl, hashtags, selectedBrand, createPostMutation, textProvider]);
 
     // ========================================
-    // POPRAWIONE: Zaplanuj post
+    // Zaplanuj post
     // ========================================
     const handleSchedule = useCallback(async (scheduledAt: string) => {
         if (!content.trim()) return;
 
-        // Dodaj hashtagi do treści jeśli istnieją
         const fullContent = hashtags.length > 0
             ? `${content}\n\n${hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}`
             : content;
 
         await createPostMutation.mutateAsync({
             content: fullContent,
-            platform: primaryPlatform,                                              // ← ZMIANA: singular
-            brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined,     // ← ZMIANA: number
+            platform: primaryPlatform,
+            brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined,
             image_url: imageUrl,
             scheduled_at: scheduledAt,
             ai_generated: true,
@@ -188,7 +190,6 @@ export default function CreatorPage() {
             return;
         }
 
-        // Instagram wymaga obrazka
         if (primaryPlatform === 'instagram' && !imageUrl) {
             toast.error('Instagram wymaga zdjęcia', {
                 description: 'Dodaj lub wygeneruj obraz przed publikacją.',
@@ -196,9 +197,8 @@ export default function CreatorPage() {
             return;
         }
 
-        // Przygotuj dane do modalu
         const data = createManualPublishData({
-            id: 0, // Tymczasowe ID - post nie jest jeszcze zapisany
+            id: 0,
             content,
             hashtags,
             image_url: imageUrl || null,
@@ -210,10 +210,9 @@ export default function CreatorPage() {
     }, [content, hashtags, imageUrl, primaryPlatform]);
 
     // ========================================
-    // POPRAWIONE: Oznacz jako opublikowane i wyczyść formularz
+    // Oznacz jako opublikowane i wyczyść formularz
     // ========================================
     const handleMarkAsPublished = useCallback(async () => {
-        // Zapisz post jako "published" w bazie
         try {
             const fullContent = hashtags.length > 0
                 ? `${content}\n\n${hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}`
@@ -221,17 +220,16 @@ export default function CreatorPage() {
 
             await createPostMutation.mutateAsync({
                 content: fullContent,
-                platform: primaryPlatform,                                          // ← ZMIANA: singular
-                brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined, // ← ZMIANA: number
+                platform: primaryPlatform,
+                brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined,
                 image_url: imageUrl,
                 ai_generated: true,
                 ai_model: textProvider,
             });
         } catch {
-            // Ignoruj błędy - post mógł już być zapisany
+            // Ignoruj błędy
         }
 
-        // Wyczyść formularz
         setContent('');
         setImageUrl(undefined);
         setHashtags([]);

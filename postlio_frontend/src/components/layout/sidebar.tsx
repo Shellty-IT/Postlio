@@ -1,4 +1,11 @@
 // src/components/layout/sidebar.tsx
+/**
+ * Sidebar z nawigacją
+ *
+ * NAPRAWIONE:
+ * - Przycisk rozwijania widoczny w headerze RÓWNIEŻ gdy sidebar jest zwinięty
+ */
+
 'use client';
 
 import Link from 'next/link';
@@ -12,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import {
     LayoutDashboard,
     PenTool,
-    FileText,  // ← NOWA IKONA
+    FileText,
     Calendar,
     Building2,
     Settings,
@@ -24,7 +31,7 @@ import {
 } from 'lucide-react';
 
 // ============================================================
-// NAWIGACJA - ZAKTUALIZOWANA
+// NAWIGACJA
 // ============================================================
 
 const navigation = [
@@ -40,7 +47,7 @@ const navigation = [
         badge: 'AI',
     },
     {
-        title: 'Materiały',       // ← NOWA POZYCJA
+        title: 'Materiały',
         href: '/saved-posts',
         icon: FileText,
     },
@@ -87,11 +94,12 @@ export function Sidebar() {
                 )}
             >
                 <div className="flex h-full flex-col">
-                    {/* Logo */}
+                    {/* Logo + Toggle Button */}
                     <div className={cn(
                         'flex h-16 items-center border-b border-border px-4',
                         isCollapsed ? 'justify-center' : 'justify-between'
                     )}>
+                        {/* Logo */}
                         <Link href="/dashboard" className="flex items-center gap-3">
                             <div className="relative">
                                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
@@ -103,16 +111,29 @@ export function Sidebar() {
                             )}
                         </Link>
 
-                        {!isCollapsed && (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setCollapsed(true)}
-                                className="h-8 w-8"
-                            >
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                        )}
+                        {/* ✅ NAPRAWIONE: Przycisk toggle ZAWSZE widoczny w headerze */}
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setCollapsed(!isCollapsed)}
+                                    className={cn(
+                                        'h-8 w-8 transition-all',
+                                        isCollapsed && 'absolute right-2 top-4'
+                                    )}
+                                >
+                                    {isCollapsed ? (
+                                        <ChevronRight className="h-4 w-4" />
+                                    ) : (
+                                        <ChevronLeft className="h-4 w-4" />
+                                    )}
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
+                                {isCollapsed ? 'Rozwiń menu' : 'Zwiń menu'}
+                            </TooltipContent>
+                        </Tooltip>
                     </div>
 
                     {/* Navigation */}
@@ -179,18 +200,19 @@ export function Sidebar() {
                     <div className="border-t border-border p-3">
                         {isCollapsed ? (
                             <div className="flex flex-col items-center gap-2">
+                                {/* Avatar gdy zwinięty */}
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => setCollapsed(false)}
-                                            className="h-10 w-10"
-                                        >
-                                            <ChevronRight className="h-4 w-4" />
-                                        </Button>
+                                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center cursor-default">
+                                            <span className="text-sm font-medium">
+                                                {user?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                                            </span>
+                                        </div>
                                     </TooltipTrigger>
-                                    <TooltipContent side="right">Rozwiń menu</TooltipContent>
+                                    <TooltipContent side="right">
+                                        <p className="font-medium">{user?.full_name || 'Użytkownik'}</p>
+                                        <p className="text-xs text-muted-foreground">{user?.email}</p>
+                                    </TooltipContent>
                                 </Tooltip>
 
                                 <Tooltip>

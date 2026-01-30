@@ -1,19 +1,27 @@
 // src/components/creator/action-bar.tsx
 /**
  * Pasek akcji w kreatorze - z opcją ręcznej publikacji i szybkiego udostępnienia
+ *
+ * ULEPSZONE:
+ * - Atrakcyjniejsze statusy ("Dodaj treść", "Gotowy do publikacji" itp.)
+ * - Animacje i lepsze ikony
  */
 
 'use client';
 
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Save,
     Calendar,
     Loader2,
     Clock,
     ChevronDown,
-    Hand,
     Zap,
+    PenLine,
+    CheckCircle2,
+    ImageOff,
+    Sparkles,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -40,6 +48,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 // ============================================================
 // TYPY
@@ -84,7 +93,97 @@ function getScheduleDate(option: number | string): string {
 }
 
 // ============================================================
-// KOMPONENT
+// KOMPONENT STATUSU - ULEPSZONY
+// ============================================================
+
+interface StatusIndicatorProps {
+    hasContent: boolean;
+    hasImage: boolean;
+    isInstagram: boolean;
+}
+
+function StatusIndicator({ hasContent, hasImage, isInstagram }: StatusIndicatorProps) {
+    const instagramWarning = isInstagram && !hasImage;
+
+    // Określ status i styl
+    const getStatus = () => {
+        if (instagramWarning) {
+            return {
+                icon: ImageOff,
+                text: 'Instagram wymaga zdjęcia',
+                color: 'text-amber-500',
+                bgColor: 'bg-amber-500/10',
+                borderColor: 'border-amber-500/30',
+                dotColor: 'bg-amber-500',
+                pulse: true,
+            };
+        }
+        if (hasContent) {
+            return {
+                icon: CheckCircle2,
+                text: 'Gotowy do publikacji',
+                color: 'text-emerald-500',
+                bgColor: 'bg-emerald-500/10',
+                borderColor: 'border-emerald-500/30',
+                dotColor: 'bg-emerald-500',
+                pulse: false,
+            };
+        }
+        return {
+            icon: PenLine,
+            text: 'Rozpocznij tworzenie',
+            color: 'text-muted-foreground',
+            bgColor: 'bg-muted/50',
+            borderColor: 'border-border',
+            dotColor: 'bg-muted-foreground',
+            pulse: false,
+        };
+    };
+
+    const status = getStatus();
+    const Icon = status.icon;
+
+    return (
+        <AnimatePresence mode="wait">
+            <motion.div
+                key={status.text}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.2 }}
+                className={cn(
+                    'flex items-center gap-2.5 px-3 py-1.5 rounded-full border text-sm font-medium',
+                    status.bgColor,
+                    status.borderColor,
+                    status.color
+                )}
+            >
+                {/* Animated dot */}
+                <span className="relative flex h-2.5 w-2.5">
+                    {status.pulse && (
+                        <span className={cn(
+                            'absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping',
+                            status.dotColor
+                        )} />
+                    )}
+                    <span className={cn(
+                        'relative inline-flex rounded-full h-2.5 w-2.5',
+                        status.dotColor
+                    )} />
+                </span>
+
+                {/* Icon */}
+                <Icon className="w-4 h-4" />
+
+                {/* Text */}
+                <span className="hidden sm:inline">{status.text}</span>
+            </motion.div>
+        </AnimatePresence>
+    );
+}
+
+// ============================================================
+// KOMPONENT GŁÓWNY
 // ============================================================
 
 export function ActionBar({
@@ -137,34 +236,18 @@ export function ActionBar({
     };
 
     const isLoading = isSaving || isSubmitting;
-
-    // Instagram wymaga obrazka
     const isInstagram = selectedPlatform === 'instagram';
     const canPublish = hasContent && (!isInstagram || hasImage);
-    const instagramWarning = isInstagram && !hasImage;
 
     return (
         <>
             <div className="flex items-center justify-between p-4">
-                {/* Left side - info */}
-                <div className="text-sm text-muted-foreground">
-                    {instagramWarning ? (
-                        <span className="flex items-center gap-1 text-amber-500">
-                            <span className="w-2 h-2 rounded-full bg-amber-500" />
-                            Instagram wymaga zdjęcia
-                        </span>
-                    ) : hasContent ? (
-                        <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-green-500" />
-                            Gotowy do publikacji
-                        </span>
-                    ) : (
-                        <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-muted-foreground" />
-                            Dodaj treść
-                        </span>
-                    )}
-                </div>
+                {/* Left side - Ulepszony status */}
+                <StatusIndicator
+                    hasContent={hasContent}
+                    hasImage={hasImage}
+                    isInstagram={isInstagram}
+                />
 
                 {/* Right side - actions */}
                 <div className="flex items-center gap-2">
@@ -224,7 +307,7 @@ export function ActionBar({
                             </DropdownMenuContent>
                         </DropdownMenu>
 
-                        {/* Share Now - NOWY PRZYCISK */}
+                        {/* Share Now */}
                         {onShareNow && (
                             <Tooltip>
                                 <TooltipTrigger asChild>
@@ -250,10 +333,10 @@ export function ActionBar({
                                 <Button
                                     onClick={onPublishManually}
                                     disabled={!canPublish || isLoading}
-                                    className="bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90"
+                                    className="gap-2 bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90 shadow-lg shadow-primary/25"
                                 >
-                                    <Hand className="w-4 h-4 mr-2" />
-                                    <span className="hidden sm:inline">Opublikuj ręcznie</span>
+                                    <Sparkles className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Opublikuj</span>
                                     <span className="sm:hidden">Publikuj</span>
                                 </Button>
                             </TooltipTrigger>

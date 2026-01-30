@@ -1,11 +1,17 @@
 // src/components/creator/post-editor.tsx
 /**
  * Edytor posta z obsługą AI, wyborem providerów i edycją obrazu
+ *
+ * NAPRAWIONE:
+ * - SOFT_LIMIT zmieniony z 700 na 500
+ * - Dodane liczniki znaków w dialogach (max 500)
+ * - Sync providerów z propsów przez useEffect
+ * - Podpowiedzi DODAJĄ tekst po spacji zamiast nadpisywać
  */
 
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Sparkles,
@@ -58,17 +64,15 @@ interface PostEditorProps {
     onHashtagsChange: (hashtags: string[]) => void;
     platforms: Platform[];
     isGenerating?: boolean;
-    // Rozszerzone o provider i model
     onGenerateText?: (prompt: string, provider?: TextProvider) => Promise<string>;
     onGenerateImage?: (prompt: string, provider?: ImageProvider, model?: string) => Promise<string | undefined>;
-    // Domyślne providery
     defaultTextProvider?: TextProvider;
     defaultImageProvider?: ImageProvider;
     defaultImageModel?: string;
 }
 
 // ============================================================
-// LIMITY PLATFORM
+// LIMITY
 // ============================================================
 
 const PLATFORM_LIMITS: Record<Platform, number> = {
@@ -77,11 +81,52 @@ const PLATFORM_LIMITS: Record<Platform, number> = {
     linkedin: 3000,
 };
 
-// Limit "soft" dla AI - sugerowany maksymalny rozmiar
-const SOFT_LIMIT = 700;
+// ✅ NAPRAWIONE: Limit dla promptów AI i "soft" limit dla posta - teraz 500
+const PROMPT_LIMIT = 500;
+const SOFT_LIMIT = 500;
 
 // ============================================================
-// KOMPONENT
+// KOMPONENT LICZNIKA ZNAKÓW (reużywalny)
+// ============================================================
+
+interface CharCounterProps {
+    current: number;
+    max: number;
+    className?: string;
+}
+
+function CharCounter({ current, max, className }: CharCounterProps) {
+    const percentage = (current / max) * 100;
+    const isNearLimit = percentage >= 80 && percentage < 100;
+    const isOverLimit = current > max;
+
+    return (
+        <div className={cn('flex items-center gap-2 text-xs', className)}>
+            <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                <motion.div
+                    className={cn(
+                        'h-full transition-colors duration-300',
+                        isOverLimit ? 'bg-red-500' :
+                            isNearLimit ? 'bg-amber-500' : 'bg-primary'
+                    )}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(percentage, 100)}%` }}
+                    transition={{ duration: 0.2 }}
+                />
+            </div>
+            <span className={cn(
+                'font-medium tabular-nums',
+                isOverLimit ? 'text-red-500' :
+                    isNearLimit ? 'text-amber-500' : 'text-muted-foreground'
+            )}>
+                {current}/{max}
+            </span>
+        </div>
+    );
+}
+
+// ============================================================
+// KOMPONENT GŁÓWNY
 // ============================================================
 
 export function PostEditor({
@@ -115,6 +160,19 @@ export function PostEditor({
     const [selectedImageProvider, setSelectedImageProvider] = useState<ImageProvider>(defaultImageProvider);
     const [selectedImageModel, setSelectedImageModel] = useState<string | undefined>(defaultImageModel);
 
+    // ✅ NAPRAWIONE: Synchronizacja providerów z propsów
+    useEffect(() => {
+        setSelectedTextProvider(defaultTextProvider);
+    }, [defaultTextProvider]);
+
+    useEffect(() => {
+        setSelectedImageProvider(defaultImageProvider);
+    }, [defaultImageProvider]);
+
+    useEffect(() => {
+        setSelectedImageModel(defaultImageModel);
+    }, [defaultImageModel]);
+
     // Limit znaków (najmniejszy z wybranych platform)
     const charLimit = Math.min(...platforms.map((p) => PLATFORM_LIMITS[p]));
     const charCount = content.length;
@@ -146,6 +204,22 @@ export function PostEditor({
     const handleRemoveHashtag = useCallback((tag: string) => {
         onHashtagsChange(hashtags.filter((h) => h !== tag));
     }, [hashtags, onHashtagsChange]);
+
+    // ✅ NAPRAWIONE: Handler dla podpowiedzi tekstu - DODAJE po spacji
+    const handleTextSuggestionClick = useCallback((suggestion: string) => {
+        setTextPrompt(prev => {
+            if (!prev.trim()) return suggestion;
+            return `${prev.trim()} ${suggestion}`;
+        });
+    }, []);
+
+    // ✅ NAPRAWIONE: Handler dla stylów obrazu - DODAJE po spacji/przecinku
+    const handleImageStyleClick = useCallback((style: string) => {
+        setImagePrompt(prev => {
+            if (!prev.trim()) return style.toLowerCase();
+            return `${prev.trim()}, ${style.toLowerCase()} styl`;
+        });
+    }, []);
 
     // Generuj tekst
     const handleGenerateText = useCallback(async () => {
@@ -186,7 +260,6 @@ export function PostEditor({
             const url = URL.createObjectURL(file);
             onImageChange(url);
         }
-        // Reset input
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -202,6 +275,21 @@ export function PostEditor({
     const handleCropComplete = useCallback((croppedUrl: string) => {
         onImageChange(croppedUrl);
     }, [onImageChange]);
+
+    // ✅ NAPRAWIONE: Handler dla textarea z limitem w dialogach
+    const handleTextPromptChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const value = e.target.value;
+        if (value.length <= PROMPT_LIMIT) {
+            setTextPrompt(value);
+        }
+    }, []);
+
+    const handleImagePromptChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const value = e.target.value;
+        if (value.length <= PROMPT_LIMIT) {
+            setImagePrompt(value);
+        }
+    }, []);
 
     return (
         <div className="space-y-4">
@@ -268,14 +356,12 @@ export function PostEditor({
                                 </TooltipContent>
                             </Tooltip>
                         )}
-                        <span className={cn(
-                            isOverLimit && 'animate-pulse'
-                        )}>
+                        <span className={cn(isOverLimit && 'animate-pulse')}>
                             {charCount.toLocaleString()}
                         </span>
                         <span className="text-muted-foreground">/</span>
                         <span className="text-muted-foreground">
-                            {charLimit.toLocaleString()}
+                            {SOFT_LIMIT}
                         </span>
                     </div>
                 </div>
@@ -414,7 +500,6 @@ export function PostEditor({
                             />
                         </div>
                         <div className="absolute top-2 right-2 flex gap-2">
-                            {/* Crop/Edit button */}
                             <Button
                                 variant="secondary"
                                 size="icon"
@@ -423,7 +508,6 @@ export function PostEditor({
                             >
                                 <Crop className="w-4 h-4" />
                             </Button>
-                            {/* Regenerate button */}
                             <Button
                                 variant="secondary"
                                 size="icon"
@@ -432,7 +516,6 @@ export function PostEditor({
                             >
                                 <RefreshCw className="w-4 h-4" />
                             </Button>
-                            {/* Remove button */}
                             <Button
                                 variant="secondary"
                                 size="icon"
@@ -446,7 +529,9 @@ export function PostEditor({
                 )}
             </AnimatePresence>
 
-            {/* Dialog: Generuj tekst */}
+            {/* ============================================================ */}
+            {/* Dialog: Generuj tekst - Z LICZNIKIEM */}
+            {/* ============================================================ */}
             <Dialog open={isGenerateTextOpen} onOpenChange={setIsGenerateTextOpen}>
                 <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
@@ -468,19 +553,26 @@ export function PostEditor({
                         />
 
                         <div className="space-y-2">
-                            <Label htmlFor="text-prompt">Opis posta</Label>
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="text-prompt">Opis posta</Label>
+                                {/* ✅ NAPRAWIONE: Licznik znaków */}
+                                <CharCounter current={textPrompt.length} max={PROMPT_LIMIT} />
+                            </div>
                             <Textarea
                                 id="text-prompt"
                                 value={textPrompt}
-                                onChange={(e) => setTextPrompt(e.target.value)}
+                                onChange={handleTextPromptChange}
                                 placeholder="np. Post o nowej kolekcji wiosennej, zachęcający do zakupów z kodem rabatowym WIOSNA20"
                                 className="min-h-[100px]"
+                                maxLength={PROMPT_LIMIT}
                             />
                         </div>
 
-                        {/* Quick prompts */}
+                        {/* Quick prompts - ✅ NAPRAWIONE: Dodają tekst po spacji */}
                         <div className="space-y-2">
-                            <Label className="text-xs text-muted-foreground">Szybkie podpowiedzi</Label>
+                            <Label className="text-xs text-muted-foreground">
+                                Szybkie podpowiedzi (kliknij, aby dodać)
+                            </Label>
                             <div className="flex flex-wrap gap-2">
                                 {[
                                     'Post promocyjny',
@@ -494,7 +586,7 @@ export function PostEditor({
                                         variant="outline"
                                         size="sm"
                                         className="text-xs"
-                                        onClick={() => setTextPrompt(suggestion)}
+                                        onClick={() => handleTextSuggestionClick(suggestion)}
                                     >
                                         {suggestion}
                                     </Button>
@@ -531,7 +623,9 @@ export function PostEditor({
                 </DialogContent>
             </Dialog>
 
-            {/* Dialog: Generuj obraz */}
+            {/* ============================================================ */}
+            {/* Dialog: Generuj obraz - Z LICZNIKIEM */}
+            {/* ============================================================ */}
             <Dialog open={isGenerateImageOpen} onOpenChange={setIsGenerateImageOpen}>
                 <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
@@ -545,7 +639,7 @@ export function PostEditor({
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
-                        {/* Provider selector z obsługą modeli */}
+                        {/* Provider selector */}
                         <AIProviderSelector
                             type="image"
                             value={selectedImageProvider}
@@ -554,23 +648,29 @@ export function PostEditor({
                         />
 
                         <div className="space-y-2">
-                            <Label htmlFor="image-prompt">Opis obrazu</Label>
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="image-prompt">Opis obrazu</Label>
+                                {/* ✅ NAPRAWIONE: Licznik znaków */}
+                                <CharCounter current={imagePrompt.length} max={PROMPT_LIMIT} />
+                            </div>
                             <Textarea
                                 id="image-prompt"
                                 value={imagePrompt}
-                                onChange={(e) => setImagePrompt(e.target.value)}
+                                onChange={handleImagePromptChange}
                                 placeholder="np. Minimalistyczne zdjęcie kawy latte art na drewnianym stole, ciepłe światło poranne"
                                 className="min-h-[100px]"
+                                maxLength={PROMPT_LIMIT}
                             />
-                            {/* Info o auto-tłumaczeniu */}
                             <p className="text-xs text-blue-600 dark:text-blue-400">
                                 ℹ️ Prompt zostanie automatycznie przetłumaczony na angielski
                             </p>
                         </div>
 
-                        {/* Style presets */}
+                        {/* Style presets - ✅ NAPRAWIONE: Dodają tekst po przecinku */}
                         <div className="space-y-2">
-                            <Label className="text-xs text-muted-foreground">Style</Label>
+                            <Label className="text-xs text-muted-foreground">
+                                Style (kliknij, aby dodać)
+                            </Label>
                             <div className="flex flex-wrap gap-2">
                                 {[
                                     'Minimalistyczny',
@@ -585,9 +685,7 @@ export function PostEditor({
                                         variant="outline"
                                         size="sm"
                                         className="text-xs"
-                                        onClick={() => setImagePrompt((prev) =>
-                                            prev ? `${prev}, ${style.toLowerCase()} styl` : style.toLowerCase()
-                                        )}
+                                        onClick={() => handleImageStyleClick(style)}
                                     >
                                         {style}
                                     </Button>
