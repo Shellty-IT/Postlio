@@ -4,7 +4,7 @@ from sqlalchemy import select
 
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
-from app.schemas.user import UserRegister, UserLogin, UserResponse, Token
+from app.schemas.user import UserRegister, UserLogin, UserResponse, Token, OnboardingComplete
 from app.utils.security import hash_password, verify_password, create_tokens, decode_token
 
 router = APIRouter()
@@ -112,4 +112,23 @@ async def get_me(
         current_user: User = Depends(get_current_user),
 ):
     """Get current user info."""
+    return current_user
+
+
+@router.post("/onboarding", response_model=UserResponse)
+async def complete_onboarding(
+        data: OnboardingComplete,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(get_current_user),
+):
+    """Complete or skip onboarding."""
+
+    if data.skipped:
+        current_user.skip_onboarding()
+    else:
+        current_user.complete_onboarding()
+
+    await db.commit()
+    await db.refresh(current_user)
+
     return current_user
