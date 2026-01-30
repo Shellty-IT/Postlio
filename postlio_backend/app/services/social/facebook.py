@@ -42,7 +42,7 @@ class FacebookService(BaseSocialService):
 
     # Wymagane uprawnienia
     REQUIRED_SCOPES = [
-        "public_profile",
+        #"public_profile",
         # Poniższe wymagają App Review lub statusu testera:
         # "email",
         # "pages_show_list",
