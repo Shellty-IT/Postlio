@@ -17,9 +17,6 @@ import {
     Instagram,
     Linkedin,
     Building2,
-    ImageIcon,
-    Link as LinkIcon,
-    Type,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -45,7 +42,6 @@ import {
     type AccountType,
     type ConnectedAccount,
     getAccountTypeLabel,
-    ACCOUNT_CAPABILITIES,
 } from '@/lib/api/social';
 
 // ==================== Platform Config ====================
