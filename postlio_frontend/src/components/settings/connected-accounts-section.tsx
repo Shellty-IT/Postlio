@@ -434,11 +434,19 @@ function AccountItem({
                          formatExpiryDate,
                      }: AccountItemProps) {
     const isExpired = account.status === 'expired';
-    const capabilities = ACCOUNT_CAPABILITIES[account.account_type];
 
-    // Filtruj pages - tylko te z nazwą
-    const validPages = account.pages?.filter(p => p.name && p.name.trim()) || [];
-    const validInstagramAccounts = account.instagram_accounts?.filter(ig => ig.username && ig.username.trim()) || [];
+    // Filtruj pages - tylko te z nazwą RÓŻNĄ od platform_username
+    const validPages = account.pages?.filter(p =>
+        p.name &&
+        p.name.trim() &&
+        p.name.trim().toLowerCase() !== account.platform_username?.toLowerCase()
+    ) || [];
+
+    // Filtruj Instagram accounts - tylko te z username
+    const validInstagramAccounts = account.instagram_accounts?.filter(ig =>
+        ig.username &&
+        ig.username.trim()
+    ) || [];
 
     return (
         <div className={cn(
@@ -450,7 +458,7 @@ function AccountItem({
                     : "border-border bg-background"
         )}>
             <div className="flex items-start gap-4">
-                {/* Avatar z kropką statusu - NAPRAWIONE */}
+                {/* Avatar z kropką statusu */}
                 <div className="relative flex-shrink-0">
                     {account.avatar_url ? (
                         <Image
@@ -468,7 +476,7 @@ function AccountItem({
                             {(account.platform_username || account.platform)?.[0]?.toUpperCase()}
                         </div>
                     )}
-                    {/* Status indicator - poprawiona pozycja */}
+                    {/* Status indicator */}
                     <div className={cn(
                         "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-background",
                         account.status === 'connected' && "bg-green-500",
@@ -500,28 +508,6 @@ function AccountItem({
                             </span>
                         )}
                     </div>
-
-                    {/* Capabilities */}
-                    {capabilities && (
-                        <div className="flex items-center gap-3 mt-2">
-                            {capabilities.supports_images && (
-                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <ImageIcon className="w-3 h-3" />
-                                    Obrazy
-                                </span>
-                            )}
-                            {capabilities.supports_links && (
-                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <LinkIcon className="w-3 h-3" />
-                                    Linki
-                                </span>
-                            )}
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Type className="w-3 h-3" />
-                                Max {capabilities.max_text_length} znaków
-                            </span>
-                        </div>
-                    )}
 
                     {/* Instagram requires image warning */}
                     {account.requires_image && (
@@ -556,7 +542,7 @@ function AccountItem({
                 </div>
             </div>
 
-            {/* Facebook Pages (tylko jeśli są i mają nazwy) */}
+            {/* Facebook Pages (tylko jeśli są i mają RÓŻNE nazwy od username) */}
             {validPages.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-border">
                     <p className="text-xs font-medium text-muted-foreground mb-2">
@@ -578,7 +564,7 @@ function AccountItem({
                 </div>
             )}
 
-            {/* Instagram accounts (tylko jeśli są i mają username) */}
+            {/* Instagram accounts (tylko jeśli są) */}
             {validInstagramAccounts.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-border">
                     <p className="text-xs font-medium text-muted-foreground mb-2">
