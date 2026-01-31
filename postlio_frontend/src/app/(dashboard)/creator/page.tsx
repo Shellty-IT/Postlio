@@ -4,13 +4,15 @@
  *
  * NAPRAWIONE:
  * - Wymiar height zmieniony z 630 na 624 (podzielne przez 8 dla HuggingFace FLUX)
+ * - ✅ NOWE: Obsługa trybu edycji z Materiałów (?mode=edit)
  */
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Sparkles, AlertTriangle } from 'lucide-react';
+import { Sparkles, AlertTriangle, Pencil, X } from 'lucide-react';
 
 import {
     PlatformSelector,
@@ -23,9 +25,10 @@ import {
     createManualPublishData,
 } from '@/components/creator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useAI, useCreatePost } from '@/hooks';
+import { Button } from '@/components/ui/button';
+import { useAI, useCreatePost, useUpdatePost } from '@/hooks';
 import { useBrandsStore } from '@/store/brands-store';
-import type { Platform } from '@/types';
+import type { Platform, Post } from '@/types';
 import type { ManualPublishData } from '@/types/autopilot';
 import type { Tone, Category, TextProvider, ImageProvider } from '@/lib/api/ai';
 import { toast } from 'sonner';
@@ -35,6 +38,15 @@ import { toast } from 'sonner';
 // ============================================================
 
 export default function CreatorPage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    // ========================================
+    // ✅ NOWE: Tryb edycji
+    // ========================================
+    const isEditMode = searchParams.get('mode') === 'edit';
+    const [editingPostId, setEditingPostId] = useState<string | null>(null);
+
     // State
     const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(['facebook']);
     const [content, setContent] = useState('');
@@ -64,9 +76,75 @@ export default function CreatorPage() {
     } = useAI();
 
     const createPostMutation = useCreatePost();
+    const updatePostMutation = useUpdatePost();
 
     // Aktualnie wybrana platforma (pierwsza z listy)
     const primaryPlatform = selectedPlatforms[0];
+
+    // ========================================
+    // ✅ NOWE: Wczytaj post do edycji z sessionStorage
+    // ========================================
+    useEffect(() => {
+        if (!isEditMode) return;
+
+        try {
+            const savedPost = sessionStorage.getItem('editPost');
+            if (!savedPost) {
+                toast.error('Nie znaleziono posta do edycji');
+                router.replace('/creator');
+                return;
+            }
+
+            const post: Post = JSON.parse(savedPost);
+
+            // Ustaw dane w edytorze
+            setEditingPostId(String(post.id));
+            setContent(post.content || '');
+            setImageUrl(post.image_url || undefined);
+
+            // Ustaw platformę
+            if (post.platform) {
+                setSelectedPlatforms([post.platform as Platform]);
+            }
+
+            // Wyciągnij hashtagi z treści lub użyj zapisanych
+            if (post.hashtags && post.hashtags.length > 0) {
+                setHashtags(post.hashtags);
+            } else {
+                const hashtagsFromContent = post.content?.match(/#\w+/g)?.map(h => h.slice(1)) || [];
+                if (hashtagsFromContent.length > 0) {
+                    setHashtags(hashtagsFromContent);
+                    // Usuń hashtagi z treści żeby nie były zduplikowane
+                    const contentWithoutHashtags = post.content?.replace(/\n*#\w+\s*/g, '').trim() || '';
+                    setContent(contentWithoutHashtags);
+                }
+            }
+
+            // Wyczyść sessionStorage
+            sessionStorage.removeItem('editPost');
+
+            toast.info('Wczytano post do edycji', {
+                description: `Post #${post.id}`,
+            });
+        } catch (error) {
+            console.error('Error loading post for edit:', error);
+            toast.error('Błąd wczytywania posta');
+            router.replace('/creator');
+        }
+    }, [isEditMode, router]);
+
+    // ========================================
+    // ✅ NOWE: Anuluj edycję
+    // ========================================
+    const handleCancelEdit = useCallback(() => {
+        setEditingPostId(null);
+        setContent('');
+        setImageUrl(undefined);
+        setHashtags([]);
+        setSelectedPlatforms(['facebook']);
+        router.replace('/creator');
+        toast.info('Anulowano edycję');
+    }, [router]);
 
     // ========================================
     // Generowanie tekstu z wybranym providerem
@@ -135,7 +213,7 @@ export default function CreatorPage() {
     }, [generateImageAsync, selectedPlatforms, imageProvider]);
 
     // ========================================
-    // Zapisz jako szkic
+    // ✅ ZMODYFIKOWANE: Zapisz jako szkic LUB aktualizuj
     // ========================================
     const handleSaveDraft = useCallback(async () => {
         if (!content.trim()) return;
@@ -144,6 +222,31 @@ export default function CreatorPage() {
             ? `${content}\n\n${hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}`
             : content;
 
+        // ✅ TRYB EDYCJI: Aktualizuj istniejący post
+        if (editingPostId) {
+            await updatePostMutation.mutateAsync({
+                id: editingPostId,
+                data: {
+                    content: fullContent,
+                    platform: primaryPlatform,
+                    image_url: imageUrl,
+                },
+            });
+
+            // Wyczyść tryb edycji po zapisaniu
+            setEditingPostId(null);
+            setContent('');
+            setImageUrl(undefined);
+            setHashtags([]);
+            router.replace('/creator');
+
+            toast.success('Post zaktualizowany!', {
+                description: 'Zmiany zostały zapisane.',
+            });
+            return;
+        }
+
+        // TRYB TWORZENIA: Utwórz nowy post
         await createPostMutation.mutateAsync({
             content: fullContent,
             platform: primaryPlatform,
@@ -154,7 +257,7 @@ export default function CreatorPage() {
         });
 
         toast.success('Zapisano jako szkic!');
-    }, [content, primaryPlatform, imageUrl, hashtags, selectedBrand, createPostMutation, textProvider]);
+    }, [content, primaryPlatform, imageUrl, hashtags, selectedBrand, createPostMutation, updatePostMutation, textProvider, editingPostId, router]);
 
     // ========================================
     // Zaplanuj post
@@ -165,6 +268,31 @@ export default function CreatorPage() {
         const fullContent = hashtags.length > 0
             ? `${content}\n\n${hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}`
             : content;
+
+        // ✅ TRYB EDYCJI: Aktualizuj i zaplanuj
+        if (editingPostId) {
+            await updatePostMutation.mutateAsync({
+                id: editingPostId,
+                data: {
+                    content: fullContent,
+                    platform: primaryPlatform,
+                    image_url: imageUrl,
+                    scheduled_at: scheduledAt,
+                    status: 'scheduled',
+                },
+            });
+
+            setEditingPostId(null);
+            setContent('');
+            setImageUrl(undefined);
+            setHashtags([]);
+            router.replace('/creator');
+
+            toast.success('Post zaktualizowany i zaplanowany!', {
+                description: `Publikacja: ${new Date(scheduledAt).toLocaleString('pl-PL')}`,
+            });
+            return;
+        }
 
         await createPostMutation.mutateAsync({
             content: fullContent,
@@ -179,7 +307,7 @@ export default function CreatorPage() {
         toast.success('Post zaplanowany!', {
             description: 'Możesz go zobaczyć w kalendarzu.',
         });
-    }, [content, primaryPlatform, imageUrl, hashtags, selectedBrand, createPostMutation, textProvider]);
+    }, [content, primaryPlatform, imageUrl, hashtags, selectedBrand, createPostMutation, updatePostMutation, textProvider, editingPostId, router]);
 
     // ========================================
     // Otwórz modal ręcznej publikacji
@@ -198,7 +326,7 @@ export default function CreatorPage() {
         }
 
         const data = createManualPublishData({
-            id: 0,
+            id: editingPostId ? parseInt(editingPostId, 10) : 0,
             content,
             hashtags,
             image_url: imageUrl || null,
@@ -207,7 +335,7 @@ export default function CreatorPage() {
 
         setManualPublishData(data);
         setIsManualPublishOpen(true);
-    }, [content, hashtags, imageUrl, primaryPlatform]);
+    }, [content, hashtags, imageUrl, primaryPlatform, editingPostId]);
 
     // ========================================
     // Oznacz jako opublikowane i wyczyść formularz
@@ -218,28 +346,46 @@ export default function CreatorPage() {
                 ? `${content}\n\n${hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}`
                 : content;
 
-            await createPostMutation.mutateAsync({
-                content: fullContent,
-                platform: primaryPlatform,
-                brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined,
-                image_url: imageUrl,
-                ai_generated: true,
-                ai_model: textProvider,
-            });
+            // ✅ TRYB EDYCJI: Aktualizuj status na published
+            if (editingPostId) {
+                await updatePostMutation.mutateAsync({
+                    id: editingPostId,
+                    data: {
+                        content: fullContent,
+                        platform: primaryPlatform,
+                        image_url: imageUrl,
+                        status: 'published',
+                    },
+                });
+            } else {
+                await createPostMutation.mutateAsync({
+                    content: fullContent,
+                    platform: primaryPlatform,
+                    brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined,
+                    image_url: imageUrl,
+                    ai_generated: true,
+                    ai_model: textProvider,
+                });
+            }
         } catch {
             // Ignoruj błędy
         }
 
+        setEditingPostId(null);
         setContent('');
         setImageUrl(undefined);
         setHashtags([]);
         setIsManualPublishOpen(false);
         setManualPublishData(null);
 
+        if (isEditMode) {
+            router.replace('/creator');
+        }
+
         toast.success('Post opublikowany! 🎉', {
             description: 'Formularz został wyczyszczony.',
         });
-    }, [content, primaryPlatform, imageUrl, hashtags, selectedBrand, createPostMutation, textProvider]);
+    }, [content, primaryPlatform, imageUrl, hashtags, selectedBrand, createPostMutation, updatePostMutation, textProvider, editingPostId, isEditMode, router]);
 
     // ========================================
     // Aktualizacja contentu z chatu AI
@@ -254,6 +400,9 @@ export default function CreatorPage() {
     const handleImageFromChat = useCallback((newImageUrl: string) => {
         setImageUrl(newImageUrl);
     }, []);
+
+    // Sprawdź czy trwa zapisywanie/aktualizacja
+    const isSaving = createPostMutation.isPending || updatePostMutation.isPending;
 
     return (
         <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
@@ -283,19 +432,48 @@ export default function CreatorPage() {
                 <div className="flex-1 flex flex-col overflow-hidden">
                     <div className="flex-1 overflow-y-auto p-4 md:p-6">
                         <div className="max-w-2xl mx-auto space-y-6">
+
+                            {/* ✅ NOWE: Info o trybie edycji */}
+                            {editingPostId && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                >
+                                    <Alert className="border-violet-500/30 bg-violet-500/5">
+                                        <Pencil className="h-4 w-4 text-violet-500" />
+                                        <AlertDescription className="flex items-center justify-between">
+                                            <span className="text-sm">
+                                                <strong>Tryb edycji</strong> — Edytujesz post #{editingPostId}
+                                            </span>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={handleCancelEdit}
+                                                className="h-7 px-2 text-muted-foreground hover:text-foreground"
+                                            >
+                                                <X className="h-4 w-4 mr-1" />
+                                                Anuluj
+                                            </Button>
+                                        </AlertDescription>
+                                    </Alert>
+                                </motion.div>
+                            )}
+
                             {/* Info o ręcznej publikacji */}
-                            <Alert className="border-amber-500/30 bg-amber-500/5">
-                                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                                <AlertDescription className="text-sm">
-                                    <strong>Kreator</strong> służy do tworzenia postów z pomocą AI.
-                                    Publikacja na <strong>konta osobiste</strong> (Facebook/Instagram)
-                                    wymaga ręcznego skopiowania treści.{' '}
-                                    <span className="text-muted-foreground">
-                                        Automatyczna publikacja jest dostępna tylko dla Facebook Pages i Instagram Business
-                                        w module Autopilot.
-                                    </span>
-                                </AlertDescription>
-                            </Alert>
+                            {!editingPostId && (
+                                <Alert className="border-amber-500/30 bg-amber-500/5">
+                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                    <AlertDescription className="text-sm">
+                                        <strong>Kreator</strong> służy do tworzenia postów z pomocą AI.
+                                        Publikacja na <strong>konta osobiste</strong> (Facebook/Instagram)
+                                        wymaga ręcznego skopiowania treści.{' '}
+                                        <span className="text-muted-foreground">
+                                            Automatyczna publikacja jest dostępna tylko dla Facebook Pages i Instagram Business
+                                            w module Autopilot.
+                                        </span>
+                                    </AlertDescription>
+                                </Alert>
+                            )}
 
                             {/* Brand indicator */}
                             {selectedBrand && (
@@ -347,10 +525,11 @@ export default function CreatorPage() {
                             onSaveDraft={handleSaveDraft}
                             onSchedule={handleSchedule}
                             onPublishManually={handlePublishManually}
-                            isSaving={createPostMutation.isPending}
+                            isSaving={isSaving}
                             hasContent={!!content.trim()}
                             hasImage={!!imageUrl}
                             selectedPlatform={primaryPlatform}
+                            isEditMode={!!editingPostId}
                         />
                     </div>
                 </div>

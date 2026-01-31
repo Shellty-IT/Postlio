@@ -5,6 +5,7 @@
  * ULEPSZONE:
  * - Atrakcyjniejsze statusy ("Dodaj treść", "Gotowy do publikacji" itp.)
  * - Animacje i lepsze ikony
+ * - ✅ NOWE: Obsługa trybu edycji (isEditMode)
  */
 
 'use client';
@@ -22,6 +23,7 @@ import {
     CheckCircle2,
     ImageOff,
     Sparkles,
+    Pencil,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -63,6 +65,7 @@ interface ActionBarProps {
     hasContent: boolean;
     hasImage?: boolean;
     selectedPlatform?: string;
+    isEditMode?: boolean; // ✅ NOWE
 }
 
 // ============================================================
@@ -100,13 +103,26 @@ interface StatusIndicatorProps {
     hasContent: boolean;
     hasImage: boolean;
     isInstagram: boolean;
+    isEditMode: boolean; // ✅ NOWE
 }
 
-function StatusIndicator({ hasContent, hasImage, isInstagram }: StatusIndicatorProps) {
+function StatusIndicator({ hasContent, hasImage, isInstagram, isEditMode }: StatusIndicatorProps) {
     const instagramWarning = isInstagram && !hasImage;
 
     // Określ status i styl
     const getStatus = () => {
+        // ✅ NOWE: Status trybu edycji
+        if (isEditMode && hasContent) {
+            return {
+                icon: Pencil,
+                text: 'Tryb edycji',
+                color: 'text-violet-500',
+                bgColor: 'bg-violet-500/10',
+                borderColor: 'border-violet-500/30',
+                dotColor: 'bg-violet-500',
+                pulse: false,
+            };
+        }
         if (instagramWarning) {
             return {
                 icon: ImageOff,
@@ -195,6 +211,7 @@ export function ActionBar({
                               hasContent,
                               hasImage = false,
                               selectedPlatform,
+                              isEditMode = false, // ✅ NOWE
                           }: ActionBarProps) {
     const [isScheduleOpen, setIsScheduleOpen] = useState(false);
     const [scheduleDate, setScheduleDate] = useState('');
@@ -247,29 +264,44 @@ export function ActionBar({
                     hasContent={hasContent}
                     hasImage={hasImage}
                     isInstagram={isInstagram}
+                    isEditMode={isEditMode}
                 />
 
                 {/* Right side - actions */}
                 <div className="flex items-center gap-2">
                     <TooltipProvider delayDuration={300}>
-                        {/* Save draft */}
+                        {/* Save draft / Update - ✅ ZMODYFIKOWANE */}
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button
                                     variant="outline"
                                     onClick={handleSaveDraft}
                                     disabled={!hasContent || isLoading}
+                                    className={cn(
+                                        isEditMode && 'border-violet-300 text-violet-600 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-400 dark:hover:bg-violet-950'
+                                    )}
                                 >
                                     {isLoading ? (
                                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : isEditMode ? (
+                                        <Pencil className="w-4 h-4 mr-2" />
                                     ) : (
                                         <Save className="w-4 h-4 mr-2" />
                                     )}
-                                    <span className="hidden sm:inline">Zapisz szkic</span>
-                                    <span className="sm:hidden">Zapisz</span>
+                                    <span className="hidden sm:inline">
+                                        {isEditMode ? 'Aktualizuj' : 'Zapisz szkic'}
+                                    </span>
+                                    <span className="sm:hidden">
+                                        {isEditMode ? 'Aktualizuj' : 'Zapisz'}
+                                    </span>
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent>Zapisz jako szkic do późniejszej edycji</TooltipContent>
+                            <TooltipContent>
+                                {isEditMode
+                                    ? 'Zapisz zmiany w poście'
+                                    : 'Zapisz jako szkic do późniejszej edycji'
+                                }
+                            </TooltipContent>
                         </Tooltip>
 
                         {/* Schedule dropdown */}
