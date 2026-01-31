@@ -90,9 +90,6 @@ const PLATFORMS: PlatformConfig[] = [
 
 // ==================== Main Component ====================
 
-// src/components/settings/connected-accounts-section.tsx
-// ... (linie 100-120)
-
 export function ConnectedAccountsSection() {
     const { data, isLoading, error } = useConnectedAccounts();
     const initOAuth = useInitOAuth();
@@ -110,7 +107,6 @@ export function ConnectedAccountsSection() {
         accounts: accounts.filter(a => a.platform === platform.platform),
     }));
 
-    // POPRAWKA: przekazujemy obiekt zamiast stringa
     const handleConnect = (platform: SocialPlatform) => {
         initOAuth.mutate({ platform, context: 'settings' });
     };
@@ -325,7 +321,7 @@ function PlatformCard({
                     {/* Platform Icon */}
                     <div
                         className={cn(
-                            "w-12 h-12 rounded-xl flex items-center justify-center text-white",
+                            "w-12 h-12 rounded-xl flex items-center justify-center text-white flex-shrink-0",
                             platform.gradient || ""
                         )}
                         style={{
@@ -352,7 +348,7 @@ function PlatformCard({
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                         {hasAccounts && (
                             <Button
                                 variant="ghost"
@@ -440,6 +436,10 @@ function AccountItem({
     const isExpired = account.status === 'expired';
     const capabilities = ACCOUNT_CAPABILITIES[account.account_type];
 
+    // Filtruj pages - tylko te z nazwą
+    const validPages = account.pages?.filter(p => p.name && p.name.trim()) || [];
+    const validInstagramAccounts = account.instagram_accounts?.filter(ig => ig.username && ig.username.trim()) || [];
+
     return (
         <div className={cn(
             "p-4 rounded-lg border transition-all",
@@ -449,28 +449,28 @@ function AccountItem({
                     ? "border-yellow-500/30 bg-yellow-500/5"
                     : "border-border bg-background"
         )}>
-            <div className="flex items-start gap-3">
-                {/* Avatar */}
-                <div className="relative">
+            <div className="flex items-start gap-4">
+                {/* Avatar z kropką statusu - NAPRAWIONE */}
+                <div className="relative flex-shrink-0">
                     {account.avatar_url ? (
                         <Image
                             src={account.avatar_url}
                             alt={account.platform_username || ''}
-                            width={40}
-                            height={40}
+                            width={48}
+                            height={48}
                             className="rounded-full object-cover"
                         />
                     ) : (
                         <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                            className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
                             style={{ backgroundColor: platformColor }}
                         >
                             {(account.platform_username || account.platform)?.[0]?.toUpperCase()}
                         </div>
                     )}
-                    {/* Status indicator */}
+                    {/* Status indicator - poprawiona pozycja */}
                     <div className={cn(
-                        "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-background",
+                        "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-background",
                         account.status === 'connected' && "bg-green-500",
                         account.status === 'expired' && "bg-yellow-500",
                         account.status === 'error' && "bg-red-500",
@@ -481,7 +481,7 @@ function AccountItem({
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium truncate">
+                        <span className="font-semibold text-base">
                             {account.platform_username || 'Nieznane konto'}
                         </span>
                         <Badge variant="secondary" className="text-xs">
@@ -489,7 +489,7 @@ function AccountItem({
                         </Badge>
                     </div>
 
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
                         <span>Połączono {formatDate(account.connected_at)}</span>
                         {account.expires_at && (
                             <span className={cn(
@@ -503,29 +503,29 @@ function AccountItem({
 
                     {/* Capabilities */}
                     {capabilities && (
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-3 mt-2">
                             {capabilities.supports_images && (
                                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <ImageIcon className="w-3 h-3" />
-                Obrazy
-            </span>
+                                    <ImageIcon className="w-3 h-3" />
+                                    Obrazy
+                                </span>
                             )}
                             {capabilities.supports_links && (
                                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <LinkIcon className="w-3 h-3" />
-                Linki
-            </span>
+                                    <LinkIcon className="w-3 h-3" />
+                                    Linki
+                                </span>
                             )}
                             <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Type className="w-3 h-3" />
-            Max {capabilities.max_text_length} znaków
-        </span>
+                                <Type className="w-3 h-3" />
+                                Max {capabilities.max_text_length} znaków
+                            </span>
                         </div>
                     )}
 
                     {/* Instagram requires image warning */}
                     {account.requires_image && (
-                        <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                        <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
                             <AlertCircle className="w-3 h-3" />
                             Instagram wymaga obrazka w każdym poście
                         </p>
@@ -533,7 +533,7 @@ function AccountItem({
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2 flex-shrink-0">
                     {(isExpired || isExpiringSoon) && (
                         <Button
                             variant="outline"
@@ -556,19 +556,19 @@ function AccountItem({
                 </div>
             </div>
 
-            {/* Facebook Pages (jeśli są) */}
-            {account.pages && account.pages.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-border">
+            {/* Facebook Pages (tylko jeśli są i mają nazwy) */}
+            {validPages.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-border">
                     <p className="text-xs font-medium text-muted-foreground mb-2">
                         Strony Facebook:
                     </p>
                     <div className="flex flex-wrap gap-2">
-                        {account.pages.map(page => (
-                            <Badge key={page.id} variant="outline" className="gap-1">
+                        {validPages.map(page => (
+                            <Badge key={page.id} variant="outline" className="gap-1.5">
                                 <Building2 className="w-3 h-3" />
                                 {page.name}
                                 {page.fan_count && (
-                                    <span className="text-muted-foreground">
+                                    <span className="text-muted-foreground ml-1">
                                         ({page.fan_count.toLocaleString()})
                                     </span>
                                 )}
@@ -578,19 +578,19 @@ function AccountItem({
                 </div>
             )}
 
-            {/* Instagram accounts (jeśli są) */}
-            {account.instagram_accounts && account.instagram_accounts.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-border">
+            {/* Instagram accounts (tylko jeśli są i mają username) */}
+            {validInstagramAccounts.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-border">
                     <p className="text-xs font-medium text-muted-foreground mb-2">
                         Konta Instagram:
                     </p>
                     <div className="flex flex-wrap gap-2">
-                        {account.instagram_accounts.map(ig => (
-                            <Badge key={ig.id} variant="outline" className="gap-1">
+                        {validInstagramAccounts.map(ig => (
+                            <Badge key={ig.id} variant="outline" className="gap-1.5">
                                 <Instagram className="w-3 h-3" />
                                 @{ig.username}
                                 {ig.followers_count && (
-                                    <span className="text-muted-foreground">
+                                    <span className="text-muted-foreground ml-1">
                                         ({ig.followers_count.toLocaleString()})
                                     </span>
                                 )}

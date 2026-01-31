@@ -9,7 +9,7 @@ import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { FileText, Plus, Download } from 'lucide-react';
+import { Plus, Download } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { SavedPostsList } from '@/components/saved-posts';
@@ -43,24 +43,19 @@ export default function SavedPostsPage() {
 
     // Handlers
     const handleEdit = useCallback((post: Post) => {
-        // Redirect to creator with post data
-        // We'll store the post in session storage to pass it to creator
         sessionStorage.setItem('editPost', JSON.stringify(post));
         router.push('/creator?mode=edit');
     }, [router]);
 
     const handleSchedule = useCallback((post: Post) => {
-        // Open calendar with pre-selected post
         sessionStorage.setItem('schedulePost', JSON.stringify(post));
         router.push('/calendar?action=schedule');
     }, [router]);
 
     const handlePublish = useCallback((post: Post) => {
-        // Extract hashtags from content if not already parsed
         const hashtagsFromContent = post.content.match(/#\w+/g)?.map(h => h.slice(1)) || [];
         const hashtags = post.hashtags?.length ? post.hashtags : hashtagsFromContent;
 
-        // Use the helper function to create proper ManualPublishData
         const publishData = createManualPublishData({
             id: typeof post.id === 'string' ? parseInt(post.id, 10) : post.id,
             content: post.content,
@@ -101,7 +96,6 @@ export default function SavedPostsPage() {
     }, [bulkAction]);
 
     const handleBulkSchedule = useCallback((postIds: (string | number)[]) => {
-        // Store selected posts and redirect to calendar
         sessionStorage.setItem('bulkSchedulePostIds', JSON.stringify(postIds.map(String)));
         router.push('/calendar?action=bulk-schedule');
     }, [router]);
@@ -130,38 +124,24 @@ export default function SavedPostsPage() {
     }, [updatePost]);
 
     return (
-        <div className="space-y-6">
-            {/* Page Header */}
+        <div className="p-6 space-y-6">
+            {/* Actions Bar */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                className="flex items-center justify-end gap-2"
             >
-                <div>
-                    <h1 className="text-3xl font-bold flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-violet-500/20 flex items-center justify-center">
-                            <FileText className="h-5 w-5 text-primary" />
-                        </div>
-                        Materiały
-                    </h1>
-                    <p className="text-muted-foreground mt-1">
-                        Zarządzaj zapisanymi postami, szkicami i zaplanowanymi publikacjami
-                    </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" className="gap-2">
-                        <Download className="h-4 w-4" />
-                        Eksportuj
-                    </Button>
-                    <Button
-                        onClick={() => router.push('/creator')}
-                        className="gap-2 bg-gradient-to-r from-primary to-violet-500"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Nowy post
-                    </Button>
-                </div>
+                <Button variant="outline" className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Eksportuj
+                </Button>
+                <Button
+                    onClick={() => router.push('/creator')}
+                    className="gap-2 bg-gradient-to-r from-primary to-violet-500"
+                >
+                    <Plus className="h-4 w-4" />
+                    Nowy post
+                </Button>
             </motion.div>
 
             {/* Stats summary */}

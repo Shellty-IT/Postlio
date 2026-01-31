@@ -45,38 +45,8 @@ export function BrandsHeader({
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
         >
-            {/* Title Row */}
+            {/* Actions Row */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold">Marki</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Zarządzaj markami i ich unikalnym głosem AI
-                    </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => refetch()}
-                        disabled={isLoading}
-                        title="Odśwież"
-                    >
-                        <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
-                    </Button>
-
-                    <Button
-                        onClick={() => openForm()}
-                        className="bg-gradient-to-r from-violet-600 to-primary hover:from-violet-500 hover:to-primary/90"
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Nowa marka
-                    </Button>
-                </div>
-            </div>
-
-            {/* Filters Row */}
-            <div className="flex flex-col sm:flex-row gap-3">
                 {/* Search */}
                 <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -88,8 +58,8 @@ export function BrandsHeader({
                     />
                 </div>
 
-                {/* Sort & Filter */}
                 <div className="flex items-center gap-2">
+                    {/* Sort & Filter */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm">
@@ -146,6 +116,24 @@ export function BrandsHeader({
                             <List className="h-4 w-4" />
                         </button>
                     </div>
+
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => refetch()}
+                        disabled={isLoading}
+                        title="Odśwież"
+                    >
+                        <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                    </Button>
+
+                    <Button
+                        onClick={() => openForm()}
+                        className="bg-gradient-to-r from-violet-600 to-primary hover:from-violet-500 hover:to-primary/90"
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nowa marka
+                    </Button>
                 </div>
             </div>
 

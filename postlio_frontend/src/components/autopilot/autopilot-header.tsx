@@ -4,7 +4,6 @@
 import {
     Play,
     Pause,
-    Zap,
     ChevronDown,
     Plus,
     RefreshCw,
@@ -93,19 +92,9 @@ export function AutopilotHeader({
     };
 
     return (
-        <div className="flex items-center justify-between">
-            {/* Left - Title & Config Selector */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* Left - Config Selector */}
             <div className="flex items-center gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                        <Zap className="w-6 h-6 text-violet-500" />
-                        Autopilot
-                    </h1>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                        Automatyczne generowanie i publikacja postów
-                    </p>
-                </div>
-
                 {/* Config Selector */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -185,7 +174,7 @@ export function AutopilotHeader({
                     </div>
                 )}
 
-                {/* Generate Now Button - ZAKTUALIZOWANE: działa także gdy autopilot nieaktywny */}
+                {/* Generate Now Button */}
                 <Button
                     variant="outline"
                     onClick={onGenerateNow}

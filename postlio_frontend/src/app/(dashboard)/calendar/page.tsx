@@ -200,16 +200,6 @@ export default function CalendarPage() {
     if (!canUseCalendar) {
         return (
             <div className="p-6">
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                >
-                    <h1 className="text-3xl font-bold">Kalendarz</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Zarządzaj harmonogramem publikacji i planuj posty
-                    </p>
-                </motion.div>
-
                 <FeatureLocked
                     feature="calendar"
                     accessLevel={accessLevel}
@@ -221,17 +211,7 @@ export default function CalendarPage() {
     // Loading state
     if (isLoadingCalendar) {
         return (
-            <div className="space-y-6 p-6">
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                >
-                    <h1 className="text-3xl font-bold">Kalendarz</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Zarządzaj harmonogramem publikacji i planuj posty
-                    </p>
-                </motion.div>
-
+            <div className="p-6">
                 <div className="flex items-center justify-center h-96">
                     <div className="flex flex-col items-center gap-4">
                         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -245,17 +225,7 @@ export default function CalendarPage() {
     // Error state
     if (isError) {
         return (
-            <div className="space-y-6 p-6">
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                >
-                    <h1 className="text-3xl font-bold">Kalendarz</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Zarządzaj harmonogramem publikacji i planuj posty
-                    </p>
-                </motion.div>
-
+            <div className="p-6">
                 <div className="flex items-center justify-center h-96">
                     <div className="text-center">
                         <p className="text-destructive mb-2">Błąd ładowania kalendarza</p>
@@ -283,17 +253,6 @@ export default function CalendarPage() {
                 {/* Main Calendar Area */}
                 <div className="flex-1 flex flex-col overflow-hidden">
                     <div className="flex-1 overflow-auto p-6 space-y-6">
-                        {/* Page Header */}
-                        <motion.div
-                            initial={{ opacity: 0, y: -20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                        >
-                            <h1 className="text-3xl font-bold">Kalendarz</h1>
-                            <p className="text-muted-foreground mt-1">
-                                Zarządzaj harmonogramem publikacji i planuj posty
-                            </p>
-                        </motion.div>
-
                         {/* Banner dla konta osobistego (limited) */}
                         {accessLevel === 'limited' && (
                             <CalendarLimitedBanner />

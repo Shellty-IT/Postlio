@@ -141,16 +141,6 @@ export default function AutopilotPage() {
     if (!canUseAutopilot) {
         return (
             <div className="p-6">
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                >
-                    <h1 className="text-3xl font-bold">Autopilot AI</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Automatyczne generowanie i publikacja postów z pomocą AI
-                    </p>
-                </motion.div>
-
                 <FeatureLocked
                     feature="autopilot"
                     accessLevel={accessLevel}
