@@ -82,6 +82,43 @@ const PLATFORMS: PlatformConfig[] = [
     },
 ];
 
+// ==================== Helper: Deduplikacja kont ====================
+
+function deduplicateAccounts(accounts: ConnectedAccount[]): ConnectedAccount[] {
+    const seen = new Map<string, ConnectedAccount>();
+
+    for (const account of accounts) {
+        // Klucz unikalności: platform + platform_user_id
+        const key = `${account.platform}_${account.platform_user_id}`;
+
+        // Jeśli już widzieliśmy to konto, zachowaj nowsze (większe id) lub connected
+        const existing = seen.get(key);
+        if (!existing) {
+            seen.set(key, account);
+        } else {
+            // Priorytet: connected > expired > error > disconnected
+            const statusPriority: Record<string, number> = {
+                connected: 4,
+                expired: 3,
+                error: 2,
+                disconnected: 1,
+            };
+
+            const existingPriority = statusPriority[existing.status] || 0;
+            const newPriority = statusPriority[account.status] || 0;
+
+            // Zachowaj konto z wyższym priorytetem statusu
+            // Lub jeśli równe, zachowaj nowsze (większe id)
+            if (newPriority > existingPriority ||
+                (newPriority === existingPriority && account.id > existing.id)) {
+                seen.set(key, account);
+            }
+        }
+    }
+
+    return Array.from(seen.values());
+}
+
 // ==================== Main Component ====================
 
 export function ConnectedAccountsSection() {
@@ -93,7 +130,10 @@ export function ConnectedAccountsSection() {
     const [disconnectingId, setDisconnectingId] = useState<number | null>(null);
     const [expandedPlatform, setExpandedPlatform] = useState<SocialPlatform | null>(null);
 
-    const accounts = data?.accounts || [];
+    // ✅ Deduplikacja i filtrowanie odłączonych kont
+    const rawAccounts = data?.accounts || [];
+    const accounts = deduplicateAccounts(rawAccounts)
+        .filter(a => a.status !== 'disconnected'); // Nie pokazuj odłączonych
 
     // Group accounts by platform
     const accountsByPlatform = PLATFORMS.map(platform => ({
@@ -405,6 +445,7 @@ function PlatformCard({
         </motion.div>
     );
 }
+
 // ==================== Account Item ====================
 
 interface AccountItemProps {
@@ -427,6 +468,10 @@ function AccountItem({
                          formatExpiryDate,
                      }: AccountItemProps) {
     const isExpired = account.status === 'expired';
+    const [imageError, setImageError] = useState(false);
+
+    // ✅ Fallback dla avatara
+    const showFallback = !account.avatar_url || imageError;
 
     return (
         <div className={cn(
@@ -440,13 +485,15 @@ function AccountItem({
             <div className="flex items-center gap-4">
                 {/* Avatar z kropką statusu */}
                 <div className="relative flex-shrink-0">
-                    {account.avatar_url ? (
+                    {!showFallback ? (
                         <Image
-                            src={account.avatar_url}
+                            src={account.avatar_url!}
                             alt=""
                             width={48}
                             height={48}
                             className="rounded-full object-cover"
+                            onError={() => setImageError(true)}
+                            unoptimized // ✅ Pomija optymalizację Next.js dla zewnętrznych URL
                         />
                     ) : (
                         <div

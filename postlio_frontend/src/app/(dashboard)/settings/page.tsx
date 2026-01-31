@@ -1,10 +1,11 @@
 // src/app/(dashboard)/settings/page.tsx
 'use client';
 
-import { useEffect, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useEffect, Suspense, useState, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
     SettingsHeader,
@@ -17,62 +18,86 @@ import {
     DangerZoneSection,
 } from '@/components/settings';
 import { useSettingsStore } from '@/store/settings-store';
-import { useOAuthCallback } from '@/hooks/useSocial';
+import { handleOAuthCallback } from '@/lib/api/social';
+import { useQueryClient } from '@tanstack/react-query';
+import { socialKeys } from '@/hooks/useSocial';
 import type { SocialPlatform } from '@/lib/api/social';
 
 function SettingsContent() {
     const { activeSection, setActiveSection } = useSettingsStore();
     const searchParams = useSearchParams();
-    const router = useRouter();
-    const oauthCallback = useOAuthCallback();
+    const queryClient = useQueryClient();
 
-    // Handle OAuth callback
+    const [showOverlay, setShowOverlay] = useState(false);
+
+    // ✅ Ref do śledzenia czy już przetworzono - NIE powoduje re-renderów
+    const processedRef = useRef(false);
+
+    // Pobierz parametry raz
+    const oauthSuccess = searchParams.get('oauth_success');
+    const oauthError = searchParams.get('oauth_error');
+    const platform = searchParams.get('platform') as SocialPlatform | null;
+    const code = searchParams.get('oauth_code');
+    const state = searchParams.get('oauth_state');
+
     useEffect(() => {
-        const oauthSuccess = searchParams.get('oauth_success');
-        const oauthError = searchParams.get('oauth_error');
-        const platform = searchParams.get('platform') as SocialPlatform | null;
+        // ✅ KLUCZOWE: Sprawdź ref, nie state
+        if (processedRef.current) {
+            return;
+        }
 
-        if (oauthError && platform) {
+        const hasOAuthParams = oauthSuccess === 'true' && platform && code && state;
+        const hasOAuthError = oauthError && platform;
+
+        // Brak parametrów - nic nie rób
+        if (!hasOAuthParams && !hasOAuthError) {
+            return;
+        }
+
+        // ✅ Oznacz jako przetworzone NATYCHMIAST
+        processedRef.current = true;
+
+        // Obsłuż błąd OAuth
+        if (hasOAuthError) {
             const errorDescription = searchParams.get('oauth_error_description');
             toast.error(`Błąd połączenia ${platform}`, {
                 description: errorDescription || oauthError,
             });
-
-            // Switch to accounts section
             setActiveSection('accounts');
-
-            // Clean URL
-            router.replace('/settings', { scroll: false });
+            window.history.replaceState({}, '', '/settings');
             return;
         }
 
-        if (oauthSuccess === 'true' && platform) {
-            const code = searchParams.get('oauth_code');
-            const state = searchParams.get('oauth_state');
-            const savedState = sessionStorage.getItem('oauth_state');
+        // Obsłuż sukces OAuth
+        if (hasOAuthParams) {
+            setShowOverlay(true);
 
-            // Verify state
-            if (state !== savedState) {
-                toast.error('Błąd bezpieczeństwa', {
-                    description: 'Nieprawidłowy token state. Spróbuj ponownie.',
+            handleOAuthCallback(platform, code, state)
+                .then(async (result) => {
+                    if (result.success) {
+                        toast.success('Konto połączone!', {
+                            description: `Połączono: ${result.account_name || platform}`,
+                        });
+                        await queryClient.invalidateQueries({ queryKey: socialKeys.accounts() });
+                    } else {
+                        toast.error('Błąd połączenia', {
+                            description: result.error_description || result.error || 'Nieznany błąd',
+                        });
+                    }
+                })
+                .catch((error) => {
+                    toast.error('Błąd połączenia', {
+                        description: error instanceof Error ? error.message : 'Wystąpił błąd',
+                    });
+                })
+                .finally(() => {
+                    setShowOverlay(false);
+                    setActiveSection('accounts');
+                    window.history.replaceState({}, '', '/settings');
                 });
-                sessionStorage.removeItem('oauth_state');
-                router.replace('/settings', { scroll: false });
-                return;
-            }
-
-            if (code && state) {
-                // Exchange code for token
-                oauthCallback.mutate({ platform, code, state });
-
-                // Switch to accounts section
-                setActiveSection('accounts');
-            }
-
-            // Clean URL
-            router.replace('/settings', { scroll: false });
         }
-    }, [searchParams, router, oauthCallback, setActiveSection]);
+    }, [oauthSuccess, oauthError, platform, code, state, setActiveSection, queryClient, searchParams]);
+    // ✅ USUNIĘTO showOverlay z dependencies!
 
     // Render active section
     const renderSection = () => {
@@ -96,6 +121,19 @@ function SettingsContent() {
 
     return (
         <div className="p-6 h-[calc(100vh-4rem)]">
+            {/* OAuth Processing Overlay */}
+            {showOverlay && (
+                <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+                    <div className="bg-card border rounded-lg p-6 shadow-lg flex flex-col items-center gap-4">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <div className="text-center">
+                            <p className="font-medium">Łączenie konta...</p>
+                            <p className="text-sm text-muted-foreground">Proszę czekać</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <SettingsHeader />
 

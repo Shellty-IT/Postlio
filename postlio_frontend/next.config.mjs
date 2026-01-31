@@ -2,6 +2,9 @@
 const nextConfig = {
     images: {
         remotePatterns: [
+            // ============================================
+            // AI Image Providers
+            // ============================================
             // Pollinations AI
             {
                 protocol: 'https',
@@ -25,7 +28,57 @@ const nextConfig = {
                 protocol: 'https',
                 hostname: '*.clipdrop-api.co',
             },
-            // Opcjonalne - popularne źródła obrazów
+
+            // ============================================
+            // Social Media Platforms
+            // ============================================
+            // Facebook - profile pictures
+            {
+                protocol: 'https',
+                hostname: 'platform-lookaside.fbsbx.com',
+            },
+            {
+                protocol: 'https',
+                hostname: '*.fbsbx.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'graph.facebook.com',
+            },
+            {
+                protocol: 'https',
+                hostname: '*.facebook.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'scontent.*.fbcdn.net',
+            },
+            {
+                protocol: 'https',
+                hostname: '*.fbcdn.net',
+            },
+            // Instagram
+            {
+                protocol: 'https',
+                hostname: '*.cdninstagram.com',
+            },
+            {
+                protocol: 'https',
+                hostname: '*.instagram.com',
+            },
+            // LinkedIn
+            {
+                protocol: 'https',
+                hostname: '*.licdn.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'media.licdn.com',
+            },
+
+            // ============================================
+            // Other Sources
+            // ============================================
             {
                 protocol: 'https',
                 hostname: 'images.unsplash.com',
