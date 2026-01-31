@@ -210,7 +210,7 @@ export function RecentPosts({ posts }: RecentPostsProps) {
             <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Ostatnie posty</h2>
                 <Button variant="ghost" size="sm" asChild>
-                    <Link href="/posts">
+                    <Link href="/saved-posts">
                         Zobacz wszystkie
                     </Link>
                 </Button>
