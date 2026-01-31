@@ -407,7 +407,6 @@ function PlatformCard({
         </motion.div>
     );
 }
-
 // ==================== Account Item ====================
 
 interface AccountItemProps {
@@ -431,19 +430,6 @@ function AccountItem({
                      }: AccountItemProps) {
     const isExpired = account.status === 'expired';
 
-    // Filtruj pages - tylko te z nazwą RÓŻNĄ od platform_username
-    const validPages = account.pages?.filter(p =>
-        p.name &&
-        p.name.trim() &&
-        p.name.trim().toLowerCase() !== account.platform_username?.toLowerCase()
-    ) || [];
-
-    // Filtruj Instagram accounts - tylko te z username
-    const validInstagramAccounts = account.instagram_accounts?.filter(ig =>
-        ig.username &&
-        ig.username.trim()
-    ) || [];
-
     return (
         <div className={cn(
             "p-4 rounded-lg border transition-all",
@@ -453,13 +439,13 @@ function AccountItem({
                     ? "border-yellow-500/30 bg-yellow-500/5"
                     : "border-border bg-background"
         )}>
-            <div className="flex items-start gap-4">
+            <div className="flex items-center gap-4">
                 {/* Avatar z kropką statusu */}
                 <div className="relative flex-shrink-0">
                     {account.avatar_url ? (
                         <Image
                             src={account.avatar_url}
-                            alt={account.platform_username || ''}
+                            alt=""
                             width={48}
                             height={48}
                             className="rounded-full object-cover"
@@ -469,7 +455,7 @@ function AccountItem({
                             className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
                             style={{ backgroundColor: platformColor }}
                         >
-                            {(account.platform_username || account.platform)?.[0]?.toUpperCase()}
+                            {(account.platform_username || 'U')[0].toUpperCase()}
                         </div>
                     )}
                     {/* Status indicator */}
@@ -482,36 +468,29 @@ function AccountItem({
                     )} />
                 </div>
 
-                {/* Info */}
+                {/* Info - TYLKO jedna linia z nazwą */}
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-base">
+                    <div className="flex items-center gap-2">
+                        <span className="font-semibold text-base truncate">
                             {account.platform_username || 'Nieznane konto'}
                         </span>
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary" className="text-xs flex-shrink-0">
                             {getAccountTypeLabel(account.account_type)}
                         </Badge>
                     </div>
 
-                    <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
-                        <span>Połączono {formatDate(account.connected_at)}</span>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Połączono {formatDate(account.connected_at)}
                         {account.expires_at && (
                             <span className={cn(
+                                "ml-2",
                                 isExpired && "text-destructive font-medium",
                                 isExpiringSoon && !isExpired && "text-yellow-600 font-medium"
                             )}>
-                                {formatExpiryDate(account.expires_at)}
+                                • {formatExpiryDate(account.expires_at)}
                             </span>
                         )}
-                    </div>
-
-                    {/* Instagram requires image warning */}
-                    {account.requires_image && (
-                        <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" />
-                            Instagram wymaga obrazka w każdym poście
-                        </p>
-                    )}
+                    </p>
                 </div>
 
                 {/* Actions */}
@@ -537,50 +516,6 @@ function AccountItem({
                     </Button>
                 </div>
             </div>
-
-            {/* Facebook Pages (tylko jeśli są i mają RÓŻNE nazwy od username) */}
-            {validPages.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-border">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">
-                        Strony Facebook:
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                        {validPages.map(page => (
-                            <Badge key={page.id} variant="outline" className="gap-1.5">
-                                <Building2 className="w-3 h-3" />
-                                {page.name}
-                                {page.fan_count && (
-                                    <span className="text-muted-foreground ml-1">
-                                        ({page.fan_count.toLocaleString()})
-                                    </span>
-                                )}
-                            </Badge>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Instagram accounts (tylko jeśli są) */}
-            {validInstagramAccounts.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-border">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">
-                        Konta Instagram:
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                        {validInstagramAccounts.map(ig => (
-                            <Badge key={ig.id} variant="outline" className="gap-1.5">
-                                <Instagram className="w-3 h-3" />
-                                @{ig.username}
-                                {ig.followers_count && (
-                                    <span className="text-muted-foreground ml-1">
-                                        ({ig.followers_count.toLocaleString()})
-                                    </span>
-                                )}
-                            </Badge>
-                        ))}
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
