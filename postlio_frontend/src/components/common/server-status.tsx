@@ -2,7 +2,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Wifi, WifiOff } from 'lucide-react';
+import { Loader2, WifiOff } from 'lucide-react';
 import { useWarmup } from '@/hooks/useWarmup';
 
 export function ServerStatus() {

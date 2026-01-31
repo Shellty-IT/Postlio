@@ -33,7 +33,7 @@ export function useWarmup() {
                 } else if (mounted) {
                     throw new Error('Health check failed');
                 }
-            } catch (error) {
+            } catch {
                 if (!mounted) return;
 
                 if (retryCount < 3) {
