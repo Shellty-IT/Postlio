@@ -143,91 +143,113 @@ async def oauth_callback(
     Obsługuje callback z OAuth.
     Zapisuje tokeny w bazie.
     """
-    # Weryfikuj state token
-    state_data = verify_state_token(request.state, current_user.id)
-    if not state_data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired state token"
+    try:
+        # Weryfikuj state token
+        state_data = verify_state_token(request.state, current_user.id)
+        if not state_data:
+            return OAuthCallbackResponse(
+                success=False,
+                platform=request.platform,
+                error="invalid_state",
+                error_description="Invalid or expired state token"
+            )
+
+        # Sprawdź platformę
+        if state_data.get("platform") != request.platform.value:
+            return OAuthCallbackResponse(
+                success=False,
+                platform=request.platform,
+                error="platform_mismatch",
+                error_description="Platform mismatch in state token"
+            )
+
+        # Wymień kod na token
+        platform = SocialPlatform(request.platform.value)
+        result = await social_manager.exchange_code_for_token(platform, request.code)
+
+        # ✅ KLUCZOWA POPRAWKA: Zwróć błąd jeśli wymiana się nie powiodła
+        if not result.success:
+            return OAuthCallbackResponse(
+                success=False,
+                platform=request.platform,
+                error=result.error or "token_exchange_failed",
+                error_description=result.error_description or "Failed to exchange code for token"
+            )
+
+        # Określ typ konta
+        account_type = _determine_account_type(platform, result.profile_data)
+
+        # Sprawdź czy konto już istnieje
+        existing = await db.execute(
+            select(SocialAccount).where(
+                and_(
+                    SocialAccount.user_id == current_user.id,
+                    SocialAccount.platform == platform.value,
+                    SocialAccount.platform_user_id == result.platform_user_id
+                )
+            )
+        )
+        existing_account = existing.scalars().first()
+
+        # Zaszyfruj tokeny
+        encrypted_access = social_manager.encrypt_token(result.access_token)
+        encrypted_refresh = social_manager.encrypt_token(result.refresh_token) if result.refresh_token else None
+
+        if existing_account:
+            # Aktualizuj istniejące konto
+            existing_account.access_token = encrypted_access
+            existing_account.refresh_token = encrypted_refresh
+            existing_account.token_expires_at = result.expires_at
+            existing_account.platform_username = result.platform_username
+            existing_account.profile_data = result.profile_data
+            existing_account.account_type = account_type.value
+            existing_account.is_active = True
+            existing_account.last_error = None
+            existing_account.updated_at = datetime.utcnow()
+            account = existing_account
+        else:
+            # Utwórz nowe konto
+            account = SocialAccount(
+                user_id=current_user.id,
+                platform=platform.value,
+                account_type=account_type.value,
+                platform_user_id=result.platform_user_id,
+                platform_username=result.platform_username,
+                access_token=encrypted_access,
+                refresh_token=encrypted_refresh,
+                token_expires_at=result.expires_at,
+                profile_data=result.profile_data,
+                is_active=True
+            )
+            db.add(account)
+
+        await db.commit()
+        await db.refresh(account)
+
+        # ✅ Dodaj więcej danych do odpowiedzi
+        return OAuthCallbackResponse(
+            success=True,
+            platform=request.platform,
+            account_id=str(account.id),
+            account_name=result.platform_username,
+            account_type=account_type,
+            display_name=result.platform_username,
+            is_business_account=getattr(result, 'is_business_account', False),
+            supports_auto_publish=getattr(result, 'supports_auto_publish', False),
+            supports_autopilot=getattr(result, 'supports_autopilot', False),
         )
 
-    # Sprawdź platformę
-    if state_data.get("platform") != request.platform.value:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Platform mismatch in state token"
-        )
+    except Exception as e:
+        # ✅ Łap wszystkie wyjątki i zwracaj czytelny błąd
+        import traceback
+        traceback.print_exc()  # Log do konsoli
 
-    # Wymień kod na token
-    platform = SocialPlatform(request.platform.value)
-    result = await social_manager.exchange_code_for_token(platform, request.code)
-
-    if not result.success:
         return OAuthCallbackResponse(
             success=False,
             platform=request.platform,
-            error=result.error,
-            error_description=result.error_description
+            error="server_error",
+            error_description=str(e)
         )
-
-    # Określ typ konta
-    account_type = _determine_account_type(platform, result.profile_data)
-
-    # Sprawdź czy konto już istnieje
-    existing = await db.execute(
-        select(SocialAccount).where(
-            and_(
-                SocialAccount.user_id == current_user.id,
-                SocialAccount.platform == platform.value,
-                SocialAccount.platform_user_id == result.platform_user_id
-            )
-        )
-    )
-    existing_account = existing.scalar_one_or_none()
-
-    # Zaszyfruj tokeny
-    encrypted_access = social_manager.encrypt_token(result.access_token)
-    encrypted_refresh = social_manager.encrypt_token(result.refresh_token) if result.refresh_token else None
-
-    if existing_account:
-        # Aktualizuj istniejące konto
-        existing_account.access_token = encrypted_access
-        existing_account.refresh_token = encrypted_refresh
-        existing_account.token_expires_at = result.expires_at
-        existing_account.platform_username = result.platform_username
-        existing_account.profile_data = result.profile_data
-        existing_account.account_type = account_type.value
-        existing_account.is_active = True
-        existing_account.last_error = None
-        existing_account.updated_at = datetime.utcnow()
-        account = existing_account
-    else:
-        # Utwórz nowe konto
-        account = SocialAccount(
-            user_id=current_user.id,
-            platform=platform.value,
-            account_type=account_type.value,
-            platform_user_id=result.platform_user_id,
-            platform_username=result.platform_username,
-            access_token=encrypted_access,
-            refresh_token=encrypted_refresh,
-            token_expires_at=result.expires_at,
-            profile_data=result.profile_data,
-            is_active=True
-        )
-        db.add(account)
-
-    await db.commit()
-    await db.refresh(account)
-
-    return OAuthCallbackResponse(
-        success=True,
-        platform=request.platform,
-        account_id=str(account.id),
-        account_name=result.platform_username,
-        account_type=account_type
-    )
-
 
 # ==================== Account Management ====================
 
