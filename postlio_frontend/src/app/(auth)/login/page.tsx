@@ -162,17 +162,9 @@ export default function LoginPage() {
                             )}
                         </div>
 
-                        {/* Hasło */}
+                        {/* Hasło - USUNIĘTY link forgot-password */}
                         <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <Label htmlFor="password">Hasło</Label>
-                                <Link
-                                    href="/forgot-password"
-                                    className="text-sm text-primary hover:text-primary/80 transition-colors"
-                                >
-                                    Zapomniałeś hasła?
-                                </Link>
-                            </div>
+                            <Label htmlFor="password">Hasło</Label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                 <Input

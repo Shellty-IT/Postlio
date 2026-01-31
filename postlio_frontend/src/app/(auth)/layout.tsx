@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
+import { ServerStatus } from '@/components/common';
 
 export default function AuthLayout({
                                        children,
@@ -56,5 +57,10 @@ export default function AuthLayout({
         );
     }
 
-    return <>{children}</>;
+    return (
+        <>
+            <ServerStatus />
+            {children}
+        </>
+    );
 }
