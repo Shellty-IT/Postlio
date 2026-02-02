@@ -1,4 +1,13 @@
-﻿from typing import Optional, Dict, Any
+﻿# postlio_backend/app/services/ai/image/pollinations.py
+"""
+Pollinations.ai - darmowy provider obrazów.
+
+NAPRAWIONE:
+- Retry dla błędów 5xx (502, 503, 504)
+- Lepsze komunikaty błędów
+"""
+
+from typing import Optional, Dict, Any
 import httpx
 import asyncio
 from urllib.parse import quote
@@ -69,19 +78,17 @@ class PollinationsProvider(BaseImageProvider):
             result = await self._text_provider.generate_text(
                 prompt=translation_prompt,
                 max_tokens=100,
-                temperature=0.1,  # Niska temperatura dla dokładnego tłumaczenia
+                temperature=0.1,
             )
 
             if result.get("success") and result.get("text"):
                 translated = result["text"].strip()
-                # Usuń cudzysłowy jeśli model je dodał
                 translated = translated.strip('"\'')
                 return translated
 
             return text
 
         except Exception:
-            # W razie błędu, zwróć oryginalny tekst
             return text
 
     async def generate_image(
@@ -97,6 +104,8 @@ class PollinationsProvider(BaseImageProvider):
 
         Polskie prompty są automatycznie tłumaczone na angielski,
         ponieważ modele AI lepiej rozumieją angielskie opisy.
+
+        NAPRAWIONE: Retry dla błędów 5xx.
         """
         original_prompt = prompt
 
@@ -107,7 +116,7 @@ class PollinationsProvider(BaseImageProvider):
         # 2. Wzbogać prompt o styl
         enhanced_prompt = self._enhance_prompt(prompt, style)
 
-        # 3. Zakoduj do URL (angielski tekst, więc bez problemu)
+        # 3. Zakoduj do URL
         encoded_prompt = quote(enhanced_prompt)
 
         model_name = model if model in self.models else self.default_model
@@ -118,65 +127,88 @@ class PollinationsProvider(BaseImageProvider):
             f"?width={width}&height={height}"
             f"&model={model_name}&nologo=true"
         )
+        print(f"[POLLINATIONS DEBUG] URL: {image_url}")
 
         try:
             async with httpx.AsyncClient(timeout=120.0) as client:
-
                 max_retries = 3
                 retry_delay = 5
 
                 for attempt in range(max_retries):
-                    response = await client.get(image_url)
+                    try:
+                        response = await client.get(image_url)
 
-                    if response.status_code == 200:
-                        content_length = len(response.content)
-
-                        if content_length > 1000:
-                            return {
-                                "success": True,
-                                "image_url": image_url,
-                                "prompt": original_prompt,  # Oryginalny polski
-                                "prompt_translated": prompt,  # Przetłumaczony angielski
-                                "prompt_enhanced": enhanced_prompt,  # Ze stylem
-                                "provider": self.name,
-                                "model": model_name,
-                                "width": width,
-                                "height": height,
-                                "size_bytes": content_length,
-                            }
-                        else:
+                        # ✅ NAPRAWIONE: Retry dla błędów 5xx
+                        if response.status_code in (502, 503, 504):
                             if attempt < max_retries - 1:
-                                await asyncio.sleep(retry_delay)
+                                await asyncio.sleep(retry_delay * (attempt + 1))
                                 continue
                             else:
                                 return {
                                     "success": False,
-                                    "error": "Obraz nie został wygenerowany w czasie. Spróbuj ponownie.",
+                                    "error": f"Serwer Pollinations jest przeciążony (HTTP {response.status_code}). Spróbuj ponownie za chwilę.",
                                     "provider": self.name,
+                                    "retry_suggested": True,
                                 }
-                    else:
-                        return {
-                            "success": False,
-                            "error": f"Błąd API: HTTP {response.status_code}",
-                            "provider": self.name,
-                        }
+
+                        if response.status_code == 200:
+                            content_length = len(response.content)
+
+                            if content_length > 1000:
+                                return {
+                                    "success": True,
+                                    "image_url": image_url,
+                                    "prompt": original_prompt,
+                                    "prompt_translated": prompt,
+                                    "prompt_enhanced": enhanced_prompt,
+                                    "provider": self.name,
+                                    "model": model_name,
+                                    "width": width,
+                                    "height": height,
+                                    "size_bytes": content_length,
+                                }
+                            else:
+                                # Mały plik - prawdopodobnie jeszcze generuje
+                                if attempt < max_retries - 1:
+                                    await asyncio.sleep(retry_delay)
+                                    continue
+                                else:
+                                    return {
+                                        "success": False,
+                                        "error": "Obraz nie został wygenerowany w czasie. Spróbuj ponownie.",
+                                        "provider": self.name,
+                                        "retry_suggested": True,
+                                    }
+                        else:
+                            return {
+                                "success": False,
+                                "error": f"Błąd API Pollinations: HTTP {response.status_code}",
+                                "provider": self.name,
+                            }
+
+                    except httpx.TimeoutException:
+                        if attempt < max_retries - 1:
+                            await asyncio.sleep(retry_delay)
+                            continue
+                        raise
 
                 return {
                     "success": False,
-                    "error": "Nie udało się wygenerować obrazu po 3 próbach.",
+                    "error": "Nie udało się wygenerować obrazu po 3 próbach. Spróbuj ponownie.",
                     "provider": self.name,
+                    "retry_suggested": True,
                 }
 
         except httpx.TimeoutException:
             return {
                 "success": False,
-                "error": "Timeout - generowanie trwa za długo (>2 min).",
+                "error": "Timeout - generowanie trwa za długo (>2 min). Spróbuj krótszy prompt.",
                 "provider": self.name,
             }
         except httpx.ConnectError:
             return {
                 "success": False,
-                "error": "Nie można połączyć się z Pollinations API.",
+                "error": "Nie można połączyć się z Pollinations API. Sprawdź połączenie internetowe.",
                 "provider": self.name,
             }
         except Exception as e:

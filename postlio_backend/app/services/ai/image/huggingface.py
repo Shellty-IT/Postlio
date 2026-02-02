@@ -11,17 +11,19 @@ class HuggingFaceProvider(BaseImageProvider):
     """HuggingFace Inference API provider - z auto-tłumaczeniem PL→EN."""
 
     name = "huggingface"
+
+    # Zaktualizowana lista modeli (FLUX.1-dev deprecated!)
     models = [
-        "black-forest-labs/FLUX.1-dev",
-        "stabilityai/stable-diffusion-xl-base-1.0",
+        "stabilityai/stable-diffusion-xl-base-1.0",  # ⭐ Główny model
         "runwayml/stable-diffusion-v1-5",
+        "CompVis/stable-diffusion-v1-4",
     ]
     is_free = True
 
     def __init__(self):
         self.api_key = settings.HUGGINGFACE_API_KEY
         self.base_url = "https://router.huggingface.co/hf-inference/models"
-        self.default_model = "black-forest-labs/FLUX.1-dev"
+        self.default_model = "stabilityai/stable-diffusion-xl-base-1.0"
         self._text_provider = None
 
     @property
@@ -52,6 +54,7 @@ class HuggingFaceProvider(BaseImageProvider):
             'śpiące', 'puchate', 'wiklinowy', 'koszyk', 'koszyku',
             'trzy', 'dwa', 'jeden', 'cztery', 'pięć', 'sześć',
             'zdjęcie', 'obraz', 'ilustracja', 'grafika',
+            'samochód', 'auto', 'dom', 'miasto', 'ulica',
         ]
         words = text.lower().split()
         polish_count = sum(1 for w in words if w in polish_words)
@@ -75,10 +78,9 @@ class HuggingFaceProvider(BaseImageProvider):
                 f"Return ONLY the translation, nothing else:\n\n{text}"
             )
 
-            result = await self._text_provider.generate_text(
+            # NAPRAWIONE: używamy _generate_with_retry zamiast generate_text
+            result = await self._text_provider._generate_with_retry(
                 prompt=translation_prompt,
-                max_tokens=150,
-                temperature=0.1,
             )
 
             if result.get("success") and result.get("text"):
@@ -86,6 +88,7 @@ class HuggingFaceProvider(BaseImageProvider):
                 print(f"✅ HuggingFace: Translated '{text}' → '{translated}'")
                 return translated
 
+            print(f"⚠️ HuggingFace: Translation returned no text")
             return text
 
         except Exception as e:
@@ -118,6 +121,7 @@ class HuggingFaceProvider(BaseImageProvider):
         # 2. Wzbogać prompt o styl
         enhanced_prompt = self._enhance_prompt(prompt, style)
 
+        # Użyj podanego modelu lub domyślnego (ale tylko z dostępnych!)
         model_name = model if model in self.models else self.default_model
 
         # Lista modeli do wypróbowania (fallback)
@@ -125,7 +129,7 @@ class HuggingFaceProvider(BaseImageProvider):
 
         last_error = None
 
-        for current_model in models_to_try[:2]:  # Próbuj max 2 modele
+        for current_model in models_to_try:
             try:
                 print(f"🔄 HuggingFace: Trying {current_model}...")
 
@@ -172,6 +176,11 @@ class HuggingFaceProvider(BaseImageProvider):
                             except:
                                 last_error = "Invalid response format"
                             print(f"❌ HuggingFace: {current_model} - {last_error}")
+
+                    elif response.status_code == 410:
+                        # Model deprecated - skip to next
+                        print(f"⚠️ HuggingFace: {current_model} is deprecated, trying next...")
+                        continue
 
                     elif response.status_code == 503:
                         try:
