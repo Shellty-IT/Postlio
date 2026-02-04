@@ -1,6 +1,8 @@
 // src/components/saved-posts/saved-posts-list.tsx
 /**
  * Lista zapisanych postów z obsługą bulk actions
+ *
+ * ✅ NAPRAWIONE: Obsługa platforms[] zamiast platform
  */
 
 'use client';
@@ -29,7 +31,8 @@ import {
 import { SavedPostCard } from './saved-post-card';
 import { SavedPostsFilters, type SavedPostsFilters as FiltersType, type ViewMode, type SortOption } from './saved-posts-filters';
 import { cn } from '@/lib/utils';
-import type { Post } from '@/types';
+import type { Platform } from '@/types';
+import type { Post } from '@/types/post';
 
 // ============================================================
 // TYPY
@@ -52,20 +55,49 @@ interface SavedPostsListProps {
 // HELPERS
 // ============================================================
 
+/**
+ * Sprawdź czy post zawiera którąkolwiek z platform
+ */
+function postHasPlatform(post: Post, platforms: Platform[]): boolean {
+    if (platforms.length === 0) return true;
+
+    // Sprawdź nowe pole platforms[]
+    if (post.platforms && post.platforms.length > 0) {
+        return post.platforms.some(p => platforms.includes(p));
+    }
+
+    // Fallback do legacy platform
+    if (post.platform) {
+        return platforms.includes(post.platform);
+    }
+
+    return false;
+}
+
+/**
+ * Pobierz pierwszą platformę z posta (do sortowania)
+ */
+function getPrimaryPlatform(post: Post): string {
+    if (post.platforms && post.platforms.length > 0) {
+        return post.platforms[0];
+    }
+    return post.platform || 'facebook';
+}
+
 function filterPosts(posts: Post[], filters: FiltersType): Post[] {
     return posts.filter(post => {
         // Search filter
         if (filters.search) {
             const searchLower = filters.search.toLowerCase();
-            const matchesContent = post.content.toLowerCase().includes(searchLower);
+            const matchesContent = post.content?.toLowerCase().includes(searchLower) || false;
             const matchesHashtags = post.hashtags?.some(tag =>
                 tag.toLowerCase().includes(searchLower)
             );
             if (!matchesContent && !matchesHashtags) return false;
         }
 
-        // Platform filter
-        if (filters.platforms.length > 0 && !filters.platforms.includes(post.platform)) {
+        // Platform filter - obsługa platforms[] i legacy platform
+        if (filters.platforms.length > 0 && !postHasPlatform(post, filters.platforms)) {
             return false;
         }
 
@@ -108,11 +140,11 @@ function sortPosts(posts: Post[], sortBy: SortOption): Post[] {
             );
         case 'alphabetical':
             return sorted.sort((a, b) =>
-                a.content.localeCompare(b.content, 'pl')
+                (a.content || '').localeCompare(b.content || '', 'pl')
             );
         case 'platform':
             return sorted.sort((a, b) =>
-                a.platform.localeCompare(b.platform)
+                getPrimaryPlatform(a).localeCompare(getPrimaryPlatform(b))
             );
         default:
             return sorted;
@@ -239,8 +271,8 @@ export function SavedPostsList({
                                 onCheckedChange={handleSelectAllCheckedChange}
                             />
                             <span className="text-sm font-medium">
-                Zaznaczono {selectedIds.size} {selectedIds.size === 1 ? 'post' : 'postów'}
-              </span>
+                                Zaznaczono {selectedIds.size} {selectedIds.size === 1 ? 'post' : 'postów'}
+                            </span>
                         </div>
 
                         <div className="flex items-center gap-2">

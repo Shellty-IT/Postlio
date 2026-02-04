@@ -1,4 +1,10 @@
 // src/app/(dashboard)/calendar/page.tsx
+/**
+ * Strona kalendarza
+ *
+ * ✅ NAPRAWIONE: Obsługa platforms[] w ScheduledPost
+ */
+
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
@@ -35,27 +41,34 @@ import { useCalendarStore } from '@/store/calendar-store';
 import { useAuthStore } from '@/store/auth-store';
 import { useCalendarPosts, useUpdatePost, usePosts } from '@/hooks';
 import type { ScheduledPost } from '@/types/calendar';
-import type { CalendarEvent } from '@/lib/api';
-import type { Post } from '@/types';
+import type { CalendarEvent } from '@/types/post';
+import type { Post } from '@/types/post';
+import type { Platform } from '@/types';
 
 // ============================================================
 // HELPER: Konwersja CalendarEvent -> ScheduledPost
 // ============================================================
 
 function convertToScheduledPost(event: CalendarEvent): ScheduledPost {
+    const platformsArray: Platform[] = Array.isArray(event.platforms) && event.platforms.length > 0
+        ? event.platforms
+        : ['facebook'];
+
+    const primaryPlatform: Platform = platformsArray[0];
+
     return {
         id: event.id,
         title: event.title,
         content: event.preview || '',
-        platform: Array.isArray(event.platforms) && event.platforms.length > 0
-            ? event.platforms[0]
-            : (event.platforms as unknown as ScheduledPost['platform']) || 'facebook',
+        platforms: platformsArray,
+        platform: primaryPlatform,
+        platform_statuses: event.platform_statuses || {},
         scheduledAt: new Date(`${event.date}T${event.time}`),
-        status: event.status as ScheduledPost['status'],
-        brandId: event.brand_id,
+        status: event.status,
+        brandId: event.brand_id ?? undefined,  // ✅ NAPRAWIONE: null → undefined
         brandName: undefined,
         aiGenerated: false,
-        imageUrl: event.image_url,
+        imageUrl: event.image_url ?? undefined,  // ✅ NAPRAWIONE: null → undefined
     };
 }
 

@@ -106,13 +106,16 @@ export type {
 export type {
     CreatePostRequest,
     UpdatePostRequest,
+    UpdatePlatformStatusRequest,
     PostsListParams,
     PostsListResponse,
     SchedulePostRequest,
     BulkActionRequest,
     CalendarEventsParams,
-    CalendarEvent,
 } from './posts';
+
+// Re-export CalendarEvent from types (where it's now defined)
+export type { CalendarEvent, Post, PostStatus, PlatformStatusDetail, PlatformStatuses } from '@/types/post';
 
 // ============================================================
 // BRANDS TYPES

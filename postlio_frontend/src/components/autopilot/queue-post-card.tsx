@@ -1,7 +1,7 @@
 // src/components/autopilot/queue-post-card.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Calendar,
@@ -27,7 +27,7 @@ import {
     AlertTriangle,
     RefreshCw,
     LinkIcon,
-    Hand, // dla ręcznej publikacji
+    Hand,
 } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -54,7 +54,8 @@ import {
     useUpdateQueueItem,
     usePublishQueueItem,
 } from '@/hooks/useAutopilot';
-import { ManualPublishModal, createManualPublishData } from './manual-publish-modal';
+import { ManualPublishModal } from '@/components/common/manual-publish-modal';
+import { createManualPublishData } from '@/components/creator/manual-publish-utils';
 import type { BackendQueueItem, BackendQueueStatus, ManualPublishData } from '@/types/autopilot';
 import type { Platform } from '@/types';
 import { cn } from '@/lib/utils';
@@ -62,18 +63,10 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { toast } from 'sonner';
 
-// ============================================================
-// TYPY
-// ============================================================
-
 interface QueuePostCardProps {
     post: BackendQueueItem;
     onPreview?: (post: BackendQueueItem) => void;
 }
-
-// ============================================================
-// KONFIGURACJA
-// ============================================================
 
 const STATUS_CONFIG: Record<BackendQueueStatus, {
     label: string;
@@ -130,22 +123,15 @@ const PLATFORM_COLORS: Record<Platform, string> = {
     linkedin: '#0A66C2',
 };
 
-// ============================================================
-// KOMPONENT
-// ============================================================
-
 export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(post.content);
     const [rejectReason, setRejectReason] = useState('');
     const [showRejectInput, setShowRejectInput] = useState(false);
-
-    // NOWE: State dla modalu ręcznej publikacji
     const [manualPublishData, setManualPublishData] = useState<ManualPublishData | null>(null);
     const [showManualModal, setShowManualModal] = useState(false);
 
-    // React Query hooks
     const approveMutation = useApproveQueueItem();
     const rejectMutation = useRejectQueueItem();
     const deleteMutation = useDeleteQueueItem();
@@ -190,7 +176,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
         setIsEditing(false);
     };
 
-    // ZAKTUALIZOWANE: Obsługa publikacji z requires_manual
     const handlePublish = async () => {
         try {
             const result = await publishMutation.mutateAsync({
@@ -198,9 +183,7 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                 request: { publish_now: true }
             });
 
-            // Sprawdź czy wymaga ręcznej publikacji
             if (result.requires_manual) {
-                // Otwórz modal z danymi do ręcznej publikacji
                 const manualData = createManualPublishData({
                     id: post.id,
                     content: post.content,
@@ -212,12 +195,11 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                 setShowManualModal(true);
             }
         } catch {
-            // Błąd jest już obsługiwany przez hook
         }
     };
 
-    // NOWE: Oznacz jako opublikowane (po ręcznej publikacji)
-    const handleMarkAsPublished = async (itemId: number) => {
+    const handleMarkAsPublished = useCallback(async (itemId?: number) => {
+        if (!itemId) return;
         try {
             await updateMutation.mutateAsync({
                 itemId,
@@ -227,9 +209,8 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
         } catch {
             toast.error('Nie udało się oznaczyć jako opublikowane');
         }
-    };
+    }, [updateMutation]);
 
-    // NOWE: Otwórz modal ręcznej publikacji bezpośrednio
     const handleOpenManualPublish = () => {
         const manualData = createManualPublishData({
             id: post.id,
@@ -274,14 +255,12 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                         post.status === 'failed' && 'ring-1 ring-red-500/30'
                     )}
                 >
-                    {/* Header */}
                     <div className="flex items-start gap-3 p-4">
-                        {/* Image Preview */}
                         {post.image_url ? (
                             <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg">
                                 <Image
                                     src={post.image_url}
-                                    alt="Post preview"
+                                    alt="Podgląd zdjęcia"
                                     fill
                                     className="object-cover"
                                     unoptimized
@@ -295,11 +274,8 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                             </div>
                         )}
 
-                        {/* Content */}
                         <div className="min-w-0 flex-1">
-                            {/* Badges Row */}
                             <div className="mb-2 flex flex-wrap items-center gap-2">
-                                {/* Status Badge */}
                                 <Badge
                                     variant="outline"
                                     style={{
@@ -317,7 +293,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                                     {statusConfig.label}
                                 </Badge>
 
-                                {/* Publish Attempts Badge */}
                                 {post.publish_attempts > 0 && post.status !== 'published' && (
                                     <Badge variant="outline" className="text-xs text-orange-500 border-orange-500/50">
                                         <RefreshCw className="mr-1 h-3 w-3" />
@@ -325,14 +300,12 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                                     </Badge>
                                 )}
 
-                                {/* Category Badge */}
                                 {post.category && (
                                     <Badge variant="secondary" className="text-xs">
                                         {post.category}
                                     </Badge>
                                 )}
 
-                                {/* Platform */}
                                 <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
@@ -351,7 +324,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                                     </Tooltip>
                                 </TooltipProvider>
 
-                                {/* Published Link */}
                                 {post.platform_post_url && (
                                     <TooltipProvider>
                                         <Tooltip>
@@ -371,7 +343,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                                 )}
                             </div>
 
-                            {/* Content Preview */}
                             <div className="mb-2">
                                 {isEditing ? (
                                     <div className="space-y-2">
@@ -410,7 +381,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                                 )}
                             </div>
 
-                            {/* Hashtags */}
                             {post.hashtags && post.hashtags.length > 0 && (
                                 <div className="mb-2 flex flex-wrap gap-1">
                                     {post.hashtags.slice(0, 3).map((tag, index) => (
@@ -426,7 +396,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                                 </div>
                             )}
 
-                            {/* Meta Info */}
                             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                     <Calendar className="h-3.5 w-3.5" />
@@ -448,9 +417,7 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                             </div>
                         </div>
 
-                        {/* Actions */}
                         <div className="flex shrink-0 items-start gap-1">
-                            {/* Expand Button */}
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -464,7 +431,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                                 )}
                             </Button>
 
-                            {/* More Actions */}
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -484,7 +450,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                                         <Copy className="mr-2 h-4 w-4" />
                                         Kopiuj treść
                                     </DropdownMenuItem>
-                                    {/* NOWE: Opcja ręcznej publikacji */}
                                     <DropdownMenuItem onClick={handleOpenManualPublish}>
                                         <Hand className="mr-2 h-4 w-4" />
                                         Opublikuj ręcznie
@@ -509,7 +474,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                         </div>
                     </div>
 
-                    {/* Expanded Content */}
                     <AnimatePresence>
                         {isExpanded && (
                             <motion.div
@@ -519,7 +483,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                                 transition={{ duration: 0.2 }}
                                 className="overflow-hidden"
                             >
-                                {/* Error Message */}
                                 {post.publish_error && (
                                     <div className="border-t bg-red-50 p-4 dark:bg-red-950/50">
                                         <div className="flex items-start gap-2">
@@ -531,7 +494,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                                                 <p className="text-sm text-red-700 dark:text-red-300">
                                                     {post.publish_error}
                                                 </p>
-                                                {/* NOWE: Sugestia ręcznej publikacji przy błędzie */}
                                                 {post.publish_error.includes('wymaga ręcznej') && (
                                                     <Button
                                                         size="sm"
@@ -548,7 +510,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                                     </div>
                                 )}
 
-                                {/* Reject Reason Input */}
                                 {showRejectInput && (
                                     <div className="border-t bg-muted/50 p-4">
                                         <label className="mb-2 block text-sm font-medium">
@@ -583,7 +544,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                                     </div>
                                 )}
 
-                                {/* User Notes */}
                                 {post.user_notes && (
                                     <div className="border-t bg-amber-50 p-4 dark:bg-amber-950">
                                         <p className="text-sm text-amber-800 dark:text-amber-200">
@@ -592,7 +552,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                                     </div>
                                 )}
 
-                                {/* Additional Meta */}
                                 <div className="flex flex-wrap items-center justify-between gap-4 border-t bg-muted/30 px-4 py-3">
                                     <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                                         <span>
@@ -631,7 +590,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                         )}
                     </AnimatePresence>
 
-                    {/* Action Buttons for Pending */}
                     {isActionable && !showRejectInput && !isEditing && (
                         <div className="flex items-center gap-2 border-t bg-muted/30 p-3">
                             <Button
@@ -648,7 +606,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                                 Zatwierdź
                             </Button>
 
-                            {/* Approve & Publish */}
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -681,7 +638,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                         </div>
                     )}
 
-                    {/* Action Buttons for Approved (can publish) */}
                     {canPublish && !isEditing && (
                         <div className="flex items-center gap-2 border-t bg-muted/30 p-3">
                             <Button
@@ -703,7 +659,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                         </div>
                     )}
 
-                    {/* NOWE: Action Buttons for Approved WITHOUT social account (manual only) */}
                     {post.status === 'approved' && !post.social_account_id && !isEditing && (
                         <div className="flex items-center gap-2 border-t bg-amber-50 p-3 dark:bg-amber-950/30">
                             <div className="flex-1 text-xs text-amber-700 dark:text-amber-300">
@@ -721,7 +676,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                         </div>
                     )}
 
-                    {/* Action Buttons for Failed (can retry) */}
                     {canRetryPublish && !isEditing && (
                         <div className="flex items-center gap-2 border-t bg-red-50 p-3 dark:bg-red-950/30">
                             <Button
@@ -738,7 +692,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                                 )}
                                 Ponów publikację
                             </Button>
-                            {/* NOWE: Opcja ręcznej publikacji przy błędzie */}
                             <Button
                                 size="sm"
                                 variant="ghost"
@@ -753,7 +706,6 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
                 </Card>
             </motion.div>
 
-            {/* Manual Publish Modal */}
             <ManualPublishModal
                 open={showManualModal}
                 onOpenChange={setShowManualModal}

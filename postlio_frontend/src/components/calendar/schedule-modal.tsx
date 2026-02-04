@@ -1,4 +1,10 @@
 // src/components/calendar/schedule-modal.tsx
+/**
+ * Modal planowania posta w kalendarzu
+ *
+ * ✅ NAPRAWIONE: Obsługa platforms[] zamiast platform
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -48,6 +54,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Platform } from '@/types';
 import { useCalendarStore } from '@/store/calendar-store';
+import { getPrimaryPlatformFromScheduledPost } from '@/types/calendar';
 import { useCreatePost, useUpdatePost, useDeletePost, useBrands, useGenerateText } from '@/hooks';
 
 // Schema walidacji
@@ -157,7 +164,9 @@ export function ScheduleModal() {
         }
         if (selectedPost) {
             setValue('content', selectedPost.content);
-            setValue('platform', selectedPost.platform as Platform);
+            // ✅ NAPRAWIONE: Użyj helper function do pobrania platformy
+            const primaryPlatform = getPrimaryPlatformFromScheduledPost(selectedPost);
+            setValue('platform', primaryPlatform);
             const postDate = new Date(selectedPost.scheduledAt);
             setValue('scheduledDate', format(postDate, 'yyyy-MM-dd'));
             setValue('scheduledHour', postDate.getHours());
@@ -199,19 +208,21 @@ export function ScheduleModal() {
         ).toISOString();
 
         if (isEditing && selectedPost) {
+            // ✅ NAPRAWIONE: Używamy platforms[] zamiast platform
             await updatePost.mutateAsync({
                 id: String(selectedPost.id),
                 data: {
                     content: data.content,
-                    platform: data.platform,
+                    platforms: [data.platform],  // ✅ Array zamiast singular
                     scheduled_at: scheduledAt,
                     brand_id: data.brandId ? Number(data.brandId) : undefined,
                 },
             });
         } else {
+            // ✅ NAPRAWIONE: Używamy platforms[] zamiast platform
             await createPost.mutateAsync({
                 content: data.content,
-                platform: data.platform,
+                platforms: [data.platform],  // ✅ Array zamiast singular
                 scheduled_at: scheduledAt,
                 brand_id: data.brandId ? Number(data.brandId) : undefined,
                 ai_generated: false,
@@ -382,7 +393,7 @@ export function ScheduleModal() {
                             </div>
                         </div>
 
-                        {/* Date & Time - ULEPSZONY */}
+                        {/* Date & Time */}
                         <div className="space-y-4">
                             <Label className="flex items-center gap-2">
                                 <Clock className="h-4 w-4" />

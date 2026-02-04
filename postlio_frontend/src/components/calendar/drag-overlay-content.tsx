@@ -1,6 +1,8 @@
 // src/components/calendar/drag-overlay-content.tsx
 /**
  * Zawartość wyświetlana podczas przeciągania
+ *
+ * ✅ NAPRAWIONE: Obsługa platforms[] zamiast platform
  */
 
 'use client';
@@ -13,7 +15,8 @@ import {
     Image as ImageIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Post, Platform } from '@/types';
+import type { Post } from '@/types/post';
+import type { Platform } from '@/types';
 
 interface DragOverlayContentProps {
     draft: Post;
@@ -30,12 +33,18 @@ const PLATFORM_CONFIG: Record<Platform, {
 };
 
 export function DragOverlayContent({ draft }: DragOverlayContentProps) {
-    const platformConfig = PLATFORM_CONFIG[draft.platform];
-    const PlatformIcon = platformConfig.icon;
+    // Wszystkie platformy posta
+    const allPlatforms = draft.platforms && draft.platforms.length > 0
+        ? draft.platforms
+        : (draft.platform ? [draft.platform] : ['facebook']);
 
-    const truncatedContent = draft.content.length > 50
+    // Pierwsza platforma (dla głównego koloru)
+    const primaryPlatform = allPlatforms[0] as Platform;
+    const primaryConfig = PLATFORM_CONFIG[primaryPlatform];
+
+    const truncatedContent = draft.content && draft.content.length > 50
         ? `${draft.content.slice(0, 50)}...`
-        : draft.content;
+        : (draft.content || '');
 
     return (
         <div
@@ -47,15 +56,26 @@ export function DragOverlayContent({ draft }: DragOverlayContentProps) {
             <div className="space-y-2">
                 {/* Header */}
                 <div className="flex items-center justify-between gap-2">
-                    <div
-                        className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
-                        style={{
-                            backgroundColor: `${platformConfig.color}15`,
-                            color: platformConfig.color,
-                        }}
-                    >
-                        <PlatformIcon className="h-3 w-3" />
-                        {platformConfig.label}
+                    {/* Wyświetl wszystkie platformy */}
+                    <div className="flex items-center gap-1">
+                        {allPlatforms.map((platform) => {
+                            const config = PLATFORM_CONFIG[platform as Platform];
+                            if (!config) return null;
+                            const Icon = config.icon;
+                            return (
+                                <div
+                                    key={platform}
+                                    className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-medium"
+                                    style={{
+                                        backgroundColor: `${config.color}15`,
+                                        color: config.color,
+                                    }}
+                                >
+                                    <Icon className="h-3 w-3" />
+                                    {allPlatforms.length === 1 && config.label}
+                                </div>
+                            );
+                        })}
                     </div>
 
                     <div className="flex items-center gap-1">
@@ -74,7 +94,10 @@ export function DragOverlayContent({ draft }: DragOverlayContentProps) {
                 </p>
 
                 {/* Drop hint */}
-                <div className="text-[10px] text-primary font-medium text-center pt-1 border-t border-dashed">
+                <div
+                    className="text-[10px] font-medium text-center pt-1 border-t border-dashed"
+                    style={{ color: primaryConfig?.color || '#3B82F6' }}
+                >
                     Upuść na dzień w kalendarzu
                 </div>
             </div>

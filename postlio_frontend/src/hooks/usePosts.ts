@@ -2,7 +2,7 @@
 /**
  * Hook do zarządzania postami
  *
- * Obsługuje: CRUD, scheduling, kalendarz, bulk actions
+ * Obsługuje: CRUD, scheduling, kalendarz, bulk actions, platform status
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -15,7 +15,7 @@ import type {
     BulkActionRequest,
     CalendarEventsParams,
 } from '@/lib/api';
-import type { Post } from '@/types';
+import type { Post } from '@/types/post';
 
 // ============================================================
 // QUERY KEYS
@@ -41,7 +41,7 @@ export function usePosts(params?: PostsListParams) {
     return useQuery({
         queryKey: postsKeys.list(params),
         queryFn: () => postsApi.getPosts(params),
-        staleTime: 2 * 60 * 1000, // 2 minuty
+        staleTime: 2 * 60 * 1000,
     });
 }
 
@@ -72,7 +72,7 @@ export function useCalendarPosts(params: CalendarEventsParams) {
         queryKey: postsKeys.calendar(params),
         queryFn: () => postsApi.getCalendarEvents(params),
         enabled: !!params.start_date && !!params.end_date,
-        staleTime: 60 * 1000, // 1 minuta
+        staleTime: 60 * 1000,
     });
 }
 
@@ -93,7 +93,6 @@ export function useCreatePost(options?: UseCreatePostOptions) {
     return useMutation({
         mutationFn: (data: CreatePostRequest) => postsApi.createPost(data),
         onSuccess: (post) => {
-            // Invalidate listy postów
             void queryClient.invalidateQueries({ queryKey: postsKeys.lists() });
 
             const statusMessage = post.status === 'scheduled'
@@ -138,13 +137,11 @@ export function useUpdatePost(options?: UseUpdatePostOptions) {
         mutationFn: ({ id, data }: { id: string; data: UpdatePostRequest }) =>
             postsApi.updatePost(id, data),
         onMutate: async ({ id, data }) => {
-            // Optimistic update
             await queryClient.cancelQueries({ queryKey: postsKeys.detail(id) });
 
             const previousPost = queryClient.getQueryData<Post>(postsKeys.detail(id));
 
             if (previousPost) {
-                // Konwertuj null na undefined dla scheduled_at
                 const updatedData = {
                     ...data,
                     scheduled_at: data.scheduled_at === null ? undefined : data.scheduled_at,
@@ -167,7 +164,6 @@ export function useUpdatePost(options?: UseUpdatePostOptions) {
             options?.onSuccess?.(post);
         },
         onError: (error: Error, { id }, context) => {
-            // Rollback optimistic update
             if (context?.previousPost) {
                 queryClient.setQueryData(postsKeys.detail(id), context.previousPost);
             }
@@ -175,6 +171,53 @@ export function useUpdatePost(options?: UseUpdatePostOptions) {
             const message = error instanceof ApiException
                 ? error.message
                 : 'Nie udało się zaktualizować posta';
+
+            toast.error('Błąd aktualizacji', { description: message });
+        },
+    });
+}
+
+// ============================================================
+// HOOK: useUpdatePlatformStatus
+// ============================================================
+
+interface UseUpdatePlatformStatusOptions {
+    onSuccess?: (post: Post) => void;
+    showToast?: boolean;
+}
+
+/**
+ * Aktualizacja statusu publikacji dla konkretnej platformy
+ */
+export function useUpdatePlatformStatus(options?: UseUpdatePlatformStatusOptions) {
+    const queryClient = useQueryClient();
+    const { showToast = true } = options || {};
+
+    return useMutation({
+        mutationFn: ({ postId, platform, status, platform_post_id }: {
+            postId: string;
+            platform: string;
+            status: 'draft' | 'published' | 'failed';
+            platform_post_id?: string;
+        }) => postsApi.updatePlatformStatus(postId, {
+            platform: platform as 'facebook' | 'instagram' | 'linkedin',
+            status,
+            platform_post_id,
+        }),
+        onSuccess: (post) => {
+            void queryClient.invalidateQueries({ queryKey: postsKeys.lists() });
+            void queryClient.invalidateQueries({ queryKey: postsKeys.detail(String(post.id)) });
+
+            if (showToast) {
+                toast.success('Status platformy zaktualizowany!');
+            }
+
+            options?.onSuccess?.(post);
+        },
+        onError: (error: Error) => {
+            const message = error instanceof ApiException
+                ? error.message
+                : 'Nie udało się zaktualizować statusu';
 
             toast.error('Błąd aktualizacji', { description: message });
         },
@@ -270,7 +313,7 @@ export function usePublishPost() {
             void queryClient.invalidateQueries({ queryKey: postsKeys.detail(String(post.id)) });
 
             toast.success('Post opublikowany!', {
-                description: `Platforma: ${post.platform}`,
+                description: `Platforma: ${post.platforms?.join(', ') || post.platform}`,
             });
         },
         onError: (error: Error) => {
@@ -363,9 +406,9 @@ export function usePostsManager(params?: PostsListParams) {
     const schedulePost = useSchedulePost();
     const publishPost = usePublishPost();
     const duplicatePost = useDuplicatePost();
+    const updatePlatformStatus = useUpdatePlatformStatus();
 
     return {
-        // Dane
         posts: posts.data?.posts || [],
         count: posts.data?.count || 0,
         isLoading: posts.isLoading,
@@ -373,7 +416,6 @@ export function usePostsManager(params?: PostsListParams) {
         error: posts.error,
         refetch: posts.refetch,
 
-        // Mutacje
         create: createPost.mutate,
         createAsync: createPost.mutateAsync,
         isCreating: createPost.isPending,
@@ -397,6 +439,10 @@ export function usePostsManager(params?: PostsListParams) {
         duplicate: duplicatePost.mutate,
         duplicateAsync: duplicatePost.mutateAsync,
         isDuplicating: duplicatePost.isPending,
+
+        updatePlatformStatus: updatePlatformStatus.mutate,
+        updatePlatformStatusAsync: updatePlatformStatus.mutateAsync,
+        isUpdatingPlatformStatus: updatePlatformStatus.isPending,
     };
 }
 

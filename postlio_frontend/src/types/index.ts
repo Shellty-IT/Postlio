@@ -5,6 +5,12 @@
  */
 
 // ============================================================
+// IMPORT POST TYPES (do użycia w tym pliku)
+// ============================================================
+
+import type { Post, PostStatus } from './post';
+
+// ============================================================
 // RE-EXPORT USER TYPES
 // ============================================================
 
@@ -92,14 +98,29 @@ export {
 } from './brand';
 
 // ============================================================
+// RE-EXPORT POST TYPES
+// ============================================================
+
+export type {
+    Post,
+    PostStatus,
+    CalendarEvent,
+    PlatformStatusDetail,
+    PlatformStatuses,
+} from './post';
+
+export {
+    isFullyPublished,
+    getUnpublishedPlatforms,
+    getOverallStatus,
+} from './post';
+
+// ============================================================
 // PODSTAWOWE ENUMY
 // ============================================================
 
 // Platform - alias dla SocialPlatform (kompatybilność wsteczna)
-// UWAGA: Używaj SocialPlatform w nowym kodzie
 export type Platform = 'facebook' | 'instagram' | 'linkedin';
-
-export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed' | 'archived';
 
 export type UserRole = 'user' | 'admin' | 'premium';
 
@@ -145,38 +166,39 @@ export const TEXT_PROVIDERS: ProviderInfo[] = [
     },
 ];
 
+// Zaktualizuj IMAGE_PROVIDERS w src/types/index.ts
+
 export const IMAGE_PROVIDERS: ProviderInfo[] = [
     {
         id: 'pollinations',
         name: 'Pollinations AI',
-        description: 'Darmowy, szybki. Auto-tłumaczenie PL→EN.',
-        isFree: true,
-    },
-    {
-        id: 'gemini',
-        name: 'Gemini (Google)',
-        description: 'Rozumie polski! Dwa modele do wyboru.',
-        isFree: true,
+        description: 'Szybki z auto-ulepszaniem. Obsługuje polski!',
+        isFree: false, // Wymaga API key
         models: [
             {
-                id: 'gemini-2.0-flash-exp-image-generation',
-                name: 'Nano Banana',
-                description: 'Szybki, eksperymentalny',
-                aliases: ['nano-banana', 'flash'],
+                id: 'flux',
+                name: 'Flux',
+                description: 'Wysoka jakość, szczegółowe obrazy',
             },
             {
-                id: 'imagen-3.0-generate-002',
-                name: 'Nano Banana Pro',
-                description: 'Najwyższa jakość, fotorealizm',
-                aliases: ['nano-banana-pro', 'pro'],
+                id: 'nanobanana',
+                name: 'Nanobanana',
+                description: 'Szybki, lżejszy model',
             },
         ],
     },
     {
         id: 'huggingface',
-        name: 'HuggingFace FLUX',
-        description: 'Wysokiej jakości. Auto-tłumaczenie PL→EN.',
+        name: 'HuggingFace',
+        description: 'Stable Diffusion XL. Wysoka jakość.',
         isFree: true,
+        models: [
+            {
+                id: 'stabilityai/stable-diffusion-xl-base-1.0',
+                name: 'Stable Diffusion XL',
+                description: 'Wysokiej jakości obrazy',
+            },
+        ],
     },
 ];
 
@@ -217,7 +239,7 @@ export interface SocialAccount {
 }
 
 // ============================================================
-// POSTS
+// POSTS - LEGACY (dla kompatybilności wstecznej)
 // ============================================================
 
 export interface PostMedia {
@@ -241,13 +263,14 @@ export interface PostAnalytics {
     engagement_rate?: number;
 }
 
-export interface Post {
+// Legacy Post interface - używa zaimportowanego PostStatus
+export interface LegacyPost {
     id: number | string;
     user_id: number | string;
     brand_id?: number | null;
     content: string;
     platform: Platform;
-    status: PostStatus;
+    status: PostStatus;  // ✅ Teraz działa - PostStatus jest zaimportowany na górze
     scheduled_at?: string | null;
     published_at?: string | null;
     image_url?: string | null;
@@ -269,7 +292,13 @@ export interface Post {
 }
 
 export function postToPlatformsArray(post: Post): Platform[] {
-    return [post.platform];
+    if ('platforms' in post && Array.isArray(post.platforms) && post.platforms.length > 0) {
+        return post.platforms;
+    }
+    if ('platform' in post && post.platform) {
+        return [post.platform];
+    }
+    return ['facebook'];
 }
 
 export function platformsToSingle(platforms: Platform[]): Platform {

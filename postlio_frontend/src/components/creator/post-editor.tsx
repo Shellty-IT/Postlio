@@ -1,12 +1,13 @@
 // src/components/creator/post-editor.tsx
 /**
- * Edytor posta z obsługą AI, wyborem providerów i edycją obrazu
+ * Edytor posta z obsługą AI, wyborem providerów i modeli, edycją obrazu
  *
  * NAPRAWIONE:
  * - SOFT_LIMIT zmieniony z 700 na 500
  * - Dodane liczniki znaków w dialogach (max 500)
  * - Sync providerów z propsów przez useEffect
  * - Podpowiedzi DODAJĄ tekst po spacji zamiast nadpisywać
+ * - Obsługa wyboru modelu dla Pollinations (flux/nanobanana)
  */
 
 'use client';
@@ -81,7 +82,6 @@ const PLATFORM_LIMITS: Record<Platform, number> = {
     linkedin: 3000,
 };
 
-// ✅ NAPRAWIONE: Limit dla promptów AI i "soft" limit dla posta - teraz 500
 const PROMPT_LIMIT = 500;
 const SOFT_LIMIT = 500;
 
@@ -142,7 +142,7 @@ export function PostEditor({
                                onGenerateImage,
                                defaultTextProvider = 'gemini',
                                defaultImageProvider = 'pollinations',
-                               defaultImageModel,
+                               defaultImageModel = 'flux',
                            }: PostEditorProps) {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -158,9 +158,9 @@ export function PostEditor({
     // Provider state
     const [selectedTextProvider, setSelectedTextProvider] = useState<TextProvider>(defaultTextProvider);
     const [selectedImageProvider, setSelectedImageProvider] = useState<ImageProvider>(defaultImageProvider);
-    const [selectedImageModel, setSelectedImageModel] = useState<string | undefined>(defaultImageModel);
+    const [selectedImageModel, setSelectedImageModel] = useState<string>(defaultImageModel);
 
-    // ✅ NAPRAWIONE: Synchronizacja providerów z propsów
+    // Synchronizacja providerów z propsów
     useEffect(() => {
         setSelectedTextProvider(defaultTextProvider);
     }, [defaultTextProvider]);
@@ -205,7 +205,7 @@ export function PostEditor({
         onHashtagsChange(hashtags.filter((h) => h !== tag));
     }, [hashtags, onHashtagsChange]);
 
-    // ✅ NAPRAWIONE: Handler dla podpowiedzi tekstu - DODAJE po spacji
+    // Handler dla podpowiedzi tekstu - DODAJE po spacji
     const handleTextSuggestionClick = useCallback((suggestion: string) => {
         setTextPrompt(prev => {
             if (!prev.trim()) return suggestion;
@@ -213,7 +213,7 @@ export function PostEditor({
         });
     }, []);
 
-    // ✅ NAPRAWIONE: Handler dla stylów obrazu - DODAJE po spacji/przecinku
+    // Handler dla stylów obrazu - DODAJE po przecinku
     const handleImageStyleClick = useCallback((style: string) => {
         setImagePrompt(prev => {
             if (!prev.trim()) return style.toLowerCase();
@@ -237,12 +237,13 @@ export function PostEditor({
         }
     }, [textPrompt, onGenerateText, selectedTextProvider]);
 
-    // Generuj obraz
+    // Generuj obraz - ✅ NAPRAWIONE: przekazuje model
     const handleGenerateImage = useCallback(async () => {
         if (!imagePrompt.trim() || !onGenerateImage) return;
 
         setIsGeneratingLocal(true);
         try {
+            console.log(`🖼️ Generating image with provider=${selectedImageProvider}, model=${selectedImageModel}`);
             await onGenerateImage(imagePrompt, selectedImageProvider, selectedImageModel);
             setIsGenerateImageOpen(false);
             setImagePrompt('');
@@ -265,10 +266,15 @@ export function PostEditor({
         }
     }, [onImageChange]);
 
-    // Handler zmiany providera obrazu
+    // ✅ NAPRAWIONE: Handler zmiany providera obrazu z modelem
     const handleImageProviderChange = (provider: string, model?: string) => {
         setSelectedImageProvider(provider as ImageProvider);
-        setSelectedImageModel(model);
+        // Dla pollinations domyślnie flux, dla innych undefined
+        if (provider === 'pollinations') {
+            setSelectedImageModel(model || 'flux');
+        } else {
+            setSelectedImageModel(model || '');
+        }
     };
 
     // Handler cropped image
@@ -276,7 +282,7 @@ export function PostEditor({
         onImageChange(croppedUrl);
     }, [onImageChange]);
 
-    // ✅ NAPRAWIONE: Handler dla textarea z limitem w dialogach
+    // Handler dla textarea z limitem w dialogach
     const handleTextPromptChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const value = e.target.value;
         if (value.length <= PROMPT_LIMIT) {
@@ -530,7 +536,7 @@ export function PostEditor({
             </AnimatePresence>
 
             {/* ============================================================ */}
-            {/* Dialog: Generuj tekst - Z LICZNIKIEM */}
+            {/* Dialog: Generuj tekst */}
             {/* ============================================================ */}
             <Dialog open={isGenerateTextOpen} onOpenChange={setIsGenerateTextOpen}>
                 <DialogContent className="sm:max-w-lg">
@@ -555,7 +561,6 @@ export function PostEditor({
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <Label htmlFor="text-prompt">Opis posta</Label>
-                                {/* ✅ NAPRAWIONE: Licznik znaków */}
                                 <CharCounter current={textPrompt.length} max={PROMPT_LIMIT} />
                             </div>
                             <Textarea
@@ -568,7 +573,7 @@ export function PostEditor({
                             />
                         </div>
 
-                        {/* Quick prompts - ✅ NAPRAWIONE: Dodają tekst po spacji */}
+                        {/* Quick prompts */}
                         <div className="space-y-2">
                             <Label className="text-xs text-muted-foreground">
                                 Szybkie podpowiedzi (kliknij, aby dodać)
@@ -624,7 +629,7 @@ export function PostEditor({
             </Dialog>
 
             {/* ============================================================ */}
-            {/* Dialog: Generuj obraz - Z LICZNIKIEM */}
+            {/* Dialog: Generuj obraz - Z WYBOREM MODELU */}
             {/* ============================================================ */}
             <Dialog open={isGenerateImageOpen} onOpenChange={setIsGenerateImageOpen}>
                 <DialogContent className="sm:max-w-lg">
@@ -634,12 +639,12 @@ export function PostEditor({
                             Generuj obraz z AI
                         </DialogTitle>
                         <DialogDescription>
-                            Opisz obraz, który chcesz wygenerować. Gemini rozumie polski, inne providery auto-tłumaczą.
+                            Opisz obraz, który chcesz wygenerować. Pollinations automatycznie ulepsza i tłumaczy prompty.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
-                        {/* Provider selector */}
+                        {/* Provider selector z wyborem modelu */}
                         <AIProviderSelector
                             type="image"
                             value={selectedImageProvider}
@@ -650,7 +655,6 @@ export function PostEditor({
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <Label htmlFor="image-prompt">Opis obrazu</Label>
-                                {/* ✅ NAPRAWIONE: Licznik znaków */}
                                 <CharCounter current={imagePrompt.length} max={PROMPT_LIMIT} />
                             </div>
                             <Textarea
@@ -661,12 +665,12 @@ export function PostEditor({
                                 className="min-h-[100px]"
                                 maxLength={PROMPT_LIMIT}
                             />
-                            <p className="text-xs text-blue-600 dark:text-blue-400">
-                                ℹ️ Prompt zostanie automatycznie przetłumaczony na angielski
+                            <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                                ✨ Prompt zostanie automatycznie ulepszony i przetłumaczony
                             </p>
                         </div>
 
-                        {/* Style presets - ✅ NAPRAWIONE: Dodają tekst po przecinku */}
+                        {/* Style presets */}
                         <div className="space-y-2">
                             <Label className="text-xs text-muted-foreground">
                                 Style (kliknij, aby dodać)

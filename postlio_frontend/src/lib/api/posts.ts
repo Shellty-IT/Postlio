@@ -3,41 +3,57 @@
  * Posts API Layer
  *
  * CRUD operacje na postach + scheduling.
+ * Obsługa wielu platform na post.
  */
 
 import { apiClient } from './client';
-import type { Post, Platform, PostStatus } from '@/types';
+import type { Post, PostStatus, CalendarEvent } from '@/types/post';
+import type { Platform } from '@/types';
 
 // ============================================================
-// TYPY - DOPASOWANE DO BACKENDU
+// TYPY REQUEST
 // ============================================================
 
 /**
- * Request do tworzenia posta - ZGODNY z backend PostCreate
+ * Request do tworzenia posta - WIELE PLATFORM
  */
 export interface CreatePostRequest {
     content: string;
-    platform: Platform;                         // ← ZMIANA: singular
-    brand_id?: number;                          // ← ZMIANA: number
+    platforms: Platform[];                        // ← ZMIANA: array
+    brand_id?: number;
     image_url?: string;
     image_prompt?: string;
-    scheduled_at?: string;                      // ISO date string
+    scheduled_at?: string;
     ai_generated?: boolean;
     ai_model?: string;
     generation_params?: Record<string, unknown>;
 }
 
 /**
- * Request do aktualizacji posta - ZGODNY z backend PostUpdate
+ * Request do aktualizacji posta
  */
 export interface UpdatePostRequest {
     content?: string;
-    platform?: Platform;                        // ← ZMIANA: singular
-    brand_id?: number;                          // ← ZMIANA: number
+    platforms?: Platform[];                       // ← ZMIANA: array
+    brand_id?: number;
     image_url?: string;
     image_prompt?: string;
     status?: PostStatus;
     scheduled_at?: string | null;
+    platform_statuses?: Record<string, {
+        status: string;
+        published_at?: string | null;
+        platform_post_id?: string | null;
+    }>;
+}
+
+/**
+ * Request do aktualizacji statusu platformy
+ */
+export interface UpdatePlatformStatusRequest {
+    platform: Platform;
+    status: 'draft' | 'published' | 'failed';
+    platform_post_id?: string;
 }
 
 export interface PostsListParams {
@@ -54,7 +70,7 @@ export interface PostsListParams {
 
 export interface PostsListResponse {
     posts: Post[];
-    count: number;                              // ← ZMIANA: backend zwraca 'count' nie 'total'
+    count: number;
 }
 
 export interface SchedulePostRequest {
@@ -71,19 +87,6 @@ export interface CalendarEventsParams {
     start_date: string;
     end_date: string;
     brand_id?: string;
-}
-
-export interface CalendarEvent {
-    id: string;
-    post_id: string;
-    title: string;
-    date: string;
-    time: string;
-    platforms: Platform[];
-    status: PostStatus;
-    preview?: string;
-    image_url?: string;
-    brand_id?: number;
 }
 
 // ============================================================
@@ -132,6 +135,16 @@ export async function updatePost(
     data: UpdatePostRequest
 ): Promise<Post> {
     return apiClient.patch<Post>(`/posts/${id}`, data);
+}
+
+/**
+ * Aktualizuj status platformy
+ */
+export async function updatePlatformStatus(
+    postId: string,
+    data: UpdatePlatformStatusRequest
+): Promise<Post> {
+    return apiClient.patch<Post>(`/posts/${postId}/platform-status`, data);
 }
 
 /**
@@ -199,6 +212,7 @@ export const postsApi = {
     getPost,
     createPost,
     updatePost,
+    updatePlatformStatus,
     deletePost,
     schedulePost,
     publishPost,

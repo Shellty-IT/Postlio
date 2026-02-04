@@ -1,4 +1,10 @@
 // src/components/calendar/post-card.tsx
+/**
+ * Karta posta w kalendarzu
+ *
+ * ✅ NAPRAWIONE: Obsługa platforms[] + legacy platform
+ */
+
 'use client';
 
 import { memo, useState } from 'react';
@@ -15,7 +21,7 @@ import {
     Trash2,
     Copy,
     ExternalLink,
-    Archive
+    Send,
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -30,8 +36,9 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { ScheduledPost } from '@/types/calendar';
-import { Platform, PostStatus } from '@/types';
+import { ScheduledPost, getPrimaryPlatformFromScheduledPost } from '@/types/calendar';
+import type { Platform } from '@/types';
+import type { PostStatus } from '@/types/post';
 import { useCalendarStore } from '@/store/calendar-store';
 
 interface PostCardProps {
@@ -52,19 +59,27 @@ const statusConfig: Record<PostStatus, {
 }> = {
     draft: { icon: Pencil, color: 'text-muted-foreground', label: 'Szkic' },
     scheduled: { icon: Clock, color: 'text-warning', label: 'Zaplanowany' },
+    publishing: { icon: Send, color: 'text-blue-500', label: 'Publikowanie...' },
     published: { icon: CheckCircle, color: 'text-success', label: 'Opublikowany' },
     failed: { icon: AlertCircle, color: 'text-destructive', label: 'Błąd' },
-    archived: { icon: Archive, color: 'text-muted-foreground', label: 'Zarchiwizowany' },
 };
 
 export const PostCard = memo(function PostCard({ post, compact = false }: PostCardProps) {
     const { selectPost, openScheduleModal, setDragging } = useCalendarStore();
     const [isHovered, setIsHovered] = useState(false);
 
-    const StatusIcon = statusConfig[post.status].icon;
-    // POPRAWKA: używamy post.platform (singular) zamiast post.platforms[0]
-    const primaryPlatform = post.platform;
+    // Bezpieczne pobranie statusu z fallbackiem
+    const postStatus = (post.status in statusConfig ? post.status : 'draft') as PostStatus;
+    const StatusIcon = statusConfig[postStatus].icon;
+
+    // Obsługa platform - używamy helper function
+    const primaryPlatform = getPrimaryPlatformFromScheduledPost(post);
     const platformStyle = platformConfig[primaryPlatform];
+
+    // Wszystkie platformy do wyświetlenia
+    const allPlatforms = post.platforms && post.platforms.length > 0
+        ? post.platforms
+        : (post.platform ? [post.platform] : ['facebook']);
 
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
         e.dataTransfer.setData('application/json', JSON.stringify(post));
@@ -114,7 +129,7 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
 
                         {/* Title */}
                         <span className="truncate font-medium">
-                            {post.title || post.content.slice(0, 30)}
+                            {post.title || post.content?.slice(0, 30)}
                         </span>
                     </div>
 
@@ -169,14 +184,23 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
                 {/* Header */}
                 <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2">
-                        {/* Platform - POPRAWKA: pojedyncza platforma zamiast tablicy */}
-                        <div
-                            className="w-6 h-6 rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: platformConfig[post.platform].color }}
-                        >
-                            <span className="text-[10px] text-white font-bold uppercase">
-                                {post.platform[0]}
-                            </span>
+                        {/* Platform badges - wyświetl wszystkie platformy */}
+                        <div className="flex items-center gap-1">
+                            {allPlatforms.map((platform) => {
+                                const config = platformConfig[platform as Platform];
+                                if (!config) return null;
+                                return (
+                                    <div
+                                        key={platform}
+                                        className="w-6 h-6 rounded-full flex items-center justify-center"
+                                        style={{ backgroundColor: config.color }}
+                                    >
+                                        <span className="text-[10px] text-white font-bold uppercase">
+                                            {platform[0]}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </div>
 
                         {/* AI Badge */}
@@ -244,8 +268,8 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
                 {/* Footer */}
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
-                        <StatusIcon className={cn("h-3.5 w-3.5", statusConfig[post.status].color)} />
-                        <span>{statusConfig[post.status].label}</span>
+                        <StatusIcon className={cn("h-3.5 w-3.5", statusConfig[postStatus].color)} />
+                        <span>{statusConfig[postStatus].label}</span>
                     </div>
 
                     <div className="flex items-center gap-1">

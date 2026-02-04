@@ -3,6 +3,8 @@
  * Karta pojedynczego zapisanego posta
  *
  * Wyświetla podgląd posta z akcjami: edycja, zaplanuj, publikuj, usuń
+ *
+ * ✅ NAPRAWIONE: Obsługa platforms[] + usunięty 'archived' status
  */
 
 'use client';
@@ -26,6 +28,7 @@ import {
     Clock,
     CheckCircle2,
     AlertCircle,
+    Send,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -45,7 +48,8 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import type { Post, Platform, PostStatus } from '@/types';
+import type { Platform } from '@/types';
+import type { Post, PostStatus } from '@/types/post';
 
 // ============================================================
 // TYPY
@@ -92,6 +96,7 @@ const PLATFORM_CONFIG: Record<Platform, {
     },
 };
 
+// Statusy - zgodne z PostStatus z @/types/post (bez 'archived')
 const STATUS_CONFIG: Record<PostStatus, {
     label: string;
     icon: typeof Clock;
@@ -107,6 +112,11 @@ const STATUS_CONFIG: Record<PostStatus, {
         icon: Clock,
         className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
     },
+    publishing: {
+        label: 'Publikowanie...',
+        icon: Send,
+        className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+    },
     published: {
         label: 'Opublikowany',
         icon: CheckCircle2,
@@ -116,11 +126,6 @@ const STATUS_CONFIG: Record<PostStatus, {
         label: 'Błąd',
         icon: AlertCircle,
         className: 'bg-red-500/10 text-red-600 dark:text-red-400',
-    },
-    archived: {
-        label: 'Zarchiwizowany',
-        icon: Copy,
-        className: 'bg-gray-500/10 text-gray-600 dark:text-gray-400',
     },
 };
 
@@ -140,15 +145,20 @@ export function SavedPostCard({
                               }: SavedPostCardProps) {
     const [isHovered, setIsHovered] = useState(false);
 
-    const platformConfig = PLATFORM_CONFIG[post.platform];
-    const statusConfig = STATUS_CONFIG[post.status];
-    const PlatformIcon = platformConfig.icon;
+    // Wszystkie platformy do wyświetlenia
+    const allPlatforms = post.platforms && post.platforms.length > 0
+        ? post.platforms
+        : (post.platform ? [post.platform] : ['facebook']);
+
+    // Bezpieczne pobranie statusu z fallbackiem
+    const postStatus = (post.status in STATUS_CONFIG ? post.status : 'draft') as PostStatus;
+    const statusConfig = STATUS_CONFIG[postStatus];
     const StatusIcon = statusConfig.icon;
 
     // Skrócona treść do podglądu (max 150 znaków)
-    const truncatedContent = post.content.length > 150
+    const truncatedContent = post.content && post.content.length > 150
         ? `${post.content.slice(0, 150)}...`
-        : post.content;
+        : (post.content || '');
 
     // Formatowanie daty
     const formattedDate = format(new Date(post.created_at), 'd MMM yyyy, HH:mm', { locale: pl });
@@ -204,15 +214,23 @@ export function SavedPostCard({
                     {/* Gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
-                    {/* Platform badge on image */}
-                    <div className="absolute bottom-2 left-2">
-                        <div
-                            className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-white text-xs font-medium backdrop-blur-sm"
-                            style={{ backgroundColor: `${platformConfig.color}CC` }}
-                        >
-                            <PlatformIcon className="h-3.5 w-3.5" />
-                            {platformConfig.label}
-                        </div>
+                    {/* Platform badges on image */}
+                    <div className="absolute bottom-2 left-2 flex gap-1">
+                        {allPlatforms.map((platform) => {
+                            const config = PLATFORM_CONFIG[platform as Platform];
+                            if (!config) return null;
+                            const Icon = config.icon;
+                            return (
+                                <div
+                                    key={platform}
+                                    className="flex items-center gap-1 rounded-full px-2 py-1 text-white text-xs font-medium backdrop-blur-sm"
+                                    style={{ backgroundColor: `${config.color}CC` }}
+                                >
+                                    <Icon className="h-3 w-3" />
+                                    {allPlatforms.length === 1 && config.label}
+                                </div>
+                            );
+                        })}
                     </div>
 
                     {/* AI badge */}
@@ -232,15 +250,23 @@ export function SavedPostCard({
                         <ImageIcon className="h-12 w-12 text-muted-foreground/30" />
                     </div>
 
-                    {/* Platform badge */}
-                    <div className="absolute bottom-2 left-2">
-                        <div
-                            className={cn('flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium', platformConfig.bgColor)}
-                            style={{ color: platformConfig.color }}
-                        >
-                            <PlatformIcon className="h-3.5 w-3.5" />
-                            {platformConfig.label}
-                        </div>
+                    {/* Platform badges */}
+                    <div className="absolute bottom-2 left-2 flex gap-1">
+                        {allPlatforms.map((platform) => {
+                            const config = PLATFORM_CONFIG[platform as Platform];
+                            if (!config) return null;
+                            const Icon = config.icon;
+                            return (
+                                <div
+                                    key={platform}
+                                    className={cn('flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium', config.bgColor)}
+                                    style={{ color: config.color }}
+                                >
+                                    <Icon className="h-3 w-3" />
+                                    {allPlatforms.length === 1 && config.label}
+                                </div>
+                            );
+                        })}
                     </div>
 
                     {post.ai_generated && (
@@ -264,8 +290,8 @@ export function SavedPostCard({
                     </Badge>
 
                     <span className="text-xs text-muted-foreground">
-            {formattedDate}
-          </span>
+                        {formattedDate}
+                    </span>
                 </div>
 
                 {/* Post content preview */}
@@ -289,13 +315,13 @@ export function SavedPostCard({
                                 key={tag}
                                 className="text-xs text-primary/70 hover:text-primary cursor-default"
                             >
-                #{tag}
-              </span>
+                                #{tag}
+                            </span>
                         ))}
                         {post.hashtags.length > 3 && (
                             <span className="text-xs text-muted-foreground">
-                +{post.hashtags.length - 3}
-              </span>
+                                +{post.hashtags.length - 3}
+                            </span>
                         )}
                     </div>
                 )}

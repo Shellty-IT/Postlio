@@ -6,5 +6,5 @@ export { PlatformSelector } from './platform-selector';
 export { PostEditor } from './post-editor';
 export { PostPreview } from './post-preview';
 export { ImageCropModal } from './image-crop-modal';
-export { ManualPublishModal } from './manual-publish-modal';
-export { createManualPublishData } from './manual-publish-utils';
+export { ManualPublishModal } from '@/components/common/manual-publish-modal';
+export { createManualPublishData, createMultiPlatformPublishData } from './manual-publish-utils';

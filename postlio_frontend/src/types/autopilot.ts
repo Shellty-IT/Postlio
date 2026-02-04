@@ -364,8 +364,35 @@ export interface SocialStatusResponse {
     missing_platforms: string[];
 }
 
+// ==================== MULTI-PLATFORM PUBLISH TYPES ====================
+
+export interface PlatformPublishStatus {
+    platform: Platform;
+    status: 'pending' | 'published' | 'skipped';
+    publishedAt?: string;
+}
+
+export interface MultiPlatformPublishData {
+    item_id: number;
+    post_id?: number;
+    platforms: Platform[];
+    platformData: Record<Platform, {
+        content: string;
+        full_content: string;
+        hashtags: string[];
+        hashtags_string: string;
+        image_url: string | null;
+        platform_link: string;
+        instructions: string;
+        share_url?: string;
+        status: 'pending' | 'published' | 'skipped';
+    }>;
+    image_url: string | null;
+}
+
 export interface ManualPublishData {
     item_id: number;
+    post_id?: number;
     content: string;
     full_content: string;
     hashtags: string[];
@@ -639,26 +666,19 @@ export const AUTOPILOT_STATUS_CONFIG: Record<AutopilotStatus, { label: string; c
 };
 
 export const THEMATIC_CATEGORIES: ThematicCategory[] = [
-    // Lifestyle & Food
     { id: 'kitchen', name: 'Kuchnia', icon: '🍳', color: '#F59E0B', keywords: ['przepisy', 'gotowanie', 'jedzenie'] },
     { id: 'cooking', name: 'Gotowanie', icon: '👨‍🍳', color: '#EF4444', keywords: ['przepis', 'danie', 'posiłek'] },
     { id: 'baking', name: 'Pieczenie', icon: '🧁', color: '#FB7185', keywords: ['ciasta', 'cukiernictwo', 'wypieki'] },
     { id: 'coffee', name: 'Kawa', icon: '☕', color: '#92400E', keywords: ['barista', 'kawiarnia', 'espresso'] },
     { id: 'wine', name: 'Wino', icon: '🍷', color: '#881337', keywords: ['winnica', 'degustacja', 'sommelier'] },
     { id: 'vegan', name: 'Wegańskie', icon: '🥬', color: '#22C55E', keywords: ['roślinne', 'vege', 'bez mięsa'] },
-
-    // Health & Wellness
     { id: 'health', name: 'Zdrowie', icon: '💚', color: '#10B981', keywords: ['wellness', 'zdrowy styl życia'] },
     { id: 'diet', name: 'Dieta', icon: '🥗', color: '#84CC16', keywords: ['odżywianie', 'kalorie', 'przepisy fit'] },
     { id: 'mental-health', name: 'Zdrowie psychiczne', icon: '🧠', color: '#8B5CF6', keywords: ['mindfulness', 'stres'] },
-
-    // Beauty & Fashion
     { id: 'beauty', name: 'Uroda', icon: '💄', color: '#EC4899', keywords: ['makijaż', 'pielęgnacja'] },
     { id: 'cosmetics', name: 'Kosmetyki', icon: '🧴', color: '#F472B6', keywords: ['skincare', 'beauty', 'krem'] },
     { id: 'fashion', name: 'Moda', icon: '👗', color: '#F43F5E', keywords: ['style', 'ubrania', 'trendy'] },
     { id: 'hair', name: 'Włosy', icon: '💇', color: '#A855F7', keywords: ['fryzury', 'pielęgnacja włosów'] },
-
-    // Fitness & Sport
     { id: 'training', name: 'Trening', icon: '💪', color: '#3B82F6', keywords: ['ćwiczenia', 'siłownia'] },
     { id: 'exercises', name: 'Ćwiczenia', icon: '🏋️', color: '#6366F1', keywords: ['workout', 'fitness'] },
     { id: 'sport', name: 'Sport', icon: '⚽', color: '#14B8A6', keywords: ['aktywność', 'zawody'] },
@@ -666,53 +686,37 @@ export const THEMATIC_CATEGORIES: ThematicCategory[] = [
     { id: 'running', name: 'Bieganie', icon: '🏃', color: '#F97316', keywords: ['jogging', 'maraton'] },
     { id: 'cycling', name: 'Kolarstwo', icon: '🚴', color: '#0EA5E9', keywords: ['rower', 'trasy rowerowe'] },
     { id: 'fitness', name: 'Fitness', icon: '🏃‍♂️', color: '#3B82F6', keywords: ['trening', 'forma'] },
-
-    // Nature & Outdoors
     { id: 'nature', name: 'Przyroda', icon: '🌿', color: '#22C55E', keywords: ['natura', 'ekologia'] },
     { id: 'animals', name: 'Zwierzęta', icon: '🐾', color: '#A78BFA', keywords: ['pets', 'pupile', 'psy', 'koty'] },
     { id: 'gardening', name: 'Ogrodnictwo', icon: '🌱', color: '#16A34A', keywords: ['rośliny', 'ogród'] },
     { id: 'travel', name: 'Podróże', icon: '✈️', color: '#0EA5E9', keywords: ['wakacje', 'turystyka'] },
     { id: 'hiking', name: 'Turystyka górska', icon: '🏔️', color: '#64748B', keywords: ['góry', 'szlaki'] },
-
-    // Tech & Business
     { id: 'technology', name: 'Technologia', icon: '💻', color: '#6366F1', keywords: ['tech', 'gadżety', 'AI'] },
     { id: 'business', name: 'Biznes', icon: '💼', color: '#1E40AF', keywords: ['przedsiębiorczość', 'startup'] },
     { id: 'marketing', name: 'Marketing', icon: '📊', color: '#7C3AED', keywords: ['social media', 'reklama'] },
     { id: 'finance', name: 'Finanse', icon: '💰', color: '#059669', keywords: ['pieniądze', 'inwestycje'] },
     { id: 'ecommerce', name: 'E-commerce', icon: '🛒', color: '#F59E0B', keywords: ['sklep', 'sprzedaż'] },
-
-    // Creative
     { id: 'art', name: 'Sztuka', icon: '🎨', color: '#E11D48', keywords: ['kreatywność', 'design'] },
     { id: 'music', name: 'Muzyka', icon: '🎵', color: '#DB2777', keywords: ['piosenki', 'koncerty'] },
     { id: 'photography', name: 'Fotografia', icon: '📸', color: '#7C3AED', keywords: ['zdjęcia', 'foto'] },
     { id: 'handmade', name: 'Rękodzieło', icon: '🧶', color: '#F97316', keywords: ['DIY', 'handmade'] },
-
-    // Entertainment
     { id: 'books', name: 'Książki', icon: '📚', color: '#8B5CF6', keywords: ['literatura', 'czytanie'] },
     { id: 'movies', name: 'Film', icon: '🎬', color: '#EF4444', keywords: ['kino', 'seriale'] },
     { id: 'gaming', name: 'Gry', icon: '🎮', color: '#10B981', keywords: ['gaming', 'esport'] },
     { id: 'entertainment', name: 'Rozrywka', icon: '🎭', color: '#EC4899', keywords: ['zabawa', 'imprezy'] },
-
-    // Home & Family
     { id: 'home', name: 'Dom', icon: '🏠', color: '#F59E0B', keywords: ['wnętrza', 'dekoracje'] },
     { id: 'diy', name: 'DIY', icon: '🔧', color: '#F97316', keywords: ['zrób to sam', 'naprawy'] },
     { id: 'parenting', name: 'Rodzicielstwo', icon: '👶', color: '#EC4899', keywords: ['dzieci', 'rodzina'] },
     { id: 'education', name: 'Edukacja', icon: '📖', color: '#3B82F6', keywords: ['nauka', 'rozwój'] },
     { id: 'kids', name: 'Dzieci', icon: '🧒', color: '#F472B6', keywords: ['zabawki', 'zabawy'] },
     { id: 'lifestyle', name: 'Lifestyle', icon: '✨', color: '#A855F7', keywords: ['styl życia', 'inspiracje'] },
-
-    // Motivation & Personal Development
     { id: 'motivation', name: 'Motywacja', icon: '🔥', color: '#EF4444', keywords: ['inspiracja', 'rozwój osobisty'] },
     { id: 'quotes', name: 'Cytaty', icon: '💬', color: '#8B5CF6', keywords: ['mądrości', 'sentencje'] },
     { id: 'productivity', name: 'Produktywność', icon: '⚡', color: '#F59E0B', keywords: ['efektywność', 'organizacja'] },
     { id: 'career', name: 'Kariera', icon: '📈', color: '#3B82F6', keywords: ['praca', 'rozwój zawodowy'] },
-
-    // Events & Seasons
     { id: 'holidays', name: 'Święta', icon: '🎄', color: '#EF4444', keywords: ['Boże Narodzenie', 'Wielkanoc'] },
     { id: 'events', name: 'Wydarzenia', icon: '🎉', color: '#A855F7', keywords: ['imprezy', 'eventy'] },
     { id: 'seasons', name: 'Pory roku', icon: '🍂', color: '#F97316', keywords: ['wiosna', 'lato', 'jesień', 'zima'] },
-
-    // Local & Community
     { id: 'local', name: 'Lokalne', icon: '📍', color: '#14B8A6', keywords: ['miasto', 'okolica'] },
     { id: 'community', name: 'Społeczność', icon: '🤝', color: '#6366F1', keywords: ['ludzie', 'networking'] },
 ];

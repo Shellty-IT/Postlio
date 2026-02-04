@@ -1,6 +1,9 @@
 // src/app/(dashboard)/saved-posts/page.tsx
 /**
  * Strona "Materiały" - zarządzanie zapisanymi postami
+ *
+ * ✅ NAPRAWIONE: Obsługa platforms[] zamiast platform
+ * ✅ NOWE: Przekazywanie platforms[] i postId do modalu publikacji
  */
 
 'use client';
@@ -10,12 +13,28 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Plus, Download } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import { SavedPostsList } from '@/components/saved-posts';
-import { ManualPublishModal, createManualPublishData, type ManualPublishData } from '@/components/autopilot/manual-publish-modal';
-import { usePosts, useDeletePost, useDuplicatePost, useBulkPostsAction, useBrands, useUpdatePost } from '@/hooks';
-import type { Post } from '@/types';
+import { ManualPublishModal } from '@/components/common';
+import { createManualPublishData } from '@/components/creator/manual-publish-utils';
+import type { ManualPublishData } from '@/types/autopilot';
+import { usePosts, useDeletePost, useDuplicatePost, useBulkPostsAction, useBrands } from '@/hooks';
+import type { Post } from '@/types/post';
+import type { Platform } from '@/types';
+
+// ============================================================
+// HELPER
+// ============================================================
+
+/**
+ * Pobierz wszystkie platformy z posta (obsługa platforms[] i legacy platform)
+ */
+function getPostPlatforms(post: Post): Platform[] {
+    if (post.platforms && post.platforms.length > 0) {
+        return post.platforms;
+    }
+    return post.platform ? [post.platform] : ['facebook'];
+}
 
 // ============================================================
 // KOMPONENT
@@ -26,6 +45,8 @@ export default function SavedPostsPage() {
 
     // State
     const [publishModalData, setPublishModalData] = useState<ManualPublishData | null>(null);
+    const [publishModalPlatforms, setPublishModalPlatforms] = useState<Platform[]>([]); // ✅ NOWE
+    const [publishModalPostId, setPublishModalPostId] = useState<number | null>(null); // ✅ NOWE
     const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
 
     // Data fetching
@@ -35,7 +56,6 @@ export default function SavedPostsPage() {
     // Mutations
     const deletePost = useDeletePost();
     const duplicatePost = useDuplicatePost();
-    const updatePost = useUpdatePost();
     const bulkAction = useBulkPostsAction();
 
     const posts = postsData?.posts || [];
@@ -52,19 +72,29 @@ export default function SavedPostsPage() {
         router.push('/calendar?action=schedule');
     }, [router]);
 
+    // ✅ NOWE: Ulepszone handlePublish z platforms[]
     const handlePublish = useCallback((post: Post) => {
-        const hashtagsFromContent = post.content.match(/#\w+/g)?.map(h => h.slice(1)) || [];
+        const hashtagsFromContent = post.content?.match(/#\w+/g)?.map(h => h.slice(1)) || [];
         const hashtags = post.hashtags?.length ? post.hashtags : hashtagsFromContent;
 
+        // Pobierz wszystkie platformy z posta
+        const platforms = getPostPlatforms(post);
+        const primaryPlatform = platforms[0];
+
+        // Przygotuj dane dla modalu (używa primaryPlatform dla kompatybilności wstecznej)
         const publishData = createManualPublishData({
             id: typeof post.id === 'string' ? parseInt(post.id, 10) : post.id,
-            content: post.content,
+            post_id: typeof post.id === 'string' ? parseInt(post.id, 10) : post.id,
+            content: post.content || '',
             hashtags,
             image_url: post.image_url || null,
-            platform: post.platform,
+            platform: primaryPlatform,
         });
 
+        // ✅ NOWE: Ustaw wszystkie dane dla modalu
         setPublishModalData(publishData);
+        setPublishModalPlatforms(platforms);
+        setPublishModalPostId(typeof post.id === 'string' ? parseInt(post.id, 10) : post.id);
         setIsPublishModalOpen(true);
     }, []);
 
@@ -100,28 +130,30 @@ export default function SavedPostsPage() {
         router.push('/calendar?action=bulk-schedule');
     }, [router]);
 
+    // ✅ NOWE: Handler zamknięcia modalu
     const handleClosePublishModal = useCallback((open: boolean) => {
         setIsPublishModalOpen(open);
         if (!open) {
             setPublishModalData(null);
+            setPublishModalPlatforms([]);
+            setPublishModalPostId(null);
         }
     }, []);
 
-    const handleMarkAsPublished = useCallback(async (itemId: number) => {
-        try {
-            await updatePost.mutateAsync({
-                id: String(itemId),
-                data: {
-                    status: 'published',
-                },
-            });
-            toast.success('Post oznaczony jako opublikowany!');
-            setIsPublishModalOpen(false);
-            setPublishModalData(null);
-        } catch {
-            // Error handled in hook
-        }
-    }, [updatePost]);
+    // ✅ NOWE: Handler dla pojedynczej platformy opublikowanej
+    const handlePlatformPublished = useCallback((postId?: number, platform?: Platform) => {
+        // Modal sam zapisuje status do backendu przez useUpdatePlatformStatus
+        console.log(`Platform ${platform} marked as published for post ${postId}`);
+    }, []);
+
+    // ✅ NOWE: Handler gdy wszystkie platformy opublikowane
+    const handleAllPublished = useCallback(() => {
+        toast.success('Wszystkie platformy opublikowane! 🎉');
+        // Modal zamknie się automatycznie
+        setPublishModalData(null);
+        setPublishModalPlatforms([]);
+        setPublishModalPostId(null);
+    }, []);
 
     return (
         <div className="p-6 space-y-6">
@@ -203,12 +235,15 @@ export default function SavedPostsPage() {
                 />
             </motion.div>
 
-            {/* Manual Publish Modal */}
+            {/* ✅ NOWE: Manual Publish Modal z platforms[] i postId */}
             <ManualPublishModal
                 open={isPublishModalOpen}
                 onOpenChange={handleClosePublishModal}
                 data={publishModalData}
-                onMarkAsPublished={handleMarkAsPublished}
+                platforms={publishModalPlatforms}
+                postId={publishModalPostId || undefined}
+                onMarkAsPublished={handlePlatformPublished}
+                onAllPublished={handleAllPublished}
             />
         </div>
     );

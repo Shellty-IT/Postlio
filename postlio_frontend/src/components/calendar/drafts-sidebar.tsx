@@ -1,6 +1,8 @@
 // src/components/calendar/drafts-sidebar.tsx
 /**
  * Sidebar z listą szkiców/draftów do przeciągnięcia na kalendarz
+ *
+ * ✅ NAPRAWIONE: Obsługa platforms[] zamiast platform
  */
 
 'use client';
@@ -36,7 +38,8 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import type { Post, Platform } from '@/types';
+import type { Post } from '@/types/post';
+import type { Platform } from '@/types';
 
 // ============================================================
 // TYPY
@@ -68,6 +71,20 @@ const PLATFORM_CONFIG: Record<Platform, {
 };
 
 // ============================================================
+// HELPER
+// ============================================================
+
+/**
+ * Sprawdź czy post zawiera daną platformę
+ */
+function hasAnyPlatform(post: Post, platform: Platform): boolean {
+    if (post.platforms && post.platforms.length > 0) {
+        return post.platforms.includes(platform);
+    }
+    return post.platform === platform;
+}
+
+// ============================================================
 // DRAGGABLE DRAFT CARD
 // ============================================================
 
@@ -90,13 +107,15 @@ function DraggableDraftCard({ draft }: DraggableDraftCardProps) {
         transform: CSS.Translate.toString(transform),
     };
 
-    const platformConfig = PLATFORM_CONFIG[draft.platform];
-    const PlatformIcon = platformConfig.icon;
+    // Wszystkie platformy posta (do wyświetlenia jako badges)
+    const allPlatforms = draft.platforms && draft.platforms.length > 0
+        ? draft.platforms
+        : (draft.platform ? [draft.platform] : ['facebook']);
 
     // Skrócona treść
-    const truncatedContent = draft.content.length > 60
+    const truncatedContent = draft.content && draft.content.length > 60
         ? `${draft.content.slice(0, 60)}...`
-        : draft.content;
+        : (draft.content || '');
 
     return (
         <div
@@ -123,17 +142,27 @@ function DraggableDraftCard({ draft }: DraggableDraftCardProps) {
             </div>
 
             <div className="pl-5 space-y-2">
-                {/* Header: Platform + AI badge */}
+                {/* Header: Platforms + AI badge */}
                 <div className="flex items-center justify-between gap-2">
-                    <div
-                        className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
-                        style={{
-                            backgroundColor: `${platformConfig.color}15`,
-                            color: platformConfig.color,
-                        }}
-                    >
-                        <PlatformIcon className="h-3 w-3" />
-                        {platformConfig.label}
+                    <div className="flex items-center gap-1">
+                        {allPlatforms.map((platform) => {
+                            const config = PLATFORM_CONFIG[platform as Platform];
+                            if (!config) return null;
+                            const Icon = config.icon;
+                            return (
+                                <div
+                                    key={platform}
+                                    className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-medium"
+                                    style={{
+                                        backgroundColor: `${config.color}15`,
+                                        color: config.color,
+                                    }}
+                                >
+                                    <Icon className="h-3 w-3" />
+                                    {allPlatforms.length === 1 && config.label}
+                                </div>
+                            );
+                        })}
                     </div>
 
                     <div className="flex items-center gap-1">
@@ -182,13 +211,13 @@ export function DraftsSidebar({
             // Search filter
             if (search) {
                 const searchLower = search.toLowerCase();
-                if (!draft.content.toLowerCase().includes(searchLower)) {
+                if (!draft.content?.toLowerCase().includes(searchLower)) {
                     return false;
                 }
             }
 
-            // Platform filter
-            if (platformFilter && draft.platform !== platformFilter) {
+            // Platform filter z obsługą platforms[]
+            if (platformFilter && !hasAnyPlatform(draft, platformFilter)) {
                 return false;
             }
 
@@ -219,8 +248,8 @@ export function DraftsSidebar({
                 <div className="flex flex-col items-center gap-2">
                     <FileText className="h-5 w-5 text-muted-foreground" />
                     <span className="text-xs font-medium writing-mode-vertical">
-            {filteredDrafts.length} szkiców
-          </span>
+                        {filteredDrafts.length} szkiców
+                    </span>
                 </div>
             </div>
         );

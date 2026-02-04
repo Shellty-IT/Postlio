@@ -1,4 +1,10 @@
 // src/components/dashboard/recent-posts.tsx
+/**
+ * Lista ostatnich postów na dashboardzie
+ *
+ * ✅ NAPRAWIONE: Obsługa platforms[] + usunięty 'archived' status
+ */
+
 'use client';
 
 import Link from 'next/link';
@@ -8,7 +14,8 @@ import { pl } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { Post, Platform, PostStatus } from '@/types';
+import type { Platform } from '@/types';
+import type { Post, PostStatus } from '@/types/post';
 import {
     MoreHorizontal,
     ExternalLink,
@@ -21,6 +28,7 @@ import {
     Clock,
     CheckCircle2,
     XCircle,
+    Send,
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -43,7 +51,7 @@ const platformColors: Record<Platform, string> = {
     linkedin: 'text-[#0A66C2]',
 };
 
-// Statusy
+// Statusy - zgodne z PostStatus z @/types/post
 const statusConfig: Record<PostStatus, { label: string; icon: React.ReactNode; className: string }> = {
     draft: {
         label: 'Szkic',
@@ -55,6 +63,11 @@ const statusConfig: Record<PostStatus, { label: string; icon: React.ReactNode; c
         icon: <Clock className="h-3.5 w-3.5" />,
         className: 'bg-warning/10 text-warning border-warning/20',
     },
+    publishing: {
+        label: 'Publikowanie...',
+        icon: <Send className="h-3.5 w-3.5" />,
+        className: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+    },
     published: {
         label: 'Opublikowany',
         icon: <CheckCircle2 className="h-3.5 w-3.5" />,
@@ -65,11 +78,6 @@ const statusConfig: Record<PostStatus, { label: string; icon: React.ReactNode; c
         icon: <XCircle className="h-3.5 w-3.5" />,
         className: 'bg-destructive/10 text-destructive border-destructive/20',
     },
-    archived: {
-        label: 'Archiwum',
-        icon: <FileText className="h-3.5 w-3.5" />,
-        className: 'bg-muted text-muted-foreground',
-    },
 };
 
 interface PostCardProps {
@@ -78,7 +86,14 @@ interface PostCardProps {
 }
 
 function PostCard({ post, index }: PostCardProps) {
-    const status = statusConfig[post.status];
+    // Bezpieczne pobranie statusu z fallbackiem
+    const postStatus = (post.status in statusConfig ? post.status : 'draft') as PostStatus;
+    const status = statusConfig[postStatus];
+
+    // Wszystkie platformy do wyświetlenia
+    const allPlatforms = post.platforms && post.platforms.length > 0
+        ? post.platforms
+        : (post.platform ? [post.platform] : ['facebook']);
 
     return (
         <motion.div
@@ -95,10 +110,17 @@ function PostCard({ post, index }: PostCardProps) {
             <div className="flex-1 min-w-0">
                 {/* Platform & Status */}
                 <div className="flex items-center gap-2 mb-2">
-                    {/* POPRAWKA: pojedyncza platforma zamiast tablicy */}
-                    <span className={cn(platformColors[post.platform])}>
-                        {platformIcons[post.platform]}
-                    </span>
+                    {/* Wyświetl wszystkie platformy */}
+                    <div className="flex items-center gap-1">
+                        {allPlatforms.map((platform) => (
+                            <span
+                                key={platform}
+                                className={cn(platformColors[platform as Platform])}
+                            >
+                                {platformIcons[platform as Platform]}
+                            </span>
+                        ))}
+                    </div>
 
                     <Badge variant="outline" className={cn('text-xs', status.className)}>
                         {status.icon}
@@ -161,47 +183,79 @@ interface RecentPostsProps {
 }
 
 export function RecentPosts({ posts }: RecentPostsProps) {
-    // Mock data - POPRAWKA: platform zamiast platforms
+    // Mock data z platforms[]
     const mockPosts: Post[] = posts || [
         {
-            id: '1',
-            user_id: '1',
+            id: 1,
+            user_id: 1,
+            brand_id: null,
             content: 'Nowy wpis na blogu o AI w marketingu! 🚀 Sprawdźcie jak sztuczna inteligencja zmienia sposób tworzenia treści w social media...',
+            image_url: null,
+            image_prompt: null,
+            platforms: ['facebook'],
+            platform_statuses: { facebook: { status: 'published', published_at: null, platform_post_id: null } },
             platform: 'facebook',
+            platform_post_id: null,
             status: 'published',
+            scheduled_at: null,
+            published_at: null,
             ai_generated: true,
+            ai_model: null,
+            generation_params: null,
             likes: 0,
             comments: 0,
             shares: 0,
             created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
             updated_at: new Date().toISOString(),
+            hashtags: [],
         },
         {
-            id: '2',
-            user_id: '1',
+            id: 2,
+            user_id: 1,
+            brand_id: null,
             content: 'Zapraszamy na webinar o automatyzacji social media! 📅 Dołącz do nas w czwartek o 18:00.',
+            image_url: null,
+            image_prompt: null,
+            platforms: ['instagram', 'facebook'],
+            platform_statuses: {},
             platform: 'instagram',
+            platform_post_id: null,
             status: 'scheduled',
             scheduled_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            published_at: null,
             ai_generated: false,
+            ai_model: null,
+            generation_params: null,
             likes: 0,
             comments: 0,
             shares: 0,
             created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
             updated_at: new Date().toISOString(),
+            hashtags: [],
         },
         {
-            id: '3',
-            user_id: '1',
+            id: 3,
+            user_id: 1,
+            brand_id: null,
             content: 'Tips & tricks dla content creatorów - nowa seria postów już wkrótce! ✨',
+            image_url: null,
+            image_prompt: null,
+            platforms: ['linkedin'],
+            platform_statuses: {},
             platform: 'linkedin',
+            platform_post_id: null,
             status: 'draft',
+            scheduled_at: null,
+            published_at: null,
             ai_generated: true,
+            ai_model: null,
+            generation_params: null,
             likes: 0,
             comments: 0,
             shares: 0,
             created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
             updated_at: new Date().toISOString(),
+            hashtags: [],
         },
     ];
 

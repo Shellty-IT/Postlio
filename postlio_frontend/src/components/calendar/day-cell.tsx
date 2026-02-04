@@ -1,4 +1,10 @@
 // src/components/calendar/day-cell.tsx
+/**
+ * Komórka dnia w kalendarzu
+ *
+ * ✅ NAPRAWIONE: Obsługa platforms[] + bezpieczne indeksowanie
+ */
+
 'use client';
 
 import { memo, useState } from 'react';
@@ -9,11 +15,19 @@ import { cn } from '@/lib/utils';
 import { CalendarDay, ScheduledPost } from '@/types/calendar';
 import { useCalendarStore } from '@/store/calendar-store';
 import { PostCard } from './post-card';
+import type { Platform } from '@/types';
 
 interface DayCellProps {
     day: CalendarDay;
     onDrop?: (post: ScheduledPost, targetDate: Date) => void;
 }
+
+// Platform colors config
+const platformColors: Record<Platform, string> = {
+    facebook: '#1877F2',
+    instagram: '#E4405F',
+    linkedin: '#0A66C2',
+};
 
 export const DayCell = memo(function DayCell({ day, onDrop }: DayCellProps) {
     const { openScheduleModal, selectDate } = useCalendarStore();
@@ -46,15 +60,16 @@ export const DayCell = memo(function DayCell({ day, onDrop }: DayCellProps) {
         openScheduleModal(day.date);
     };
 
-    // Platform dots - pokazują jakie platformy mają posty tego dnia
-    const platformColors: Record<string, string> = {
-        facebook: '#1877F2',
-        instagram: '#E4405F',
-        linkedin: '#0A66C2',
-    };
-
-    // NAPRAWIONE: używamy platform (singular) zamiast platforms (plural)
-    const uniquePlatforms = Array.from(new Set(day.posts.map(p => p.platform)));
+    // Zbierz unikalne platformy ze wszystkich postów tego dnia
+    // Obsługa zarówno platforms[] jak i legacy platform
+    const uniquePlatforms = Array.from(new Set(
+        day.posts.flatMap(post => {
+            if (post.platforms && post.platforms.length > 0) {
+                return post.platforms;
+            }
+            return post.platform ? [post.platform] : [];
+        })
+    )).filter((p): p is Platform => !!p);
 
     return (
         <motion.div
