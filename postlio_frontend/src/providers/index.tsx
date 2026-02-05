@@ -1,7 +1,13 @@
 // src/providers/index.tsx
+/**
+ * Providers - główny wrapper aplikacji
+ *
+ * ✅ ZAKTUALIZOWANE: AuthInitializer weryfikuje sesję z backendem
+ */
+
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { QueryProvider } from './query-provider';
 import { ThemeProvider } from './theme-provider';
@@ -12,6 +18,7 @@ import { InstallPrompt } from '@/components/pwa/install-prompt';
 import { OfflineIndicator } from '@/components/pwa/offline-indicator';
 import { UpdateNotification } from '@/components/pwa/update-notification';
 import { initReminders } from '@/lib/reminders';
+import { Sparkles } from 'lucide-react';
 
 interface ProvidersProps {
     children: ReactNode;
@@ -43,14 +50,17 @@ function ReminderInitializer() {
 
 /**
  * Auth Initializer - sprawdza stan autoryzacji przy starcie
+ * ✅ ZAKTUALIZOWANE: Weryfikuje sesję z backendem
  */
 function AuthInitializer({ children }: { children: ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
+    const [isVerifying, setIsVerifying] = useState(true);
 
     const checkAuth = useAuthStore((state) => state.checkAuth);
     const isInitialized = useAuthStore((state) => state.isInitialized);
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+    const isLoading = useAuthStore((state) => state.isLoading);
     const user = useAuthStore((state) => state.user);
 
     const isPublicPath = PUBLIC_PATHS.some(path =>
@@ -61,19 +71,29 @@ function AuthInitializer({ children }: { children: ReactNode }) {
         pathname === path || pathname.startsWith(`${path}/`)
     );
 
+    // Weryfikacja sesji przy starcie
     useEffect(() => {
-        checkAuth();
+        const verifyAuth = async () => {
+            setIsVerifying(true);
+            await checkAuth();
+            setIsVerifying(false);
+        };
+
+        verifyAuth();
     }, [checkAuth]);
 
+    // Przekierowania po weryfikacji
     useEffect(() => {
-        if (!isInitialized) return;
-        if (isAuthenticated && !user) return;
+        // Czekaj na zakończenie weryfikacji
+        if (isVerifying || !isInitialized || isLoading) return;
 
+        // Jeśli nie zalogowany i próbuje wejść na chronioną stronę
         if (!isAuthenticated && !isPublicPath) {
             router.replace('/login');
             return;
         }
 
+        // Jeśli zalogowany i próbuje wejść na stronę logowania/rejestracji
         if (isAuthenticated && isAuthOnlyPath && user) {
             if (user.needs_onboarding) {
                 router.replace('/onboarding');
@@ -82,18 +102,21 @@ function AuthInitializer({ children }: { children: ReactNode }) {
             }
             return;
         }
-    }, [isInitialized, isAuthenticated, user, isPublicPath, isAuthOnlyPath, pathname, router]);
+    }, [isVerifying, isInitialized, isLoading, isAuthenticated, user, isPublicPath, isAuthOnlyPath, pathname, router]);
 
-    if (!isInitialized) {
+    // Loading screen podczas weryfikacji
+    if (isVerifying || !isInitialized) {
         return (
             <div className="fixed inset-0 flex items-center justify-center bg-background">
                 <div className="flex flex-col items-center gap-4">
                     <div className="relative">
-                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 animate-pulse" />
+                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center">
+                            <Sparkles className="h-6 w-6 text-white animate-pulse" />
+                        </div>
                         <div className="absolute inset-0 h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 animate-ping opacity-20" />
                     </div>
                     <p className="text-sm text-muted-foreground animate-pulse">
-                        Ładowanie...
+                        Weryfikacja sesji...
                     </p>
                 </div>
             </div>

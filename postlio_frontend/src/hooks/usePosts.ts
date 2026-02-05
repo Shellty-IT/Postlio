@@ -2,12 +2,12 @@
 /**
  * Hook do zarządzania postami
  *
- * Obsługuje: CRUD, scheduling, kalendarz, bulk actions, platform status
+ * Obsługuje: CRUD, scheduling, kalendarz, bulk actions, platform status, stats
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { postsApi, ApiException } from '@/lib/api';
+import { postsApi, ApiException, apiClient } from '@/lib/api';
 import type {
     CreatePostRequest,
     UpdatePostRequest,
@@ -28,7 +28,18 @@ export const postsKeys = {
     details: () => [...postsKeys.all, 'detail'] as const,
     detail: (id: string) => [...postsKeys.details(), id] as const,
     calendar: (params: CalendarEventsParams) => [...postsKeys.all, 'calendar', params] as const,
+    stats: () => [...postsKeys.all, 'stats'] as const,
 };
+
+// ============================================================
+// TYPY DLA STATS
+// ============================================================
+
+interface PostsStats {
+    total: number;
+    by_status: Record<string, number>;
+    upcoming_scheduled: number;
+}
 
 // ============================================================
 // HOOK: usePosts
@@ -42,6 +53,24 @@ export function usePosts(params?: PostsListParams) {
         queryKey: postsKeys.list(params),
         queryFn: () => postsApi.getPosts(params),
         staleTime: 2 * 60 * 1000,
+    });
+}
+
+// ============================================================
+// HOOK: usePostsStats (NOWY)
+// ============================================================
+
+/**
+ * Pobiera statystyki postów z dedykowanego endpointu
+ * Lżejsze niż pobieranie wszystkich postów
+ */
+export function usePostsStats() {
+    return useQuery({
+        queryKey: postsKeys.stats(),
+        queryFn: async (): Promise<PostsStats> => {
+            return apiClient.get<PostsStats>('/posts/stats');
+        },
+        staleTime: 60 * 1000, // 1 minuta
     });
 }
 
@@ -94,6 +123,7 @@ export function useCreatePost(options?: UseCreatePostOptions) {
         mutationFn: (data: CreatePostRequest) => postsApi.createPost(data),
         onSuccess: (post) => {
             void queryClient.invalidateQueries({ queryKey: postsKeys.lists() });
+            void queryClient.invalidateQueries({ queryKey: postsKeys.stats() });
 
             const statusMessage = post.status === 'scheduled'
                 ? 'zaplanowany'
@@ -158,6 +188,7 @@ export function useUpdatePost(options?: UseUpdatePostOptions) {
         onSuccess: (post) => {
             void queryClient.invalidateQueries({ queryKey: postsKeys.lists() });
             void queryClient.invalidateQueries({ queryKey: postsKeys.detail(String(post.id)) });
+            void queryClient.invalidateQueries({ queryKey: postsKeys.stats() });
 
             toast.success('Post zaktualizowany!');
 
@@ -207,6 +238,7 @@ export function useUpdatePlatformStatus(options?: UseUpdatePlatformStatusOptions
         onSuccess: (post) => {
             void queryClient.invalidateQueries({ queryKey: postsKeys.lists() });
             void queryClient.invalidateQueries({ queryKey: postsKeys.detail(String(post.id)) });
+            void queryClient.invalidateQueries({ queryKey: postsKeys.stats() });
 
             if (showToast) {
                 toast.success('Status platformy zaktualizowany!');
@@ -242,6 +274,7 @@ export function useDeletePost(options?: UseDeletePostOptions) {
         mutationFn: (id: string) => postsApi.deletePost(id),
         onSuccess: (_, id) => {
             void queryClient.invalidateQueries({ queryKey: postsKeys.lists() });
+            void queryClient.invalidateQueries({ queryKey: postsKeys.stats() });
             queryClient.removeQueries({ queryKey: postsKeys.detail(id) });
 
             toast.success('Post usunięty');
@@ -279,6 +312,7 @@ export function useSchedulePost() {
         onSuccess: (post) => {
             void queryClient.invalidateQueries({ queryKey: postsKeys.lists() });
             void queryClient.invalidateQueries({ queryKey: postsKeys.detail(String(post.id)) });
+            void queryClient.invalidateQueries({ queryKey: postsKeys.stats() });
 
             toast.success('Post zaplanowany!', {
                 description: post.scheduled_at
@@ -311,6 +345,7 @@ export function usePublishPost() {
         onSuccess: (post) => {
             void queryClient.invalidateQueries({ queryKey: postsKeys.lists() });
             void queryClient.invalidateQueries({ queryKey: postsKeys.detail(String(post.id)) });
+            void queryClient.invalidateQueries({ queryKey: postsKeys.stats() });
 
             toast.success('Post opublikowany!', {
                 description: `Platforma: ${post.platforms?.join(', ') || post.platform}`,
@@ -340,6 +375,7 @@ export function useDuplicatePost() {
         mutationFn: (id: string) => postsApi.duplicatePost(id),
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: postsKeys.lists() });
+            void queryClient.invalidateQueries({ queryKey: postsKeys.stats() });
 
             toast.success('Post zduplikowany!', {
                 description: 'Utworzono kopię jako szkic',
@@ -369,6 +405,7 @@ export function useBulkPostsAction() {
         mutationFn: (data: BulkActionRequest) => postsApi.bulkAction(data),
         onSuccess: (_, { action, post_ids }) => {
             void queryClient.invalidateQueries({ queryKey: postsKeys.lists() });
+            void queryClient.invalidateQueries({ queryKey: postsKeys.stats() });
 
             const actionLabels: Record<string, string> = {
                 delete: 'usunięto',

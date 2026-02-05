@@ -2,6 +2,8 @@
 /**
  * Auth Store - Zustand
  * Zarządzanie stanem autoryzacji użytkownika z obsługą onboardingu i capabilities
+ *
+ * ✅ ZAKTUALIZOWANE: checkAuth weryfikuje token z backendem
  */
 
 import { create } from 'zustand';
@@ -43,10 +45,11 @@ interface AuthState {
     setUser: (user: User | null) => void;
     setIsAuthenticated: (value: boolean) => void;
     setIsLoading: (value: boolean) => void;
+    setIsInitialized: (value: boolean) => void;
     login: (user: User, skipOnboarding?: boolean) => void;
     logout: () => void;
     reset: () => void;
-    checkAuth: () => void;
+    checkAuth: () => Promise<void>;
 
     // Akcje - Capabilities
     setCapabilities: (capabilities: UserCapabilities) => void;
@@ -126,6 +129,8 @@ export const useAuthStore = create<AuthState>()(
 
             setIsLoading: (isLoading) => set({ isLoading }),
 
+            setIsInitialized: (isInitialized) => set({ isInitialized }),
+
             login: (user, skipOnboarding = false) => {
                 const needsOnboarding = user.needs_onboarding && !skipOnboarding;
 
@@ -149,18 +154,61 @@ export const useAuthStore = create<AuthState>()(
 
             reset: () => set(initialState),
 
-            checkAuth: () => {
+            /**
+             * ✅ ZAKTUALIZOWANE: Weryfikuje token z backendem
+             * Jeśli token jest nieprawidłowy, wylogowuje użytkownika
+             */
+            checkAuth: async () => {
                 const hasTokens = TokenManager.hasTokens();
 
-                if (hasTokens) {
-                    set({
-                        isAuthenticated: true,
-                        isInitialized: true,
-                    });
-                } else {
+                if (!hasTokens) {
                     set({
                         user: null,
                         isAuthenticated: false,
+                        isInitialized: true,
+                        capabilities: DEFAULT_CAPABILITIES,
+                        connectedAccounts: [],
+                    });
+                    return;
+                }
+
+                // Mamy tokeny - weryfikuj z backendem
+                set({ isLoading: true });
+
+                try {
+                    const { authApi } = await import('@/lib/api/auth');
+                    const user = await authApi.verifySession();
+
+                    if (user) {
+                        // Token valid - ustaw użytkownika
+                        const needsOnboarding = user.needs_onboarding;
+                        set({
+                            user,
+                            isAuthenticated: true,
+                            isLoading: false,
+                            isInitialized: true,
+                            showOnboarding: needsOnboarding,
+                            onboardingStep: needsOnboarding ? 'welcome' : 'completed',
+                        });
+                    } else {
+                        // Token invalid - wyloguj
+                        set({
+                            user: null,
+                            isAuthenticated: false,
+                            isLoading: false,
+                            isInitialized: true,
+                            capabilities: DEFAULT_CAPABILITIES,
+                            connectedAccounts: [],
+                        });
+                    }
+                } catch (error) {
+                    console.error('Auth check failed:', error);
+                    // Błąd weryfikacji - wyloguj dla bezpieczeństwa
+                    TokenManager.clearTokens();
+                    set({
+                        user: null,
+                        isAuthenticated: false,
+                        isLoading: false,
                         isInitialized: true,
                         capabilities: DEFAULT_CAPABILITIES,
                         connectedAccounts: [],
@@ -255,9 +303,7 @@ export const useAuthStore = create<AuthState>()(
                 });
             },
 
-// W sekcji akcji onboarding (około linii 150-180)
-
-// === AKCJE ONBOARDING ===
+            // === AKCJE ONBOARDING ===
 
             setShowOnboarding: (show) => set({ showOnboarding: show }),
 

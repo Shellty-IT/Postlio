@@ -3,6 +3,7 @@
  * Aktywność AI na dashboardzie
  *
  * ✅ PRAWDZIWE DANE - posty wygenerowane przez AI
+ * ✅ NAPRAWIONE - limit 100 zamiast 1000
  */
 
 'use client';
@@ -51,7 +52,7 @@ const activityConfig = {
 export function AIActivity() {
     const router = useRouter();
 
-    // Pobierz posty wygenerowane przez AI
+    // ✅ NAPRAWIONE: limit 100 zamiast 1000
     const { data, isLoading } = usePosts({ limit: 100 });
 
     // Filtruj posty AI

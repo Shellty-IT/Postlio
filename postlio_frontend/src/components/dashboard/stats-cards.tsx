@@ -1,10 +1,4 @@
 // src/components/dashboard/stats-cards.tsx
-/**
- * Karty ze statystykami na dashboardzie
- *
- * ✅ PRAWDZIWE DANE z API
- */
-
 'use client';
 
 import { motion } from 'framer-motion';
@@ -16,7 +10,7 @@ import {
     Edit3,
     Loader2,
 } from 'lucide-react';
-import { usePosts } from '@/hooks/usePosts';
+import { usePostsStats } from '@/hooks/usePosts';
 
 // ============================================================
 // TYPY
@@ -95,63 +89,59 @@ function StatCard({
 // ============================================================
 
 export function StatsCards() {
-    // Pobierz prawdziwe dane
-    const { data: allPostsData, isLoading: loadingAll } = usePosts({ limit: 1000 });
-    const { data: scheduledData, isLoading: loadingScheduled } = usePosts({ status: 'scheduled', limit: 1000 });
-    const { data: publishedData, isLoading: loadingPublished } = usePosts({ status: 'published', limit: 1000 });
-    const { data: draftData, isLoading: loadingDraft } = usePosts({ status: 'draft', limit: 1000 });
+    // Używamy lekkiego endpointu /posts/stats zamiast pobierania wszystkich postów
+    const { data: stats, isLoading, isError } = usePostsStats();
 
-    const isLoading = loadingAll || loadingScheduled || loadingPublished || loadingDraft;
+    // Oblicz wartości z odpowiedzi API
+    const total = stats?.total ?? 0;
+    const scheduled = stats?.by_status?.scheduled ?? 0;
+    const published = stats?.by_status?.published ?? 0;
+    const drafts = stats?.by_status?.draft ?? 0;
 
-    // Oblicz statystyki
-    const stats = {
-        total: allPostsData?.count ?? 0,
-        scheduled: scheduledData?.count ?? 0,
-        published: publishedData?.count ?? 0,
-        drafts: draftData?.count ?? 0,
-    };
+    // W przypadku błędu pokazujemy 0
+    const showLoading = isLoading && !isError;
 
     return (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
                 title="Wszystkie posty"
-                value={stats.total}
+                value={total}
                 subtitle="Łącznie w systemie"
                 icon={<FileText className="h-6 w-6" />}
                 gradient="from-blue-500 to-blue-600"
                 iconBg="bg-white/20"
                 delay={0}
-                isLoading={isLoading}
+                isLoading={showLoading}
             />
             <StatCard
                 title="Zaplanowane"
-                value={stats.scheduled}
+                value={scheduled}
                 subtitle="Oczekujące na publikację"
                 icon={<Calendar className="h-6 w-6" />}
                 gradient="from-violet-500 to-purple-600"
                 iconBg="bg-white/20"
                 delay={0.1}
-                isLoading={isLoading}
+                isLoading={showLoading}
             />
             <StatCard
                 title="Opublikowane"
-                value={stats.published}
+                value={published}
                 subtitle="Wysłane na platformy"
                 icon={<CheckCircle2 className="h-6 w-6" />}
                 gradient="from-emerald-500 to-green-600"
                 iconBg="bg-white/20"
                 delay={0.2}
-                isLoading={isLoading}
+                isLoading={showLoading}
             />
             <StatCard
                 title="Szkice"
-                value={stats.drafts}
+                value={drafts}
                 subtitle="Do dokończenia"
                 icon={<Edit3 className="h-6 w-6" />}
                 gradient="from-amber-500 to-orange-600"
                 iconBg="bg-white/20"
                 delay={0.3}
-                isLoading={isLoading}
+                isLoading={showLoading}
             />
         </div>
     );

@@ -3,6 +3,7 @@
  * Statystyki per platforma
  *
  * ✅ PRAWDZIWE DANE - obliczane z postów użytkownika
+ * ✅ NAPRAWIONE - limit 100 zamiast 1000
  */
 
 'use client';
@@ -57,8 +58,8 @@ const platformConfig: Record<Platform, {
 export function PlatformStats() {
     const router = useRouter();
 
-    // Pobierz wszystkie posty
-    const { data, isLoading } = usePosts({ limit: 1000 });
+    // ✅ NAPRAWIONE: limit 100 zamiast 1000
+    const { data, isLoading } = usePosts({ limit: 100 });
 
     // Oblicz statystyki per platforma
     const platformStats = useMemo(() => {
