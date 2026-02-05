@@ -7,10 +7,8 @@ from enum import Enum
 
 class ImageProvider(str, Enum):
     """Available image generation providers."""
-    POLLINATIONS = "pollinations"
-    GEMINI = "gemini"  # NOWY - Gemini Nano Banana
-    HUGGINGFACE = "huggingface"
-    CLIPDROP = "clipdrop"  # Płatny
+    POLLINATIONS = "pollinations"  # Flux, Nanobanana
+    HUGGINGFACE = "huggingface"    # Stable Diffusion XL
 
 
 class ImageStyle(str, Enum):
@@ -28,7 +26,7 @@ class BaseImageProvider(ABC):
 
     name: str
     models: List[str] = []
-    is_free: bool = True  # Domyślnie darmowy
+    is_free: bool = True
 
     @property
     @abstractmethod

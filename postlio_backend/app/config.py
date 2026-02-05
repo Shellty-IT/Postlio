@@ -1,5 +1,4 @@
-﻿# postlio_backend/app/config.py
-"""
+﻿"""
 Konfiguracja aplikacji.
 """
 from pydantic_settings import BaseSettings
@@ -20,17 +19,21 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
 
     # Token Encryption (dla social media tokenów)
-    # Generuj: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     TOKEN_ENCRYPTION_KEY: Optional[str] = None
 
     # Database - PostgreSQL (Neon)
     DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost/postlio"
 
-    # AI Providers
+    # AI Providers - Text
     GOOGLE_API_KEY: Optional[str] = None
     GROQ_API_KEY: Optional[str] = None
-    CLIPDROP_API_KEY: Optional[str] = None
+
+    # AI Providers - Image
     HUGGINGFACE_API_KEY: Optional[str] = None
+    POLLINATIONS_API_KEY: Optional[str] = None  # Nowe API gen.pollinations.ai
+
+    # Legacy (nieużywane)
+    CLIPDROP_API_KEY: Optional[str] = None
 
     # AI Defaults
     DEFAULT_TEXT_PROVIDER: str = "gemini"
@@ -42,17 +45,15 @@ class Settings(BaseSettings):
     # ==================== SOCIAL MEDIA APIs ====================
 
     # Facebook / Instagram (Meta for Developers)
-    # https://developers.facebook.com/apps/
     FACEBOOK_APP_ID: Optional[str] = None
     FACEBOOK_APP_SECRET: Optional[str] = None
     FACEBOOK_API_VERSION: str = "v18.0"
 
     # LinkedIn (LinkedIn Developers)
-    # https://www.linkedin.com/developers/apps/
     LINKEDIN_CLIENT_ID: Optional[str] = None
     LINKEDIN_CLIENT_SECRET: Optional[str] = None
 
-    # OAuth Callback URLs (będą używane w OAuth flow)
+    # OAuth Callback URLs
     @property
     def facebook_redirect_uri(self) -> str:
         return f"{self.FRONTEND_URL}/api/auth/callback/facebook"
