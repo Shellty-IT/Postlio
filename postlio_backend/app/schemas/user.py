@@ -1,4 +1,5 @@
-﻿"""
+﻿# app/schemas/user.py
+"""
 Schematy Pydantic dla użytkownika.
 """
 from pydantic import BaseModel, EmailStr, Field
@@ -30,9 +31,14 @@ class UserResponse(BaseModel):
     id: int
     email: str
     full_name: Optional[str]
+    avatar_url: Optional[str] = None
     is_active: bool
     is_verified: bool
     created_at: datetime
+
+    # OAuth
+    oauth_provider: Optional[str] = None
+    is_oauth_user: bool = False
 
     # Trial & Onboarding
     trial_ends_at: Optional[datetime] = None
@@ -51,6 +57,7 @@ class UserBasicResponse(BaseModel):
     id: int
     email: str
     full_name: Optional[str]
+    avatar_url: Optional[str] = None
     is_active: bool
     is_verified: bool
     created_at: datetime

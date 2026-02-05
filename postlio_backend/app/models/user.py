@@ -1,7 +1,9 @@
-﻿"""
+﻿# app/models/user.py
+"""
 Model użytkownika.
 """
 from datetime import datetime, timedelta
+from typing import Optional
 from sqlalchemy import String, Boolean, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
@@ -13,18 +15,25 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255))
-    full_name: Mapped[str] = mapped_column(String(255), nullable=True)
+    full_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    # Avatar
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+
+    # OAuth login
+    oauth_provider: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # "facebook", "google"
+    oauth_provider_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Trial & Onboarding
-    trial_ends_at: Mapped[datetime] = mapped_column(
+    trial_ends_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime,
         nullable=True,
         default=lambda: datetime.utcnow() + timedelta(days=14)
     )
-    onboarding_completed_at: Mapped[datetime] = mapped_column(
+    onboarding_completed_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime,
         nullable=True,
         default=None
@@ -61,6 +70,16 @@ class User(Base):
     def needs_onboarding(self) -> bool:
         """Sprawdza czy użytkownik musi przejść onboarding."""
         return self.onboarding_completed_at is None and not self.onboarding_skipped
+
+    @property
+    def has_password(self) -> bool:
+        """Sprawdza czy użytkownik ma ustawione hasło (nie jest OAuth-only)."""
+        return bool(self.hashed_password)
+
+    @property
+    def is_oauth_user(self) -> bool:
+        """Sprawdza czy użytkownik zalogował się przez OAuth."""
+        return bool(self.oauth_provider)
 
     def complete_onboarding(self) -> None:
         """Oznacza onboarding jako ukończony."""

@@ -1,11 +1,10 @@
-﻿# postlio_backend/app/services/social/manager.py
+﻿# app/services/social/manager.py
 """
 Manager do zarządzania serwisami social media.
-Wzorzec podobny do AI manager.
 """
 
 from typing import Dict, Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 from .base import (
@@ -18,6 +17,7 @@ from .base import (
 from .facebook import FacebookService, facebook_service
 from .instagram import InstagramService, instagram_service
 from .linkedin import LinkedInService, linkedin_service
+from .google import GoogleService, google_service
 from .encryption import token_encryption
 
 logger = logging.getLogger(__name__)
@@ -26,12 +26,6 @@ logger = logging.getLogger(__name__)
 class SocialManager:
     """
     Centralny manager do obsługi wszystkich platform social media.
-
-    Zapewnia:
-    - Jednolity interfejs dla wszystkich platform
-    - Wybór platformy na podstawie enum
-    - Szyfrowanie/deszyfrowanie tokenów
-    - Walidację i odświeżanie tokenów
     """
 
     def __init__(self):
@@ -39,6 +33,7 @@ class SocialManager:
             SocialPlatform.FACEBOOK: facebook_service,
             SocialPlatform.INSTAGRAM: instagram_service,
             SocialPlatform.LINKEDIN: linkedin_service,
+            SocialPlatform.GOOGLE: google_service,
         }
         self.logger = logging.getLogger(f"{__name__}.SocialManager")
 
@@ -62,11 +57,15 @@ class SocialManager:
                 is_configured = bool(service.app_id and service.app_secret)
             elif platform == SocialPlatform.LINKEDIN:
                 is_configured = bool(service.client_id and service.client_secret)
+            elif platform == SocialPlatform.GOOGLE:
+                is_configured = bool(service.client_id and service.client_secret)
 
             platforms.append({
                 "platform": platform.value,
                 "name": platform.value.title(),
-                "is_configured": is_configured
+                "is_configured": is_configured,
+                "supports_login": platform in [SocialPlatform.FACEBOOK, SocialPlatform.GOOGLE],
+                "supports_publish": platform in [SocialPlatform.FACEBOOK, SocialPlatform.INSTAGRAM, SocialPlatform.LINKEDIN],
             })
 
         return platforms
@@ -141,20 +140,7 @@ class SocialManager:
             link_url: Optional[str] = None,
             **kwargs
     ) -> PublishResult:
-        """
-        Publikuje post na platformie.
-
-        Args:
-            platform: Platforma docelowa
-            access_token: Zaszyfrowany access token
-            content: Treść posta
-            image_url: URL do obrazka
-            link_url: URL linku
-            **kwargs: Dodatkowe parametry per platforma
-                - page_id: dla Facebook
-                - instagram_account_id: dla Instagram
-                - author_urn: dla LinkedIn
-        """
+        """Publikuje post na platformie."""
         service = self.get_service(platform)
         decrypted_token = self.decrypt_token(access_token)
 
@@ -185,7 +171,6 @@ class SocialManager:
             return token_encryption.encrypt(token)
         except Exception as e:
             self.logger.error(f"Failed to encrypt token: {e}")
-            # W dev mode zwróć niezaszyfrowany (NIGDY w produkcji!)
             return token
 
     def decrypt_token(self, encrypted_token: str) -> str:
@@ -195,7 +180,6 @@ class SocialManager:
         try:
             return token_encryption.decrypt(encrypted_token)
         except ValueError:
-            # Token może być niezaszyfrowany (stare dane lub dev mode)
             self.logger.warning("Token appears to be unencrypted")
             return encrypted_token
         except Exception as e:
@@ -225,9 +209,6 @@ class SocialManager:
         else:
             return "valid"
 
-
-# Potrzebny import dla get_token_status
-from datetime import timedelta
 
 # Globalna instancja
 social_manager = SocialManager()

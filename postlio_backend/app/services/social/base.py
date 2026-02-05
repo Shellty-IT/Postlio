@@ -1,4 +1,5 @@
-﻿"""
+﻿# app/services/social/base.py
+"""
 Bazowa klasa dla serwisów social media.
 """
 
@@ -17,6 +18,7 @@ class SocialPlatform(str, Enum):
     FACEBOOK = "facebook"
     INSTAGRAM = "instagram"
     LINKEDIN = "linkedin"
+    GOOGLE = "google"  # Tylko do logowania, nie do publikacji
 
 
 @dataclass
@@ -34,7 +36,7 @@ class OAuthResult:
     error_description: Optional[str] = None
 
     # === NOWE POLA - Typ konta ===
-    account_type: Optional[str] = None  # np. "facebook_page", "instagram_personal"
+    account_type: Optional[str] = None
     is_business_account: bool = False
     supports_auto_publish: bool = False
     supports_autopilot: bool = False
@@ -46,14 +48,18 @@ class OAuthResult:
 
     # Dla Instagram
     instagram_account_id: Optional[str] = None
-    instagram_account_type: Optional[str] = None  # BUSINESS lub CREATOR
+    instagram_account_type: Optional[str] = None
 
     # Dla LinkedIn Company
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
 
-    # Komunikat dla UI (np. jeśli konto osobiste)
+    # Komunikat dla UI
     upgrade_message: Optional[str] = None
+
+    # Dla OAuth Login (Google/Facebook)
+    email: Optional[str] = None
+    email_verified: bool = False
 
 
 @dataclass
@@ -93,9 +99,10 @@ class AccountInfo:
     avatar_url: Optional[str] = None
     followers_count: Optional[int] = None
     permissions: List[str] = field(default_factory=list)
+    email: Optional[str] = None
 
     # === NOWE POLA - Typ konta ===
-    account_type: Optional[str] = None  # np. "facebook_page", "linkedin_personal"
+    account_type: Optional[str] = None
     is_business: bool = False
     supports_auto_publish: bool = False
     supports_autopilot: bool = False
@@ -106,14 +113,14 @@ class AccountInfo:
 
     # Dla Instagram
     instagram_account_id: Optional[str] = None
-    instagram_account_type: Optional[str] = None  # BUSINESS, CREATOR
+    instagram_account_type: Optional[str] = None
     connected_fb_page_id: Optional[str] = None
 
     # Dla LinkedIn Company
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
 
-    # Lista dostępnych stron/organizacji (dla wyboru)
+    # Lista dostępnych stron/organizacji
     available_pages: List[Dict[str, Any]] = field(default_factory=list)
     available_organizations: List[Dict[str, Any]] = field(default_factory=list)
 
@@ -121,9 +128,6 @@ class AccountInfo:
 class BaseSocialService(ABC):
     """
     Bazowa klasa abstrakcyjna dla serwisów social media.
-
-    Każda platforma (Facebook, Instagram, LinkedIn) dziedziczy z tej klasy
-    i implementuje specyficzne metody.
     """
 
     platform: SocialPlatform
@@ -135,72 +139,29 @@ class BaseSocialService(ABC):
 
     @abstractmethod
     def get_authorization_url(self, state: str) -> str:
-        """
-        Generuje URL do autoryzacji OAuth.
-
-        Args:
-            state: Unikalny state token (CSRF protection)
-
-        Returns:
-            URL do przekierowania użytkownika
-        """
+        """Generuje URL do autoryzacji OAuth."""
         pass
 
     @abstractmethod
     async def exchange_code_for_token(self, code: str) -> OAuthResult:
-        """
-        Wymienia authorization code na access token.
-
-        WAŻNE: Ta metoda automatycznie wykrywa typ konta
-        (firmowe vs osobiste) i ustawia odpowiednie flagi.
-
-        Args:
-            code: Authorization code z callback URL
-
-        Returns:
-            OAuthResult z tokenami, typem konta lub błędem
-        """
+        """Wymienia authorization code na access token."""
         pass
 
     @abstractmethod
     async def refresh_access_token(self, refresh_token: str) -> OAuthResult:
-        """
-        Odświeża access token używając refresh token.
-
-        Args:
-            refresh_token: Refresh token
-
-        Returns:
-            OAuthResult z nowym access token
-        """
+        """Odświeża access token."""
         pass
 
     @abstractmethod
     async def validate_token(self, access_token: str) -> bool:
-        """
-        Sprawdza czy token jest wciąż ważny.
-
-        Args:
-            access_token: Token do sprawdzenia
-
-        Returns:
-            True jeśli token jest ważny
-        """
+        """Sprawdza czy token jest ważny."""
         pass
 
     # ==================== Account Info ====================
 
     @abstractmethod
     async def get_account_info(self, access_token: str) -> Optional[AccountInfo]:
-        """
-        Pobiera informacje o koncie wraz z wykryciem typu.
-
-        Args:
-            access_token: Access token użytkownika
-
-        Returns:
-            AccountInfo z typem konta lub None jeśli błąd
-        """
+        """Pobiera informacje o koncie."""
         pass
 
     # ==================== Publishing ====================
@@ -214,19 +175,7 @@ class BaseSocialService(ABC):
             link_url: Optional[str] = None,
             **kwargs
     ) -> PublishResult:
-        """
-        Publikuje post na platformie.
-
-        Args:
-            access_token: Access token
-            content: Treść posta
-            image_url: URL do obrazka (opcjonalnie)
-            link_url: URL linku (opcjonalnie)
-            **kwargs: Dodatkowe parametry per platforma
-
-        Returns:
-            PublishResult z ID posta lub błędem
-        """
+        """Publikuje post na platformie."""
         pass
 
     # ==================== Helpers ====================

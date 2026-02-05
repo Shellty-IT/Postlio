@@ -1,4 +1,5 @@
-﻿"""
+﻿# app/config.py
+"""
 Konfiguracja aplikacji.
 """
 from pydantic_settings import BaseSettings
@@ -30,7 +31,7 @@ class Settings(BaseSettings):
 
     # AI Providers - Image
     HUGGINGFACE_API_KEY: Optional[str] = None
-    POLLINATIONS_API_KEY: Optional[str] = None  # Nowe API gen.pollinations.ai
+    POLLINATIONS_API_KEY: Optional[str] = None
 
     # Legacy (nieużywane)
     CLIPDROP_API_KEY: Optional[str] = None
@@ -53,6 +54,10 @@ class Settings(BaseSettings):
     LINKEDIN_CLIENT_ID: Optional[str] = None
     LINKEDIN_CLIENT_SECRET: Optional[str] = None
 
+    # Google OAuth (Google Cloud Console)
+    GOOGLE_CLIENT_ID: Optional[str] = None
+    GOOGLE_CLIENT_SECRET: Optional[str] = None
+
     # OAuth Callback URLs
     @property
     def facebook_redirect_uri(self) -> str:
@@ -65,6 +70,10 @@ class Settings(BaseSettings):
     @property
     def linkedin_redirect_uri(self) -> str:
         return f"{self.FRONTEND_URL}/api/auth/callback/linkedin"
+
+    @property
+    def google_redirect_uri(self) -> str:
+        return f"{self.FRONTEND_URL}/api/auth/callback/google"
 
     class Config:
         env_file = ".env"
