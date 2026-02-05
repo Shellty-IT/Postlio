@@ -34,7 +34,7 @@ const defaultProfile: UserProfile = {
 
 const defaultAIPreferences: AIPreferences = {
     defaultTextProvider: 'gemini',
-    defaultImageProvider: 'pollinations',
+    defaultImageProvider: 'flux',  // ✅ POPRAWKA: było 'pollinations', teraz 'flux'
     defaultCreativityLevel: 60,
     defaultPostLength: 'medium',
     autoGenerateImages: true,

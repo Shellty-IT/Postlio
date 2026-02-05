@@ -89,29 +89,29 @@ const TEXT_PROVIDERS: ProviderOption[] = [
 
 const IMAGE_PROVIDERS: ProviderOption[] = [
     {
-        id: 'flux',  // ID dla UI
+        id: 'flux',
         name: 'Flux',
-        description: 'Wysoka jakość, szczegółowe obrazy. Obsługuje polski!',
+        description: 'Wysoka jakość i szczegółowe obrazy.',
         icon: Star,
         color: 'from-violet-500 to-purple-500',
-        features: ['Wysoka jakość', 'Polski język', '~15s'],
+        features: ['Wysoka jakość', 'Fotorealizm', '~15s'],
         backendProvider: 'pollinations',
         backendModel: 'flux',
     },
     {
         id: 'nanobanana',  // ID dla UI
         name: 'Nanobanana',
-        description: 'Szybki i lekki model. Obsługuje polski!',
+        description: 'Szybki i lekki model.',
         icon: Zap,
         color: 'from-amber-500 to-orange-500',
-        features: ['Szybki', 'Polski język', '~5s'],
+        features: ['Szybki', 'Kreatywny styl', '~10s'],
         backendProvider: 'pollinations',
         backendModel: 'nanobanana',
     },
     {
         id: 'huggingface',
         name: 'Stable Diffusion XL',
-        description: 'Wysoka jakość, realistyczne obrazy',
+        description: 'Średnia jakość i realistyczne obrazy.',
         icon: Brain,
         color: 'from-green-500 to-emerald-500',
         features: ['Wysoka jakość', 'Realistyczny', '~30s'],
@@ -376,7 +376,7 @@ export function AIProviderSelector({
                             <p>
                                 {type === 'text'
                                     ? 'Wybierz model AI do generowania tekstu.'
-                                    : 'Flux i Nanobanana obsługują polskie prompty. Stable Diffusion wymaga angielskiego.'}
+                                    : 'Prompty są automatycznie tłumaczone na język angielski, aby zapewnić wyższą jakość generowanych obrazów.'}
                             </p>
                         </TooltipContent>
                     </Tooltip>

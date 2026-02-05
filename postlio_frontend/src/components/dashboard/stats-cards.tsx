@@ -1,4 +1,10 @@
 // src/components/dashboard/stats-cards.tsx
+/**
+ * Karty ze statystykami na dashboardzie
+ *
+ * ✅ PRAWDZIWE DANE z API
+ */
+
 'use client';
 
 import { motion } from 'framer-motion';
@@ -7,97 +13,76 @@ import {
     FileText,
     Calendar,
     CheckCircle2,
-    TrendingUp,
-    ArrowUpRight,
-    ArrowDownRight,
+    Edit3,
+    Loader2,
 } from 'lucide-react';
+import { usePosts } from '@/hooks/usePosts';
+
+// ============================================================
+// TYPY
+// ============================================================
 
 interface StatCardProps {
     title: string;
     value: string | number;
-    change?: number;
-    changeLabel?: string;
+    subtitle?: string;
     icon: React.ReactNode;
-    color: 'blue' | 'violet' | 'green' | 'orange';
+    gradient: string;
+    iconBg: string;
     delay?: number;
+    isLoading?: boolean;
 }
 
-const colorVariants = {
-    blue: {
-        bg: 'bg-primary/10',
-        icon: 'text-primary',
-        border: 'border-primary/20',
-    },
-    violet: {
-        bg: 'bg-accent/10',
-        icon: 'text-accent',
-        border: 'border-accent/20',
-    },
-    green: {
-        bg: 'bg-success/10',
-        icon: 'text-success',
-        border: 'border-success/20',
-    },
-    orange: {
-        bg: 'bg-warning/10',
-        icon: 'text-warning',
-        border: 'border-warning/20',
-    },
-};
+// ============================================================
+// KOMPONENT KARTY
+// ============================================================
 
-function StatCard({ title, value, change, changeLabel, icon, color, delay = 0 }: StatCardProps) {
-    const colors = colorVariants[color];
-    const isPositive = change && change > 0;
-    const isNegative = change && change < 0;
-
+function StatCard({
+                      title,
+                      value,
+                      subtitle,
+                      icon,
+                      gradient,
+                      iconBg,
+                      delay = 0,
+                      isLoading
+                  }: StatCardProps) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay }}
             className={cn(
-                'relative overflow-hidden rounded-2xl border bg-card p-6',
-                'transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5',
-                colors.border
+                'relative overflow-hidden rounded-2xl p-6',
+                'bg-gradient-to-br',
+                gradient,
+                'text-white',
+                'transition-all duration-300 hover:shadow-xl hover:-translate-y-1'
             )}
         >
-            {/* Background Gradient */}
-            <div
-                className={cn(
-                    'absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2',
-                    colors.bg
-                )}
-            />
+            {/* Background Pattern */}
+            <div className="absolute inset-0 opacity-10">
+                <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white blur-3xl translate-x-1/2 -translate-y-1/2" />
+            </div>
 
             <div className="relative">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-4">
-                    <div className={cn('p-2.5 rounded-xl', colors.bg)}>
-                        <div className={colors.icon}>{icon}</div>
-                    </div>
-
-                    {change !== undefined && (
-                        <div
-                            className={cn(
-                                'flex items-center gap-1 text-sm font-medium px-2 py-1 rounded-full',
-                                isPositive && 'text-success bg-success/10',
-                                isNegative && 'text-destructive bg-destructive/10',
-                                !isPositive && !isNegative && 'text-muted-foreground bg-muted'
-                            )}
-                        >
-                            {isPositive && <ArrowUpRight className="h-3.5 w-3.5" />}
-                            {isNegative && <ArrowDownRight className="h-3.5 w-3.5" />}
-                            {Math.abs(change)}%
-                        </div>
-                    )}
+                {/* Icon */}
+                <div className={cn('inline-flex p-3 rounded-xl mb-4', iconBg)}>
+                    {icon}
                 </div>
 
                 {/* Value */}
                 <div className="space-y-1">
-                    <h3 className="text-3xl font-bold">{value}</h3>
-                    <p className="text-sm text-muted-foreground">{title}</p>
-                    {changeLabel && (
-                        <p className="text-xs text-muted-foreground">{changeLabel}</p>
+                    {isLoading ? (
+                        <div className="flex items-center gap-2">
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                        </div>
+                    ) : (
+                        <h3 className="text-4xl font-bold">{value}</h3>
+                    )}
+                    <p className="text-white/90 font-medium">{title}</p>
+                    {subtitle && (
+                        <p className="text-sm text-white/70">{subtitle}</p>
                     )}
                 </div>
             </div>
@@ -105,69 +90,68 @@ function StatCard({ title, value, change, changeLabel, icon, color, delay = 0 }:
     );
 }
 
-interface StatsCardsProps {
-    stats?: {
-        totalPosts: number;
-        scheduledPosts: number;
-        publishedPosts: number;
-        engagementRate: number;
-        totalPostsChange?: number;
-        scheduledPostsChange?: number;
-        publishedPostsChange?: number;
-        engagementChange?: number;
-    };
-}
+// ============================================================
+// KOMPONENT GŁÓWNY
+// ============================================================
 
-export function StatsCards({ stats }: StatsCardsProps) {
-    // Mock data jeśli brak prawdziwych danych
-    const data = stats || {
-        totalPosts: 47,
-        scheduledPosts: 12,
-        publishedPosts: 35,
-        engagementRate: 4.8,
-        totalPostsChange: 12,
-        scheduledPostsChange: 8,
-        publishedPostsChange: 15,
-        engagementChange: -2,
+export function StatsCards() {
+    // Pobierz prawdziwe dane
+    const { data: allPostsData, isLoading: loadingAll } = usePosts({ limit: 1000 });
+    const { data: scheduledData, isLoading: loadingScheduled } = usePosts({ status: 'scheduled', limit: 1000 });
+    const { data: publishedData, isLoading: loadingPublished } = usePosts({ status: 'published', limit: 1000 });
+    const { data: draftData, isLoading: loadingDraft } = usePosts({ status: 'draft', limit: 1000 });
+
+    const isLoading = loadingAll || loadingScheduled || loadingPublished || loadingDraft;
+
+    // Oblicz statystyki
+    const stats = {
+        total: allPostsData?.count ?? 0,
+        scheduled: scheduledData?.count ?? 0,
+        published: publishedData?.count ?? 0,
+        drafts: draftData?.count ?? 0,
     };
 
     return (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
                 title="Wszystkie posty"
-                value={data.totalPosts}
-                change={data.totalPostsChange}
-                changeLabel="vs poprzedni miesiąc"
-                icon={<FileText className="h-5 w-5" />}
-                color="blue"
+                value={stats.total}
+                subtitle="Łącznie w systemie"
+                icon={<FileText className="h-6 w-6" />}
+                gradient="from-blue-500 to-blue-600"
+                iconBg="bg-white/20"
                 delay={0}
+                isLoading={isLoading}
             />
             <StatCard
                 title="Zaplanowane"
-                value={data.scheduledPosts}
-                change={data.scheduledPostsChange}
-                changeLabel="do publikacji"
-                icon={<Calendar className="h-5 w-5" />}
-                color="violet"
+                value={stats.scheduled}
+                subtitle="Oczekujące na publikację"
+                icon={<Calendar className="h-6 w-6" />}
+                gradient="from-violet-500 to-purple-600"
+                iconBg="bg-white/20"
                 delay={0.1}
+                isLoading={isLoading}
             />
             <StatCard
                 title="Opublikowane"
-                value={data.publishedPosts}
-                change={data.publishedPostsChange}
-                changeLabel="w tym miesiącu"
-                icon={<CheckCircle2 className="h-5 w-5" />}
-                color="green"
+                value={stats.published}
+                subtitle="Wysłane na platformy"
+                icon={<CheckCircle2 className="h-6 w-6" />}
+                gradient="from-emerald-500 to-green-600"
+                iconBg="bg-white/20"
                 delay={0.2}
+                isLoading={isLoading}
             />
             <StatCard
-                title="Engagement"
-                value={`${data.engagementRate}%`}
-                change={data.engagementChange}
-                changeLabel="średni współczynnik"
-                icon={<TrendingUp className="h-5 w-5" />}
-                color="orange"
+                title="Szkice"
+                value={stats.drafts}
+                subtitle="Do dokończenia"
+                icon={<Edit3 className="h-6 w-6" />}
+                gradient="from-amber-500 to-orange-600"
+                iconBg="bg-white/20"
                 delay={0.3}
+                isLoading={isLoading}
             />
         </div>
     );

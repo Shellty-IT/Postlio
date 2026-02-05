@@ -5,11 +5,12 @@
  * Wyświetla podgląd posta z akcjami: edycja, zaplanuj, publikuj, usuń
  *
  * ✅ NAPRAWIONE: Obsługa platforms[] + usunięty 'archived' status
+ * ✅ NAPRAWIONE: forwardRef dla AnimatePresence
  */
 
 'use client';
 
-import { useState } from 'react';
+import { useState, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
@@ -133,281 +134,287 @@ const STATUS_CONFIG: Record<PostStatus, {
 // KOMPONENT
 // ============================================================
 
-export function SavedPostCard({
-                                  post,
-                                  isSelected = false,
-                                  onSelect,
-                                  onEdit,
-                                  onSchedule,
-                                  onPublish,
-                                  onDelete,
-                                  onDuplicate,
-                              }: SavedPostCardProps) {
-    const [isHovered, setIsHovered] = useState(false);
+export const SavedPostCard = forwardRef<HTMLDivElement, SavedPostCardProps>(
+    function SavedPostCard(
+        {
+            post,
+            isSelected = false,
+            onSelect,
+            onEdit,
+            onSchedule,
+            onPublish,
+            onDelete,
+            onDuplicate,
+        },
+        ref
+    ) {
+        const [isHovered, setIsHovered] = useState(false);
 
-    // Wszystkie platformy do wyświetlenia
-    const allPlatforms = post.platforms && post.platforms.length > 0
-        ? post.platforms
-        : (post.platform ? [post.platform] : ['facebook']);
+        // Wszystkie platformy do wyświetlenia
+        const allPlatforms = post.platforms && post.platforms.length > 0
+            ? post.platforms
+            : (post.platform ? [post.platform] : ['facebook']);
 
-    // Bezpieczne pobranie statusu z fallbackiem
-    const postStatus = (post.status in STATUS_CONFIG ? post.status : 'draft') as PostStatus;
-    const statusConfig = STATUS_CONFIG[postStatus];
-    const StatusIcon = statusConfig.icon;
+        // Bezpieczne pobranie statusu z fallbackiem
+        const postStatus = (post.status in STATUS_CONFIG ? post.status : 'draft') as PostStatus;
+        const statusConfig = STATUS_CONFIG[postStatus];
+        const StatusIcon = statusConfig.icon;
 
-    // Skrócona treść do podglądu (max 150 znaków)
-    const truncatedContent = post.content && post.content.length > 150
-        ? `${post.content.slice(0, 150)}...`
-        : (post.content || '');
+        // Skrócona treść do podglądu (max 150 znaków)
+        const truncatedContent = post.content && post.content.length > 150
+            ? `${post.content.slice(0, 150)}...`
+            : (post.content || '');
 
-    // Formatowanie daty
-    const formattedDate = format(new Date(post.created_at), 'd MMM yyyy, HH:mm', { locale: pl });
-    const scheduledDate = post.scheduled_at
-        ? format(new Date(post.scheduled_at), 'd MMM yyyy, HH:mm', { locale: pl })
-        : null;
+        // Formatowanie daty
+        const formattedDate = format(new Date(post.created_at), 'd MMM yyyy, HH:mm', { locale: pl });
+        const scheduledDate = post.scheduled_at
+            ? format(new Date(post.scheduled_at), 'd MMM yyyy, HH:mm', { locale: pl })
+            : null;
 
-    // Handler dla checkbox - z prawidłowym typem
-    const handleCheckedChange = (checked: boolean | 'indeterminate') => {
-        if (typeof checked === 'boolean') {
-            onSelect?.(post.id, checked);
-        }
-    };
+        // Handler dla checkbox - z prawidłowym typem
+        const handleCheckedChange = (checked: boolean | 'indeterminate') => {
+            if (typeof checked === 'boolean') {
+                onSelect?.(post.id, checked);
+            }
+        };
 
-    return (
-        <motion.div
-            layout
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            whileHover={{ y: -2 }}
-            onHoverStart={() => setIsHovered(true)}
-            onHoverEnd={() => setIsHovered(false)}
-            className={cn(
-                'group relative rounded-xl border bg-card transition-all duration-200',
-                'hover:shadow-lg hover:border-primary/20',
-                isSelected && 'ring-2 ring-primary border-primary'
-            )}
-        >
-            {/* Checkbox selection */}
-            {onSelect && (
-                <div className={cn(
-                    'absolute top-3 left-3 z-10 transition-opacity duration-200',
-                    isHovered || isSelected ? 'opacity-100' : 'opacity-0'
-                )}>
-                    <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={handleCheckedChange}
-                        className="bg-background"
-                    />
-                </div>
-            )}
-
-            {/* Image thumbnail */}
-            {post.image_url ? (
-                <div className="relative aspect-video w-full overflow-hidden rounded-t-xl">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                        src={post.image_url}
-                        alt="Post thumbnail"
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                    {/* Gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-
-                    {/* Platform badges on image */}
-                    <div className="absolute bottom-2 left-2 flex gap-1">
-                        {allPlatforms.map((platform) => {
-                            const config = PLATFORM_CONFIG[platform as Platform];
-                            if (!config) return null;
-                            const Icon = config.icon;
-                            return (
-                                <div
-                                    key={platform}
-                                    className="flex items-center gap-1 rounded-full px-2 py-1 text-white text-xs font-medium backdrop-blur-sm"
-                                    style={{ backgroundColor: `${config.color}CC` }}
-                                >
-                                    <Icon className="h-3 w-3" />
-                                    {allPlatforms.length === 1 && config.label}
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* AI badge */}
-                    {post.ai_generated && (
-                        <div className="absolute bottom-2 right-2">
-                            <div className="flex items-center gap-1 rounded-full bg-violet-500/90 px-2 py-1 text-white text-xs font-medium backdrop-blur-sm">
-                                <Sparkles className="h-3 w-3" />
-                                AI
-                            </div>
-                        </div>
-                    )}
-                </div>
-            ) : (
-                // Placeholder when no image
-                <div className="relative aspect-video w-full overflow-hidden rounded-t-xl bg-muted/50">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <ImageIcon className="h-12 w-12 text-muted-foreground/30" />
-                    </div>
-
-                    {/* Platform badges */}
-                    <div className="absolute bottom-2 left-2 flex gap-1">
-                        {allPlatforms.map((platform) => {
-                            const config = PLATFORM_CONFIG[platform as Platform];
-                            if (!config) return null;
-                            const Icon = config.icon;
-                            return (
-                                <div
-                                    key={platform}
-                                    className={cn('flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium', config.bgColor)}
-                                    style={{ color: config.color }}
-                                >
-                                    <Icon className="h-3 w-3" />
-                                    {allPlatforms.length === 1 && config.label}
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {post.ai_generated && (
-                        <div className="absolute bottom-2 right-2">
-                            <Badge variant="secondary" className="bg-violet-500/10 text-violet-600 dark:text-violet-400">
-                                <Sparkles className="h-3 w-3 mr-1" />
-                                AI
-                            </Badge>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Content */}
-            <div className="p-4 space-y-3">
-                {/* Status & Date */}
-                <div className="flex items-center justify-between gap-2">
-                    <Badge variant="secondary" className={cn('text-xs', statusConfig.className)}>
-                        <StatusIcon className="h-3 w-3 mr-1" />
-                        {statusConfig.label}
-                    </Badge>
-
-                    <span className="text-xs text-muted-foreground">
-                        {formattedDate}
-                    </span>
-                </div>
-
-                {/* Post content preview */}
-                <p className="text-sm text-foreground/80 line-clamp-3 min-h-[3.75rem]">
-                    {truncatedContent}
-                </p>
-
-                {/* Scheduled date if exists */}
-                {scheduledDate && post.status === 'scheduled' && (
-                    <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400">
-                        <Clock className="h-3.5 w-3.5" />
-                        <span>Zaplanowano: {scheduledDate}</span>
+        return (
+            <motion.div
+                ref={ref}
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                whileHover={{ y: -2 }}
+                onHoverStart={() => setIsHovered(true)}
+                onHoverEnd={() => setIsHovered(false)}
+                className={cn(
+                    'group relative rounded-xl border bg-card transition-all duration-200',
+                    'hover:shadow-lg hover:border-primary/20',
+                    isSelected && 'ring-2 ring-primary border-primary'
+                )}
+            >
+                {/* Checkbox selection */}
+                {onSelect && (
+                    <div className={cn(
+                        'absolute top-3 left-3 z-10 transition-opacity duration-200',
+                        isHovered || isSelected ? 'opacity-100' : 'opacity-0'
+                    )}>
+                        <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={handleCheckedChange}
+                            className="bg-background"
+                        />
                     </div>
                 )}
 
-                {/* Hashtags preview */}
-                {post.hashtags && post.hashtags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                        {post.hashtags.slice(0, 3).map((tag) => (
-                            <span
-                                key={tag}
-                                className="text-xs text-primary/70 hover:text-primary cursor-default"
-                            >
-                                #{tag}
-                            </span>
-                        ))}
-                        {post.hashtags.length > 3 && (
-                            <span className="text-xs text-muted-foreground">
-                                +{post.hashtags.length - 3}
-                            </span>
+                {/* Image thumbnail */}
+                {post.image_url ? (
+                    <div className="relative aspect-video w-full overflow-hidden rounded-t-xl">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src={post.image_url}
+                            alt="Post thumbnail"
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                        {/* Gradient overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+                        {/* Platform badges on image */}
+                        <div className="absolute bottom-2 left-2 flex gap-1">
+                            {allPlatforms.map((platform) => {
+                                const config = PLATFORM_CONFIG[platform as Platform];
+                                if (!config) return null;
+                                const Icon = config.icon;
+                                return (
+                                    <div
+                                        key={platform}
+                                        className="flex items-center gap-1 rounded-full px-2 py-1 text-white text-xs font-medium backdrop-blur-sm"
+                                        style={{ backgroundColor: `${config.color}CC` }}
+                                    >
+                                        <Icon className="h-3 w-3" />
+                                        {allPlatforms.length === 1 && config.label}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* AI badge */}
+                        {post.ai_generated && (
+                            <div className="absolute bottom-2 right-2">
+                                <div className="flex items-center gap-1 rounded-full bg-violet-500/90 px-2 py-1 text-white text-xs font-medium backdrop-blur-sm">
+                                    <Sparkles className="h-3 w-3" />
+                                    AI
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    // Placeholder when no image
+                    <div className="relative aspect-video w-full overflow-hidden rounded-t-xl bg-muted/50">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <ImageIcon className="h-12 w-12 text-muted-foreground/30" />
+                        </div>
+
+                        {/* Platform badges */}
+                        <div className="absolute bottom-2 left-2 flex gap-1">
+                            {allPlatforms.map((platform) => {
+                                const config = PLATFORM_CONFIG[platform as Platform];
+                                if (!config) return null;
+                                const Icon = config.icon;
+                                return (
+                                    <div
+                                        key={platform}
+                                        className={cn('flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium', config.bgColor)}
+                                        style={{ color: config.color }}
+                                    >
+                                        <Icon className="h-3 w-3" />
+                                        {allPlatforms.length === 1 && config.label}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {post.ai_generated && (
+                            <div className="absolute bottom-2 right-2">
+                                <Badge variant="secondary" className="bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                                    <Sparkles className="h-3 w-3 mr-1" />
+                                    AI
+                                </Badge>
+                            </div>
                         )}
                     </div>
                 )}
 
-                {/* Actions */}
-                <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                    <div className="flex items-center gap-1">
-                        <TooltipProvider delayDuration={300}>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                        onClick={() => onEdit?.(post)}
-                                    >
-                                        <Edit3 className="h-4 w-4" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Edytuj</TooltipContent>
-                            </Tooltip>
+                {/* Content */}
+                <div className="p-4 space-y-3">
+                    {/* Status & Date */}
+                    <div className="flex items-center justify-between gap-2">
+                        <Badge variant="secondary" className={cn('text-xs', statusConfig.className)}>
+                            <StatusIcon className="h-3 w-3 mr-1" />
+                            {statusConfig.label}
+                        </Badge>
 
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                        onClick={() => onSchedule?.(post)}
-                                    >
-                                        <Calendar className="h-4 w-4" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Zaplanuj</TooltipContent>
-                            </Tooltip>
-
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-violet-600 hover:text-violet-700 hover:bg-violet-50 dark:hover:bg-violet-950"
-                                        onClick={() => onPublish?.(post)}
-                                    >
-                                        <Hand className="h-4 w-4" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Opublikuj ręcznie</TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
+                        <span className="text-xs text-muted-foreground">
+                            {formattedDate}
+                        </span>
                     </div>
 
-                    {/* More options dropdown */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => onEdit?.(post)}>
-                                <Edit3 className="h-4 w-4 mr-2" />
-                                Edytuj
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onDuplicate?.(post)}>
-                                <Copy className="h-4 w-4 mr-2" />
-                                Duplikuj
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onSchedule?.(post)}>
-                                <Calendar className="h-4 w-4 mr-2" />
-                                Zaplanuj
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                onClick={() => onDelete?.(post)}
-                                className="text-destructive focus:text-destructive"
-                            >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Usuń
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    {/* Post content preview */}
+                    <p className="text-sm text-foreground/80 line-clamp-3 min-h-[3.75rem]">
+                        {truncatedContent}
+                    </p>
+
+                    {/* Scheduled date if exists */}
+                    {scheduledDate && post.status === 'scheduled' && (
+                        <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400">
+                            <Clock className="h-3.5 w-3.5" />
+                            <span>Zaplanowano: {scheduledDate}</span>
+                        </div>
+                    )}
+
+                    {/* Hashtags preview */}
+                    {post.hashtags && post.hashtags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                            {post.hashtags.slice(0, 3).map((tag) => (
+                                <span
+                                    key={tag}
+                                    className="text-xs text-primary/70 hover:text-primary cursor-default"
+                                >
+                                    #{tag}
+                                </span>
+                            ))}
+                            {post.hashtags.length > 3 && (
+                                <span className="text-xs text-muted-foreground">
+                                    +{post.hashtags.length - 3}
+                                </span>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                        <div className="flex items-center gap-1">
+                            <TooltipProvider delayDuration={300}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            onClick={() => onEdit?.(post)}
+                                        >
+                                            <Edit3 className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Edytuj</TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            onClick={() => onSchedule?.(post)}
+                                        >
+                                            <Calendar className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Zaplanuj</TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-violet-600 hover:text-violet-700 hover:bg-violet-50 dark:hover:bg-violet-950"
+                                            onClick={() => onPublish?.(post)}
+                                        >
+                                            <Hand className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Opublikuj ręcznie</TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
+
+                        {/* More options dropdown */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem onClick={() => onEdit?.(post)}>
+                                    <Edit3 className="h-4 w-4 mr-2" />
+                                    Edytuj
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => onDuplicate?.(post)}>
+                                    <Copy className="h-4 w-4 mr-2" />
+                                    Duplikuj
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => onSchedule?.(post)}>
+                                    <Calendar className="h-4 w-4 mr-2" />
+                                    Zaplanuj
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    onClick={() => onDelete?.(post)}
+                                    className="text-destructive focus:text-destructive"
+                                >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Usuń
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                 </div>
-            </div>
-        </motion.div>
-    );
-}
+            </motion.div>
+        );
+    }
+);
 
 export default SavedPostCard;

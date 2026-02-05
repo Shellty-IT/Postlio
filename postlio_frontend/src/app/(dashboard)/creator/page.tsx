@@ -1,14 +1,4 @@
 // src/app/(dashboard)/creator/page.tsx
-/**
- * Kreator Postów z integracją AI i ręczną publikacją
- *
- * NAPRAWIONE:
- * - Wymiar height zmieniony z 630 na 624 (podzielne przez 8 dla HuggingFace FLUX)
- * - ✅ Obsługa trybu edycji z Materiałów (?mode=edit)
- * - ✅ NOWE: Obsługa wielu platform (platforms[])
- * - ✅ NOWE: Przekazywanie platforms[] i postId do modalu publikacji
- */
-
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
@@ -37,6 +27,54 @@ import type { Tone, Category, TextProvider, ImageProvider } from '@/lib/api/ai';
 import { toast } from 'sonner';
 
 // ============================================================
+// WALIDACJA PLATFORM
+// ============================================================
+
+interface PlatformValidation {
+    isValid: boolean;
+    errors: string[];
+}
+
+function validatePlatformRequirements(
+    platforms: Platform[],
+    content: string,
+    imageUrl: string | undefined
+): PlatformValidation {
+    const errors: string[] = [];
+    const hasContent = content.trim().length > 0;
+    const hasImage = !!imageUrl;
+
+    // Jeśli nie ma nic - błąd
+    if (!hasContent && !hasImage) {
+        errors.push('Dodaj treść lub zdjęcie');
+        return { isValid: false, errors };
+    }
+
+    for (const platform of platforms) {
+        switch (platform) {
+            case 'instagram':
+                // Instagram wymaga zdjęcia (tekst opcjonalny)
+                if (!hasImage) {
+                    errors.push('Instagram wymaga zdjęcia');
+                }
+                break;
+
+            case 'facebook':
+            case 'linkedin':
+                // Facebook i LinkedIn: tekst LUB zdjęcie (jedno wystarczy)
+                // Już sprawdziliśmy wyżej że coś jest
+                break;
+        }
+    }
+
+    // ✅ POPRAWKA: Array.from() zamiast spread na Set
+    return {
+        isValid: errors.length === 0,
+        errors: Array.from(new Set(errors)),
+    };
+}
+
+// ============================================================
 // KOMPONENT
 // ============================================================
 
@@ -60,7 +98,7 @@ export default function CreatorPage() {
     // Manual publish modal state
     const [isManualPublishOpen, setIsManualPublishOpen] = useState(false);
     const [manualPublishData, setManualPublishData] = useState<ManualPublishData | null>(null);
-    const [manualPublishPostId, setManualPublishPostId] = useState<string | null>(null); // ✅ NOWE
+    const [manualPublishPostId, setManualPublishPostId] = useState<string | null>(null);
 
     // AI Settings
     const [selectedTone] = useState<Tone>('professional');
@@ -107,7 +145,7 @@ export default function CreatorPage() {
             setContent(post.content || '');
             setImageUrl(post.image_url || undefined);
 
-            // ✅ NOWE: Ustaw platformy (nowe pole lub legacy)
+            // Ustaw platformy (nowe pole lub legacy)
             if (post.platforms && post.platforms.length > 0) {
                 setSelectedPlatforms(post.platforms);
             } else if (post.platform) {
@@ -201,13 +239,13 @@ export default function CreatorPage() {
         }
     }, [generateTextAsync, selectedPlatforms, selectedTone, selectedCategory, textProvider]);
 
-// ========================================
-// Generowanie obrazu z wybranym providerem i modelem
-// ========================================
+    // ========================================
+    // Generowanie obrazu z wybranym providerem i modelem
+    // ========================================
     const handleGenerateImage = useCallback(async (
         prompt: string,
         provider?: ImageProvider,
-        model?: string  // ✅ NOWE: model (flux/nanobanana)
+        model?: string
     ) => {
         try {
             const width = 1024;
@@ -219,11 +257,11 @@ export default function CreatorPage() {
                 height,
                 style: 'professional',
                 provider: provider || imageProvider,
-                model: model,  // ✅ NOWE: przekaż model
+                model: model || imageModel,
             });
 
             if (result.success && result.data) {
-                // ✅ POPRAWKA: Preferuj image_data (base64) nad image_url
+                // Preferuj image_data (base64) nad image_url
                 const generatedImageUrl = result.data.image_data || result.data.image_url;
 
                 if (generatedImageUrl) {
@@ -237,13 +275,21 @@ export default function CreatorPage() {
             console.error('Image generation error:', err);
             throw new Error('Nie udało się wygenerować obrazu');
         }
-    }, [generateImageAsync, imageProvider]);
+    }, [generateImageAsync, imageProvider, imageModel]);
 
     // ========================================
-    // ✅ NAPRAWIONE: Zapisz jako szkic LUB aktualizuj (z platforms[])
+    // Zapisz jako szkic LUB aktualizuj
     // ========================================
     const handleSaveDraft = useCallback(async () => {
-        if (!content.trim()) return;
+        // Walidacja platform
+        const validation = validatePlatformRequirements(selectedPlatforms, content, imageUrl);
+
+        if (!validation.isValid) {
+            validation.errors.forEach(error => {
+                toast.error(error);
+            });
+            return;
+        }
 
         const fullContent = getFullContent();
 
@@ -254,7 +300,7 @@ export default function CreatorPage() {
                 data: {
                     content: fullContent,
                     platforms: selectedPlatforms,
-                    image_url: imageUrl,
+                    image_url: imageUrl, // ✅ POPRAWKA: undefined jest OK
                 },
             });
 
@@ -272,7 +318,7 @@ export default function CreatorPage() {
             content: fullContent,
             platforms: selectedPlatforms,
             brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined,
-            image_url: imageUrl,
+            image_url: imageUrl, // ✅ POPRAWKA: undefined jest OK
             ai_generated: true,
             ai_model: textProvider,
         });
@@ -281,10 +327,18 @@ export default function CreatorPage() {
     }, [content, selectedPlatforms, imageUrl, selectedBrand, createPostMutation, updatePostMutation, textProvider, editingPostId, router, getFullContent, clearForm]);
 
     // ========================================
-    // ✅ NAPRAWIONE: Zaplanuj post (z platforms[])
+    // Zaplanuj post
     // ========================================
     const handleSchedule = useCallback(async (scheduledAt: string) => {
-        if (!content.trim()) return;
+        // Walidacja platform
+        const validation = validatePlatformRequirements(selectedPlatforms, content, imageUrl);
+
+        if (!validation.isValid) {
+            validation.errors.forEach(error => {
+                toast.error(error);
+            });
+            return;
+        }
 
         const fullContent = getFullContent();
 
@@ -295,7 +349,7 @@ export default function CreatorPage() {
                 data: {
                     content: fullContent,
                     platforms: selectedPlatforms,
-                    image_url: imageUrl,
+                    image_url: imageUrl, // ✅ POPRAWKA
                     scheduled_at: scheduledAt,
                     status: 'scheduled',
                 },
@@ -314,7 +368,7 @@ export default function CreatorPage() {
             content: fullContent,
             platforms: selectedPlatforms,
             brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined,
-            image_url: imageUrl,
+            image_url: imageUrl, // ✅ POPRAWKA
             scheduled_at: scheduledAt,
             ai_generated: true,
             ai_model: textProvider,
@@ -326,17 +380,15 @@ export default function CreatorPage() {
     }, [content, selectedPlatforms, imageUrl, selectedBrand, createPostMutation, updatePostMutation, textProvider, editingPostId, router, getFullContent, clearForm]);
 
     // ========================================
-    // ✅ NOWE: Otwórz modal ręcznej publikacji
+    // Otwórz modal ręcznej publikacji
     // ========================================
     const handlePublishManually = useCallback(async () => {
-        if (!content.trim()) {
-            toast.error('Dodaj treść posta');
-            return;
-        }
+        // Walidacja platform
+        const validation = validatePlatformRequirements(selectedPlatforms, content, imageUrl);
 
-        if (selectedPlatforms.includes('instagram') && !imageUrl) {
-            toast.error('Instagram wymaga zdjęcia', {
-                description: 'Dodaj lub wygeneruj obraz przed publikacją.',
+        if (!validation.isValid) {
+            validation.errors.forEach(error => {
+                toast.error(error);
             });
             return;
         }
@@ -344,14 +396,14 @@ export default function CreatorPage() {
         const fullContent = getFullContent();
         let postIdForModal = editingPostId;
 
-        // ✅ NOWE: Jeśli post nie istnieje, utwórz go jako draft
+        // Jeśli post nie istnieje, utwórz go jako draft
         if (!postIdForModal) {
             try {
                 const newPost = await createPostMutation.mutateAsync({
                     content: fullContent,
                     platforms: selectedPlatforms,
                     brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined,
-                    image_url: imageUrl,
+                    image_url: imageUrl, // ✅ POPRAWKA
                     ai_generated: true,
                     ai_model: textProvider,
                 });
@@ -379,16 +431,15 @@ export default function CreatorPage() {
     }, [content, hashtags, imageUrl, selectedPlatforms, primaryPlatform, editingPostId, selectedBrand, createPostMutation, textProvider, getFullContent]);
 
     // ========================================
-    // ✅ NOWE: Handler dla pojedynczej platformy opublikowanej
+    // Handler dla pojedynczej platformy opublikowanej
     // ========================================
     const handlePlatformPublished = useCallback((postId?: number, platform?: Platform) => {
         // Modal sam zapisuje status do backendu
-        // Tu możemy dodać dodatkową logikę jeśli potrzebna
         console.log(`Platform ${platform} marked as published for post ${postId}`);
     }, []);
 
     // ========================================
-    // ✅ NOWE: Handler gdy wszystkie platformy opublikowane
+    // Handler gdy wszystkie platformy opublikowane
     // ========================================
     const handleAllPublished = useCallback(() => {
         clearForm();
@@ -429,6 +480,7 @@ export default function CreatorPage() {
         setImageUrl(newImageUrl);
     }, []);
 
+    // Sprawdź czy trwa zapisywanie/aktualizacja
     const isSaving = createPostMutation.isPending || updatePostMutation.isPending;
 
     return (
@@ -457,14 +509,14 @@ export default function CreatorPage() {
                 </div>
             </div>
 
-
+            {/* Główna zawartość */}
             <div className="flex-1 flex overflow-hidden">
-
+                {/* Lewa strona - Edytor */}
                 <div className="flex-1 flex flex-col overflow-hidden">
                     <div className="flex-1 overflow-y-auto p-4 md:p-6">
                         <div className="max-w-2xl mx-auto space-y-6">
 
-
+                            {/* Info o trybie edycji */}
                             {editingPostId && (
                                 <motion.div
                                     initial={{ opacity: 0, y: -10 }}
@@ -551,7 +603,7 @@ export default function CreatorPage() {
                         </div>
                     </div>
 
-                    {/* Action bar */}
+                    {/* Action bar - ✅ DODANE selectedPlatforms */}
                     <div className="flex-shrink-0 border-t border-border/40 bg-background/50 backdrop-blur-sm">
                         <ActionBar
                             onSaveDraft={handleSaveDraft}
@@ -561,6 +613,7 @@ export default function CreatorPage() {
                             hasContent={!!content.trim()}
                             hasImage={!!imageUrl}
                             selectedPlatform={primaryPlatform}
+                            selectedPlatforms={selectedPlatforms}
                             isEditMode={!!editingPostId}
                         />
                     </div>
@@ -583,7 +636,7 @@ export default function CreatorPage() {
                 />
             </div>
 
-            {/* ✅ NOWE: Manual Publish Modal z platforms[] i postId */}
+            {/* Manual Publish Modal z platforms[] i postId */}
             <ManualPublishModal
                 open={isManualPublishOpen}
                 onOpenChange={handleModalClose}

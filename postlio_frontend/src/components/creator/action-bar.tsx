@@ -1,13 +1,4 @@
 // src/components/creator/action-bar.tsx
-/**
- * Pasek akcji w kreatorze - z opcją ręcznej publikacji i szybkiego udostępnienia
- *
- * ULEPSZONE:
- * - Atrakcyjniejsze statusy ("Dodaj treść", "Gotowy do publikacji" itp.)
- * - Animacje i lepsze ikony
- * - ✅ NOWE: Obsługa trybu edycji (isEditMode)
- */
-
 'use client';
 
 import { useState } from 'react';
@@ -51,6 +42,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import type { Platform } from '@/types';
 
 // ============================================================
 // TYPY
@@ -65,7 +57,8 @@ interface ActionBarProps {
     hasContent: boolean;
     hasImage?: boolean;
     selectedPlatform?: string;
-    isEditMode?: boolean; // ✅ NOWE
+    selectedPlatforms?: Platform[];
+    isEditMode?: boolean;
 }
 
 // ============================================================
@@ -100,19 +93,20 @@ function getScheduleDate(option: number | string): string {
 // ============================================================
 
 interface StatusIndicatorProps {
-    hasContent: boolean;
-    hasImage: boolean;
-    isInstagram: boolean;
-    isEditMode: boolean; // ✅ NOWE
+    hasAnything: boolean;
+    instagramNeedsImage: boolean;
+    isEditMode: boolean;
 }
 
-function StatusIndicator({ hasContent, hasImage, isInstagram, isEditMode }: StatusIndicatorProps) {
-    const instagramWarning = isInstagram && !hasImage;
-
+function StatusIndicator({
+                             hasAnything,
+                             instagramNeedsImage,
+                             isEditMode
+                         }: StatusIndicatorProps) {
     // Określ status i styl
     const getStatus = () => {
-        // ✅ NOWE: Status trybu edycji
-        if (isEditMode && hasContent) {
+        // Tryb edycji
+        if (isEditMode && hasAnything) {
             return {
                 icon: Pencil,
                 text: 'Tryb edycji',
@@ -123,7 +117,9 @@ function StatusIndicator({ hasContent, hasImage, isInstagram, isEditMode }: Stat
                 pulse: false,
             };
         }
-        if (instagramWarning) {
+
+        // Instagram wymaga zdjęcia
+        if (instagramNeedsImage) {
             return {
                 icon: ImageOff,
                 text: 'Instagram wymaga zdjęcia',
@@ -134,7 +130,9 @@ function StatusIndicator({ hasContent, hasImage, isInstagram, isEditMode }: Stat
                 pulse: true,
             };
         }
-        if (hasContent) {
+
+        // Gotowy do publikacji (ma cokolwiek - tekst lub zdjęcie)
+        if (hasAnything) {
             return {
                 icon: CheckCircle2,
                 text: 'Gotowy do publikacji',
@@ -145,9 +143,11 @@ function StatusIndicator({ hasContent, hasImage, isInstagram, isEditMode }: Stat
                 pulse: false,
             };
         }
+
+        // Brak treści
         return {
             icon: PenLine,
-            text: 'Rozpocznij tworzenie',
+            text: 'Dodaj treść lub zdjęcie',
             color: 'text-muted-foreground',
             bgColor: 'bg-muted/50',
             borderColor: 'border-border',
@@ -211,12 +211,32 @@ export function ActionBar({
                               hasContent,
                               hasImage = false,
                               selectedPlatform,
-                              isEditMode = false, // ✅ NOWE
+                              selectedPlatforms = [],
+                              isEditMode = false,
                           }: ActionBarProps) {
     const [isScheduleOpen, setIsScheduleOpen] = useState(false);
     const [scheduleDate, setScheduleDate] = useState('');
     const [scheduleTime, setScheduleTime] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // ✅ POPRAWKA: Logika walidacji
+    const hasAnything = hasContent || hasImage; // Ma tekst LUB zdjęcie
+
+    // Sprawdź czy Instagram jest w wybranych platformach
+    const platforms = selectedPlatforms.length > 0
+        ? selectedPlatforms
+        : (selectedPlatform ? [selectedPlatform as Platform] : []);
+
+    const hasInstagram = platforms.includes('instagram');
+    const instagramNeedsImage = hasInstagram && !hasImage;
+
+    // ✅ POPRAWKA: Można zapisać jeśli jest COKOLWIEK (tekst lub zdjęcie)
+    const canSave = hasAnything;
+
+    // ✅ POPRAWKA: Można opublikować jeśli:
+    // - Ma cokolwiek (tekst lub zdjęcie)
+    // - I jeśli jest Instagram - musi mieć zdjęcie
+    const canPublish = hasAnything && !instagramNeedsImage;
 
     const handleSaveDraft = async () => {
         setIsSubmitting(true);
@@ -253,30 +273,27 @@ export function ActionBar({
     };
 
     const isLoading = isSaving || isSubmitting;
-    const isInstagram = selectedPlatform === 'instagram';
-    const canPublish = hasContent && (!isInstagram || hasImage);
 
     return (
         <>
             <div className="flex items-center justify-between p-4">
                 {/* Left side - Ulepszony status */}
                 <StatusIndicator
-                    hasContent={hasContent}
-                    hasImage={hasImage}
-                    isInstagram={isInstagram}
+                    hasAnything={hasAnything}
+                    instagramNeedsImage={instagramNeedsImage}
                     isEditMode={isEditMode}
                 />
 
                 {/* Right side - actions */}
                 <div className="flex items-center gap-2">
                     <TooltipProvider delayDuration={300}>
-                        {/* Save draft / Update - ✅ ZMODYFIKOWANE */}
+                        {/* Save draft / Update */}
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button
                                     variant="outline"
                                     onClick={handleSaveDraft}
-                                    disabled={!hasContent || isLoading}
+                                    disabled={!canSave || isLoading}
                                     className={cn(
                                         isEditMode && 'border-violet-300 text-violet-600 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-400 dark:hover:bg-violet-950'
                                     )}

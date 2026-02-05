@@ -42,6 +42,10 @@ export function AIPreferencesSection() {
         ) || POST_LENGTH_PRESETS[1];
     };
 
+    // ✅ NOWE: Filtruj providery obrazów (bez 'none' w głównej sekcji)
+    const imageProviderKeys = (Object.keys(IMAGE_PROVIDER_LABELS) as ImageProvider[])
+        .filter(p => p !== 'none');
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -63,7 +67,7 @@ export function AIPreferencesSection() {
             <div className="space-y-4">
                 <Label className="flex items-center gap-2 text-base">
                     <Sparkles className="w-4 h-4 text-primary" />
-                    Domyślny provider tekstu
+                    Domyślny model tekstu
                 </Label>
                 <p className="text-sm text-muted-foreground -mt-2">
                     Wybierz który model AI będzie domyślnie używany do generowania tekstu
@@ -104,16 +108,16 @@ export function AIPreferencesSection() {
                 </div>
             </div>
 
-            {/* Image Provider */}
+            {/* Image Provider - ✅ ZAKTUALIZOWANE */}
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
                     <div>
                         <Label className="flex items-center gap-2 text-base">
                             <ImageIcon className="w-4 h-4 text-violet-500" />
-                            Domyślny provider obrazów
+                            Domyślny model obrazów
                         </Label>
                         <p className="text-sm text-muted-foreground mt-1">
-                            Model AI do generowania grafik
+                            Wybierz generator grafik AI
                         </p>
                     </div>
 
@@ -129,8 +133,9 @@ export function AIPreferencesSection() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {(Object.keys(IMAGE_PROVIDER_LABELS) as ImageProvider[]).map((provider) => {
+                {/* ✅ ZMIANA: Grid 3 kolumny dla nowych modeli */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {imageProviderKeys.map((provider) => {
                         const info = IMAGE_PROVIDER_LABELS[provider];
                         const isSelected = ai.defaultImageProvider === provider;
 
@@ -139,20 +144,39 @@ export function AIPreferencesSection() {
                                 key={provider}
                                 onClick={() => updateAIPreferences({ defaultImageProvider: provider })}
                                 className={cn(
-                                    "p-4 rounded-xl border-2 text-center transition-all",
+                                    "relative p-4 rounded-xl border-2 text-left transition-all",
                                     "hover:border-violet-500/50",
                                     isSelected
                                         ? "border-violet-500 bg-violet-500/10"
                                         : "border-border bg-card"
                                 )}
                             >
-                                <span className="text-2xl block mb-2">{info.icon}</span>
-                                <span className="text-sm font-medium block">{info.name}</span>
-                                <span className="text-xs text-muted-foreground">{info.quality}</span>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">{info.icon}</span>
+                                    <span className="font-medium">{info.name}</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground line-clamp-2">
+                                    {info.description}
+                                </p>
+                                <div className="flex items-center justify-between mt-2">
+                                    <span className="text-xs text-violet-500">{info.quality}</span>
+                                    {info.speed && (
+                                        <span className="text-xs text-muted-foreground">{info.speed}</span>
+                                    )}
+                                </div>
+
+                                {isSelected && (
+                                    <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-violet-500" />
+                                )}
                             </button>
                         );
                     })}
                 </div>
+
+                {/* Info o polskim języku */}
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    ✨ Flux i Nanobanana obsługują polskie prompty i automatycznie je ulepszają
+                </p>
             </div>
 
             {/* Creativity Level */}
@@ -222,8 +246,8 @@ export function AIPreferencesSection() {
                             >
                                 <span className="font-medium block">{preset.label}</span>
                                 <span className="text-xs text-muted-foreground mt-1 block">
-                  {preset.description}
-                </span>
+                                    {preset.description}
+                                </span>
                             </button>
                         );
                     })}

@@ -1,19 +1,12 @@
 // src/components/layout/top-bar.tsx
-/**
- * Górny pasek nawigacji w dashboard
- *
- * ULEPSZONE:
- * - Atrakcyjniejsze tytuły stron z ikonami i gradientami
- * - Animowany opis
- */
 
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
     Search,
-    Bell,
     Menu,
     Command,
     Plus,
@@ -35,6 +28,8 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { UserMenu } from './user-menu';
+import { SearchCommand } from './search-command';
+import { NotificationsDropdown } from './notifications-dropdown';
 import { useBrandsStore } from '@/store/brands-store';
 import { cn } from '@/lib/utils';
 
@@ -47,7 +42,7 @@ interface TopBarProps {
 }
 
 // ============================================================
-// PAGE CONFIG - ULEPSZONE Z IKONAMI I GRADIENTAMI
+// PAGE CONFIG
 // ============================================================
 
 const pageConfig: Record<string, {
@@ -104,7 +99,7 @@ const pageConfig: Record<string, {
 };
 
 // ============================================================
-// KOMPONENT TYTUŁU - ULEPSZONY
+// KOMPONENT TYTUŁU
 // ============================================================
 
 interface PageTitleProps {
@@ -177,7 +172,9 @@ function PageTitle({ config }: PageTitleProps) {
 
 export function TopBar({ onMenuClick }: TopBarProps) {
     const pathname = usePathname();
+    const router = useRouter();
     const { selectedBrand } = useBrandsStore();
+    const [searchOpen, setSearchOpen] = useState(false);
 
     // Znajdź konfigurację strony
     const config = pageConfig[pathname] || {
@@ -188,96 +185,90 @@ export function TopBar({ onMenuClick }: TopBarProps) {
     };
 
     return (
-        <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl">
-            <div className="flex h-16 items-center gap-4 px-4 md:px-6">
-                {/* Mobile menu button */}
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="md:hidden"
-                    onClick={onMenuClick}
-                >
-                    <Menu className="h-5 w-5" />
-                </Button>
-
-                {/* Page title - ULEPSZONY */}
-                <div className="flex-1">
-                    <PageTitle config={config} />
-                </div>
-
-                {/* Active brand indicator */}
-                {selectedBrand && (
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border/50"
+        <>
+            <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl">
+                <div className="flex h-16 items-center gap-4 px-4 md:px-6">
+                    {/* Mobile menu button */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="md:hidden"
+                        onClick={onMenuClick}
                     >
-                        <div
-                            className="w-3 h-3 rounded-full ring-2 ring-white/20"
-                            style={{ backgroundColor: selectedBrand.primaryColor || '#3B82F6' }}
-                        />
-                        <span className="text-sm font-medium">{selectedBrand.name}</span>
-                    </motion.div>
-                )}
+                        <Menu className="h-5 w-5" />
+                    </Button>
 
-                {/* Search */}
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="outline"
-                                className="hidden sm:flex items-center gap-2 text-muted-foreground"
-                            >
-                                <Search className="h-4 w-4" />
-                                <span className="hidden md:inline">Szukaj...</span>
-                                <kbd className="hidden md:inline-flex pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-                                    <Command className="h-3 w-3" />K
-                                </kbd>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Szybkie wyszukiwanie</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
+                    {/* Page title */}
+                    <div className="flex-1">
+                        <PageTitle config={config} />
+                    </div>
 
-                {/* Quick create */}
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                size="sm"
-                                className="bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90 shadow-lg shadow-primary/25"
-                            >
-                                <Plus className="h-4 w-4 mr-1" />
-                                <span className="hidden sm:inline">Nowy post</span>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Utwórz nowy post</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
+                    {/* Active brand indicator */}
+                    {selectedBrand && (
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border/50"
+                        >
+                            <div
+                                className="w-3 h-3 rounded-full ring-2 ring-white/20"
+                                style={{ backgroundColor: selectedBrand.primaryColor || '#3B82F6' }}
+                            />
+                            <span className="text-sm font-medium">{selectedBrand.name}</span>
+                        </motion.div>
+                    )}
 
-                {/* Notifications */}
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="relative">
-                                <Bell className="h-5 w-5" />
-                                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Powiadomienia</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
+                    {/* Search - DZIAŁAJĄCE */}
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className="hidden sm:flex items-center gap-2 text-muted-foreground"
+                                    onClick={() => setSearchOpen(true)}
+                                >
+                                    <Search className="h-4 w-4" />
+                                    <span className="hidden md:inline">Szukaj...</span>
+                                    <kbd className="hidden md:inline-flex pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                                        <Command className="h-3 w-3" />K
+                                    </kbd>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Szybkie wyszukiwanie (⌘K)</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
 
-                {/* User menu */}
-                <UserMenu />
-            </div>
-        </header>
+                    {/* Quick create - DZIAŁAJĄCE */}
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    size="sm"
+                                    className="bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90 shadow-lg shadow-primary/25"
+                                    onClick={() => router.push('/creator')}
+                                >
+                                    <Plus className="h-4 w-4 mr-1" />
+                                    <span className="hidden sm:inline">Nowy post</span>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Utwórz nowy post</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+
+                    <NotificationsDropdown />
+
+                    {/* User menu */}
+                    <UserMenu />
+                </div>
+            </header>
+
+            {/* Search Command Modal */}
+            <SearchCommand open={searchOpen} onOpenChange={setSearchOpen} />
+        </>
     );
 }
 

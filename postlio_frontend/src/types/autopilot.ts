@@ -66,7 +66,8 @@ export interface TopicSuggestion {
 
 export type AIProvider = 'gemini' | 'groq' | 'auto';
 
-export type ImageProvider = 'pollinations' | 'huggingface' | 'none';
+// ✅ ZMIANA: Nowe modele obrazów jako osobne opcje
+export type ImageProvider = 'flux' | 'nanobanana' | 'huggingface' | 'none';
 
 export type PostLength = 'short' | 'medium' | 'long';
 export type ImageStyle =
@@ -727,10 +728,41 @@ export const AI_PROVIDER_LABELS: Record<AIProvider, { name: string; description:
     auto: { name: 'Auto', description: 'System sam wybierze najlepszy', icon: '🤖', speed: 'Zależy' },
 };
 
-export const IMAGE_PROVIDER_LABELS: Record<ImageProvider, { name: string; description: string; icon: string; quality: string }> = {
-    pollinations: { name: 'Pollinations', description: 'Darmowy, dobra jakość', icon: '🌸', quality: 'Dobra' },
-    huggingface: { name: 'HuggingFace FLUX', description: 'Najlepsza jakość obrazów', icon: '🤗', quality: 'Świetna' },
-    none: { name: 'Bez obrazów', description: 'Tylko tekst', icon: '📝', quality: '-' },
+// ✅ ZMIANA: Nowe modele obrazów jako osobne opcje
+export const IMAGE_PROVIDER_LABELS: Record<ImageProvider, {
+    name: string;
+    description: string;
+    icon: string;
+    quality: string;
+    speed?: string;
+}> = {
+    flux: {
+        name: 'Flux',
+        description: 'Wysoka jakość, szczegółowe obrazy. Obsługuje polski!',
+        icon: '⭐',
+        quality: 'Świetna',
+        speed: '~15s'
+    },
+    nanobanana: {
+        name: 'Nanobanana',
+        description: 'Szybki i lekki model. Obsługuje polski!',
+        icon: '⚡',
+        quality: 'Dobra',
+        speed: '~5s'
+    },
+    huggingface: {
+        name: 'Stable Diffusion XL',
+        description: 'Wysoka jakość, realistyczne obrazy',
+        icon: '🖼️',
+        quality: 'Świetna',
+        speed: '~30s'
+    },
+    none: {
+        name: 'Bez obrazów',
+        description: 'Tylko tekst',
+        icon: '📝',
+        quality: '-'
+    },
 };
 
 export const CREATIVITY_LEVEL_LABELS: { value: number; label: string; description: string; icon: string }[] = [
