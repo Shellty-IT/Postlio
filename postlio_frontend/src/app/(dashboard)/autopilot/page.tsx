@@ -31,12 +31,10 @@ import {
 import type { BackendAutopilotConfigCreate, BackendAutopilotConfigUpdate } from '@/types/autopilot';
 
 export default function AutopilotPage() {
-    // Auth Store - sprawdź uprawnienia
     const { capabilities } = useAuthStore();
     const accessLevel = capabilities.access_level;
     const canUseAutopilot = capabilities.can_use_autopilot;
 
-    // UI Store
     const {
         selectedConfigId,
         activeTab,
@@ -47,22 +45,18 @@ export default function AutopilotPage() {
         setCreateModalOpen,
     } = useAutopilotStore();
 
-    // React Query - Configs (tylko jeśli ma dostęp)
     const { data: configs = [], isLoading: isLoadingConfigs } = useAutopilotConfigs();
     const { data: selectedConfig } = useAutopilotConfig(selectedConfigId);
 
-    // React Query - Queue & Stats
     const { data: queueItems = [] } = useAutopilotQueue(
         selectedConfigId,
         { status: queueFilter === 'all' ? undefined : queueFilter }
     );
     const { data: queueStats } = useQueueStats(selectedConfigId);
 
-    // React Query - Brands
     const brandsQuery = useBrands();
     const brands = brandsQuery.data?.brands || [];
 
-    // Mutations
     const toggleAutopilot = useToggleAutopilot();
     const pauseAutopilot = usePauseAutopilot();
     const createConfig = useCreateAutopilotConfig();
@@ -70,19 +64,16 @@ export default function AutopilotPage() {
     const deleteConfig = useDeleteAutopilotConfig();
     const generatePosts = useGeneratePosts();
 
-    // Auto-select first config if none selected
     useEffect(() => {
         if (canUseAutopilot && !selectedConfigId && configs.length > 0) {
             selectConfig(configs[0].id);
         }
     }, [configs, selectedConfigId, selectConfig, canUseAutopilot]);
 
-    // Computed
     const isRunning = selectedConfig ? (selectedConfig.is_active && !selectedConfig.is_paused) : false;
     const isGenerating = generatePosts.isPending;
     const pendingCount = queueStats?.pending_count || 0;
 
-    // Handlers
     const handleToggleAutopilot = () => {
         if (!selectedConfigId || !selectedConfig) return;
 
@@ -135,12 +126,9 @@ export default function AutopilotPage() {
         selectConfig(configId);
     };
 
-    // ============================================================
-    // BLOKADA - Brak konta firmowego
-    // ============================================================
     if (!canUseAutopilot) {
         return (
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
                 <FeatureLocked
                     feature="autopilot"
                     accessLevel={accessLevel}
@@ -149,21 +137,19 @@ export default function AutopilotPage() {
         );
     }
 
-    // Loading state
     if (isLoadingConfigs) {
         return (
-            <div className="flex items-center justify-center h-[60vh]">
+            <div className="flex items-center justify-center h-[50vh] sm:h-[60vh]">
                 <div className="text-center">
-                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
-                    <p className="text-muted-foreground">Ładowanie konfiguracji...</p>
+                    <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin mx-auto mb-3 sm:mb-4 text-primary" />
+                    <p className="text-sm text-muted-foreground">Ładowanie konfiguracji...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="p-6 space-y-6">
-            {/* Header */}
+        <div className="space-y-4 sm:space-y-6">
             <AutopilotHeader
                 selectedConfig={selectedConfig}
                 configs={configs}
@@ -175,38 +161,37 @@ export default function AutopilotPage() {
                 onCreateNew={() => setCreateModalOpen(true)}
             />
 
-            {/* Main Content */}
             <Tabs
                 value={activeTab}
                 onValueChange={(v) => setActiveTab(v as typeof activeTab)}
-                className="space-y-6"
+                className="space-y-4 sm:space-y-6"
             >
-                <TabsList className="bg-card border border-border">
+                <TabsList className="bg-card border border-border w-full xs:w-auto grid grid-cols-3 xs:inline-flex">
                     <TabsTrigger
                         value="queue"
-                        className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                        className="gap-1.5 sm:gap-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                     >
-                        <ListTodo className="w-4 h-4" />
-                        Kolejka
+                        <ListTodo className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <span className="hidden xs:inline">Kolejka</span>
                         {pendingCount > 0 && (
-                            <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/20">
+                            <span className="ml-0.5 sm:ml-1 px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs rounded-full bg-primary/20">
                                 {pendingCount}
                             </span>
                         )}
                     </TabsTrigger>
                     <TabsTrigger
                         value="stats"
-                        className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                        className="gap-1.5 sm:gap-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                     >
-                        <BarChart3 className="w-4 h-4" />
-                        Statystyki
+                        <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <span className="hidden xs:inline">Statystyki</span>
                     </TabsTrigger>
                     <TabsTrigger
                         value="config"
-                        className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                        className="gap-1.5 sm:gap-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                     >
-                        <Settings className="w-4 h-4" />
-                        Konfiguracja
+                        <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <span className="hidden xs:inline">Konfiguracja</span>
                     </TabsTrigger>
                 </TabsList>
 
@@ -252,7 +237,6 @@ export default function AutopilotPage() {
                 </TabsContent>
             </Tabs>
 
-            {/* Create Config Modal */}
             <CreateConfigModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setCreateModalOpen(false)}

@@ -27,7 +27,6 @@ export function AIPreferencesSection() {
     const { settings, updateAIPreferences } = useSettingsStore();
     const { ai } = settings;
 
-    // Znajdź najbliższy preset kreatywności
     const getCreativityPreset = () => {
         const sorted = CREATIVITY_LEVEL_LABELS.slice().sort(
             (a, b) => Math.abs(a.value - ai.defaultCreativityLevel) - Math.abs(b.value - ai.defaultCreativityLevel)
@@ -35,14 +34,12 @@ export function AIPreferencesSection() {
         return sorted[0];
     };
 
-    // Znajdź preset długości
     const getCurrentLengthPreset = () => {
         return POST_LENGTH_PRESETS.find(
             p => p.id === ai.defaultPostLength
         ) || POST_LENGTH_PRESETS[1];
     };
 
-    // ✅ NOWE: Filtruj providery obrazów (bez 'none' w głównej sekcji)
     const imageProviderKeys = (Object.keys(IMAGE_PROVIDER_LABELS) as ImageProvider[])
         .filter(p => p !== 'none');
 
@@ -50,30 +47,28 @@ export function AIPreferencesSection() {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-8"
+            className="space-y-6 sm:space-y-8"
         >
-            {/* Header */}
             <div>
-                <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-                    <Wand2 className="w-5 h-5 text-violet-500" />
+                <h2 className="text-lg xs:text-xl font-semibold text-foreground flex items-center gap-2">
+                    <Wand2 className="w-4 h-4 xs:w-5 xs:h-5 text-violet-500" />
                     Preferencje AI
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                    Domyślne ustawienia generowania treści przez sztuczną inteligencję
+                <p className="text-xs xs:text-sm text-muted-foreground mt-1">
+                    Domyślne ustawienia generowania treści
                 </p>
             </div>
 
-            {/* Text Provider */}
-            <div className="space-y-4">
-                <Label className="flex items-center gap-2 text-base">
+            <div className="space-y-3 xs:space-y-4">
+                <Label className="flex items-center gap-2 text-sm xs:text-base">
                     <Sparkles className="w-4 h-4 text-primary" />
                     Domyślny model tekstu
                 </Label>
-                <p className="text-sm text-muted-foreground -mt-2">
-                    Wybierz który model AI będzie domyślnie używany do generowania tekstu
+                <p className="text-xs xs:text-sm text-muted-foreground -mt-2">
+                    Wybierz model AI do generowania tekstu
                 </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-2 xs:gap-3">
                     {(Object.keys(AI_PROVIDER_LABELS) as AIProvider[]).map((provider) => {
                         const info = AI_PROVIDER_LABELS[provider];
                         const isSelected = ai.defaultTextProvider === provider;
@@ -83,20 +78,20 @@ export function AIPreferencesSection() {
                                 key={provider}
                                 onClick={() => updateAIPreferences({ defaultTextProvider: provider })}
                                 className={cn(
-                                    "relative p-4 rounded-xl border-2 text-left transition-all",
+                                    "relative p-3 xs:p-4 rounded-xl border-2 text-left transition-all min-h-[80px]",
                                     "hover:border-primary/50",
                                     isSelected
                                         ? "border-primary bg-primary/5"
                                         : "border-border bg-card"
                                 )}
                             >
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="text-xl">{info.icon}</span>
-                                    <span className="font-medium">{info.name}</span>
+                                <div className="flex items-center gap-2 mb-1 xs:mb-2">
+                                    <span className="text-lg xs:text-xl">{info.icon}</span>
+                                    <span className="font-medium text-sm xs:text-base">{info.name}</span>
                                 </div>
-                                <p className="text-xs text-muted-foreground">{info.description}</p>
-                                <div className="flex items-center gap-1 mt-2">
-                                    <span className="text-xs text-green-500">{info.speed}</span>
+                                <p className="text-[10px] xs:text-xs text-muted-foreground line-clamp-2">{info.description}</p>
+                                <div className="flex items-center gap-1 mt-1.5 xs:mt-2">
+                                    <span className="text-[10px] xs:text-xs text-green-500">{info.speed}</span>
                                 </div>
 
                                 {isSelected && (
@@ -108,22 +103,21 @@ export function AIPreferencesSection() {
                 </div>
             </div>
 
-            {/* Image Provider - ✅ ZAKTUALIZOWANE */}
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
+            <div className="space-y-3 xs:space-y-4">
+                <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2">
                     <div>
-                        <Label className="flex items-center gap-2 text-base">
+                        <Label className="flex items-center gap-2 text-sm xs:text-base">
                             <ImageIcon className="w-4 h-4 text-violet-500" />
                             Domyślny model obrazów
                         </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-xs xs:text-sm text-muted-foreground mt-1">
                             Wybierz generator grafik AI
                         </p>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <Label htmlFor="auto-images" className="text-sm text-muted-foreground">
-                            Auto-generuj obrazy
+                        <Label htmlFor="auto-images" className="text-xs xs:text-sm text-muted-foreground">
+                            Auto-generuj
                         </Label>
                         <Switch
                             id="auto-images"
@@ -133,8 +127,7 @@ export function AIPreferencesSection() {
                     </div>
                 </div>
 
-                {/* ✅ ZMIANA: Grid 3 kolumny dla nowych modeli */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-2 xs:gap-3">
                     {imageProviderKeys.map((provider) => {
                         const info = IMAGE_PROVIDER_LABELS[provider];
                         const isSelected = ai.defaultImageProvider === provider;
@@ -144,24 +137,24 @@ export function AIPreferencesSection() {
                                 key={provider}
                                 onClick={() => updateAIPreferences({ defaultImageProvider: provider })}
                                 className={cn(
-                                    "relative p-4 rounded-xl border-2 text-left transition-all",
+                                    "relative p-3 xs:p-4 rounded-xl border-2 text-left transition-all min-h-[80px]",
                                     "hover:border-violet-500/50",
                                     isSelected
                                         ? "border-violet-500 bg-violet-500/10"
                                         : "border-border bg-card"
                                 )}
                             >
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="text-xl">{info.icon}</span>
-                                    <span className="font-medium">{info.name}</span>
+                                <div className="flex items-center gap-2 mb-1 xs:mb-2">
+                                    <span className="text-lg xs:text-xl">{info.icon}</span>
+                                    <span className="font-medium text-sm xs:text-base">{info.name}</span>
                                 </div>
-                                <p className="text-xs text-muted-foreground line-clamp-2">
+                                <p className="text-[10px] xs:text-xs text-muted-foreground line-clamp-2">
                                     {info.description}
                                 </p>
-                                <div className="flex items-center justify-between mt-2">
-                                    <span className="text-xs text-violet-500">{info.quality}</span>
+                                <div className="flex items-center justify-between mt-1.5 xs:mt-2">
+                                    <span className="text-[10px] xs:text-xs text-violet-500">{info.quality}</span>
                                     {info.speed && (
-                                        <span className="text-xs text-muted-foreground">{info.speed}</span>
+                                        <span className="text-[10px] xs:text-xs text-muted-foreground">{info.speed}</span>
                                     )}
                                 </div>
 
@@ -173,17 +166,15 @@ export function AIPreferencesSection() {
                     })}
                 </div>
 
-                {/* Info o polskim języku */}
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                    ✨ Flux i Nanobanana obsługują polskie prompty i automatycznie je ulepszają
+                <p className="text-[10px] xs:text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    ✨ Flux i Nanobanana obsługują polskie prompty
                 </p>
             </div>
 
-            {/* Creativity Level */}
-            <div className="space-y-4 p-6 rounded-xl border border-border bg-card">
-                <Label className="flex items-center gap-2 text-base">
+            <div className="space-y-3 xs:space-y-4 p-4 xs:p-6 rounded-xl border border-border bg-card">
+                <Label className="flex items-center gap-2 text-sm xs:text-base">
                     <Gauge className="w-4 h-4 text-orange-500" />
-                    Domyślny poziom kreatywności: {getCreativityPreset().label}
+                    Kreatywność: {getCreativityPreset().label}
                 </Label>
 
                 <div className="space-y-3">
@@ -197,38 +188,37 @@ export function AIPreferencesSection() {
                         className="w-full accent-orange-500"
                     />
 
-                    <div className="flex justify-between">
+                    <div className="flex justify-between overflow-x-auto gap-1">
                         {CREATIVITY_LEVEL_LABELS.map((level) => (
                             <button
                                 key={level.value}
                                 onClick={() => updateAIPreferences({ defaultCreativityLevel: level.value })}
                                 className={cn(
-                                    "flex flex-col items-center gap-1 p-2 rounded-lg transition-all",
+                                    "flex flex-col items-center gap-0.5 xs:gap-1 p-1.5 xs:p-2 rounded-lg transition-all min-w-[40px] xs:min-w-[48px]",
                                     ai.defaultCreativityLevel === level.value
                                         ? "bg-orange-500/10 text-orange-500"
                                         : "text-muted-foreground hover:text-foreground"
                                 )}
                             >
-                                <span className="text-lg">{level.icon}</span>
-                                <span className="text-[10px] font-medium">{level.label}</span>
+                                <span className="text-base xs:text-lg">{level.icon}</span>
+                                <span className="text-[8px] xs:text-[10px] font-medium whitespace-nowrap">{level.label}</span>
                             </button>
                         ))}
                     </div>
                 </div>
 
-                <p className="text-xs text-muted-foreground text-center">
+                <p className="text-[10px] xs:text-xs text-muted-foreground text-center">
                     {getCreativityPreset().description}
                 </p>
             </div>
 
-            {/* Post Length */}
-            <div className="space-y-4">
-                <Label className="flex items-center gap-2 text-base">
+            <div className="space-y-3 xs:space-y-4">
+                <Label className="flex items-center gap-2 text-sm xs:text-base">
                     <FileText className="w-4 h-4 text-blue-500" />
                     Domyślna długość postów
                 </Label>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2 xs:gap-3">
                     {POST_LENGTH_PRESETS.map((preset) => {
                         const isSelected = getCurrentLengthPreset().id === preset.id;
 
@@ -237,15 +227,15 @@ export function AIPreferencesSection() {
                                 key={preset.id}
                                 onClick={() => updateAIPreferences({ defaultPostLength: preset.id as 'short' | 'medium' | 'long' })}
                                 className={cn(
-                                    "p-4 rounded-xl border-2 text-center transition-all",
+                                    "p-3 xs:p-4 rounded-xl border-2 text-center transition-all",
                                     "hover:border-blue-500/50",
                                     isSelected
                                         ? "border-blue-500 bg-blue-500/10"
                                         : "border-border bg-card"
                                 )}
                             >
-                                <span className="font-medium block">{preset.label}</span>
-                                <span className="text-xs text-muted-foreground mt-1 block">
+                                <span className="font-medium block text-sm xs:text-base">{preset.label}</span>
+                                <span className="text-[10px] xs:text-xs text-muted-foreground mt-1 block">
                                     {preset.description}
                                 </span>
                             </button>
@@ -254,12 +244,10 @@ export function AIPreferencesSection() {
                 </div>
             </div>
 
-            {/* Hashtags & Emoji */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Auto Hashtags */}
-                <div className="p-5 rounded-xl border border-border bg-card space-y-4">
+            <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 xs:gap-4">
+                <div className="p-4 xs:p-5 rounded-xl border border-border bg-card space-y-3 xs:space-y-4">
                     <div className="flex items-center justify-between">
-                        <Label htmlFor="auto-hashtags" className="flex items-center gap-2">
+                        <Label htmlFor="auto-hashtags" className="flex items-center gap-2 text-xs xs:text-sm">
                             <Hash className="w-4 h-4 text-green-500" />
                             Automatyczne hashtagi
                         </Label>
@@ -272,8 +260,8 @@ export function AIPreferencesSection() {
 
                     {ai.autoHashtags && (
                         <div className="space-y-2">
-                            <Label className="text-xs text-muted-foreground">
-                                Domyślna ilość: {ai.defaultHashtagCount}
+                            <Label className="text-[10px] xs:text-xs text-muted-foreground">
+                                Ilość: {ai.defaultHashtagCount}
                             </Label>
                             <input
                                 type="range"
@@ -283,7 +271,7 @@ export function AIPreferencesSection() {
                                 onChange={(e) => updateAIPreferences({ defaultHashtagCount: parseInt(e.target.value) })}
                                 className="w-full accent-green-500"
                             />
-                            <div className="flex justify-between text-xs text-muted-foreground">
+                            <div className="flex justify-between text-[10px] xs:text-xs text-muted-foreground">
                                 <span>3</span>
                                 <span>15</span>
                             </div>
@@ -291,16 +279,15 @@ export function AIPreferencesSection() {
                     )}
                 </div>
 
-                {/* Auto Emoji */}
-                <div className="p-5 rounded-xl border border-border bg-card">
+                <div className="p-4 xs:p-5 rounded-xl border border-border bg-card">
                     <div className="flex items-center justify-between">
                         <div>
-                            <Label htmlFor="auto-emoji" className="flex items-center gap-2">
+                            <Label htmlFor="auto-emoji" className="flex items-center gap-2 text-xs xs:text-sm">
                                 <Smile className="w-4 h-4 text-yellow-500" />
                                 Automatyczne emoji
                             </Label>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                AI będzie dodawać odpowiednie emoji
+                            <p className="text-[10px] xs:text-xs text-muted-foreground mt-1">
+                                AI doda odpowiednie emoji
                             </p>
                         </div>
                         <Switch

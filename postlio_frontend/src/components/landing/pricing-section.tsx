@@ -1,3 +1,4 @@
+// src/components/landing/pricing-section.tsx
 'use client';
 
 import { useState } from 'react';
@@ -71,13 +72,11 @@ export function PricingSection() {
     const [isYearly, setIsYearly] = useState(false);
 
     return (
-        <section id="pricing" className="py-24 md:py-32 relative overflow-hidden">
-            {/* Background decoration */}
+        <section id="pricing" className="py-16 xs:py-20 md:py-24 lg:py-32 relative overflow-hidden">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] rounded-full bg-gradient-to-br from-primary/5 to-violet-500/5 blur-3xl -z-10" />
 
             <div className="container mx-auto px-4">
-                {/* Section Header */}
-                <div className="text-center max-w-3xl mx-auto mb-12">
+                <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-12">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -86,14 +85,14 @@ export function PricingSection() {
                     >
                         <Badge
                             variant="secondary"
-                            className="mb-4 px-4 py-2 bg-primary/10 text-primary border-primary/20"
+                            className="mb-3 sm:mb-4 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-primary/10 text-primary border-primary/20"
                         >
                             Cennik
                         </Badge>
                     </motion.div>
 
                     <motion.h2
-                        className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6"
+                        className="text-2xl xs:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6"
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
@@ -104,7 +103,7 @@ export function PricingSection() {
                     </motion.h2>
 
                     <motion.p
-                        className="text-lg text-muted-foreground mb-8"
+                        className="text-sm sm:text-base md:text-lg text-muted-foreground mb-6 sm:mb-8 px-2"
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
@@ -123,8 +122,7 @@ export function PricingSection() {
                     </motion.div>
                 </div>
 
-                {/* Pricing Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-4 max-w-6xl mx-auto items-stretch">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-4 max-w-6xl mx-auto items-stretch">
                     {pricingPlans.map((plan, index) => (
                         <PricingCard
                             key={plan.name}
@@ -135,18 +133,17 @@ export function PricingSection() {
                     ))}
                 </div>
 
-                {/* Trust badges */}
                 <motion.div
-                    className="mt-16 text-center"
+                    className="mt-10 sm:mt-16 text-center"
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: 0.5 }}
                 >
-                    <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6 text-xs sm:text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
                             <svg
-                                className="w-5 h-5 text-green-500"
+                                className="w-4 h-4 sm:w-5 sm:h-5 text-green-500"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -160,9 +157,9 @@ export function PricingSection() {
                             </svg>
                             <span>Bezpieczne płatności</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
                             <svg
-                                className="w-5 h-5 text-green-500"
+                                className="w-4 h-4 sm:w-5 sm:h-5 text-green-500"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -176,9 +173,9 @@ export function PricingSection() {
                             </svg>
                             <span>Anuluj kiedy chcesz</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
                             <svg
-                                className="w-5 h-5 text-green-500"
+                                className="w-4 h-4 sm:w-5 sm:h-5 text-green-500"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"

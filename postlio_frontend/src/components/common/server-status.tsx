@@ -15,11 +15,11 @@ export function ServerStatus() {
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
-                    className="fixed top-4 left-1/2 -translate-x-1/2 z-50"
+                    className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-[calc(100vw-2rem)]"
                 >
-                    <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm">
-                        <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                        <span className="text-sm text-primary font-medium">
+                    <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm">
+                        <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary animate-spin flex-shrink-0" />
+                        <span className="text-xs sm:text-sm text-primary font-medium whitespace-nowrap">
                             Łączenie z serwerem...
                         </span>
                     </div>
@@ -30,11 +30,11 @@ export function ServerStatus() {
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="fixed top-4 left-1/2 -translate-x-1/2 z-50"
+                    className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-[calc(100vw-2rem)]"
                 >
-                    <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-destructive/10 border border-destructive/20 backdrop-blur-sm">
-                        <WifiOff className="w-4 h-4 text-destructive" />
-                        <span className="text-sm text-destructive font-medium">
+                    <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-full bg-destructive/10 border border-destructive/20 backdrop-blur-sm">
+                        <WifiOff className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-destructive flex-shrink-0" />
+                        <span className="text-xs sm:text-sm text-destructive font-medium whitespace-nowrap">
                             Nie można połączyć z serwerem
                         </span>
                     </div>

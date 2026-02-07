@@ -44,12 +44,11 @@ export function AutopilotHeader({
                                     onCreateNew,
                                 }: AutopilotHeaderProps) {
 
-    // Status indicator
     const StatusIndicator = ({ config }: { config: BackendAutopilotConfig }) => {
         const isActive = config.is_active;
         const isPaused = config.is_paused;
 
-        let color = '#6B7280'; // inactive
+        let color = '#6B7280';
         let label = 'Nieaktywny';
 
         if (isActive && !isPaused) {
@@ -61,22 +60,21 @@ export function AutopilotHeader({
         }
 
         return (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 xs:gap-2">
                 <div
                     className={cn(
-                        "w-2 h-2 rounded-full",
+                        "w-2 h-2 rounded-full flex-shrink-0",
                         isActive && !isPaused && "animate-pulse"
                     )}
                     style={{ backgroundColor: color }}
                 />
-                <span className="text-sm" style={{ color }}>
+                <span className="text-xs xs:text-sm hidden xs:inline" style={{ color }}>
                     {label}
                 </span>
             </div>
         );
     };
 
-    // Format next run time
     const formatNextRun = (dateStr: string | null | undefined) => {
         if (!dateStr) return null;
         const date = new Date(dateStr);
@@ -92,27 +90,25 @@ export function AutopilotHeader({
     };
 
     return (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            {/* Left - Config Selector */}
-            <div className="flex items-center gap-4">
-                {/* Config Selector */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div className="flex items-center gap-2 xs:gap-4 flex-wrap">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="gap-2 min-w-[220px] justify-between">
+                        <Button variant="outline" className="gap-2 min-w-0 xs:min-w-[180px] sm:min-w-[220px] justify-between h-10 xs:h-11">
                             {selectedConfig ? (
                                 <>
-                                    <span className="truncate max-w-[120px]">
+                                    <span className="truncate max-w-[80px] xs:max-w-[120px]">
                                         Marka #{selectedConfig.brand_id}
                                     </span>
                                     <StatusIndicator config={selectedConfig} />
                                 </>
                             ) : (
-                                <span className="text-muted-foreground">Wybierz konfigurację</span>
+                                <span className="text-muted-foreground text-sm">Wybierz...</span>
                             )}
-                            <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
+                            <ChevronDown className="w-4 h-4 ml-1 xs:ml-2 opacity-50 flex-shrink-0" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[300px]">
+                    <DropdownMenuContent align="start" className="w-[280px] xs:w-[300px]">
                         <DropdownMenuLabel>Konfiguracje Autopilota</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         {configs.map((config) => (
@@ -126,7 +122,7 @@ export function AutopilotHeader({
                                         Marka #{config.brand_id}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                        {config.platforms.join(', ')} • {config.total_published} opublikowanych
+                                        {config.platforms.join(', ')} • {config.total_published} opubl.
                                     </p>
                                 </div>
                                 <StatusIndicator config={config} />
@@ -145,19 +141,16 @@ export function AutopilotHeader({
                     </DropdownMenuContent>
                 </DropdownMenu>
 
-                {/* Next run info */}
                 {selectedConfig?.next_generation_at && isRunning && (
-                    <div className="text-sm text-muted-foreground">
-                        Następny post: {formatNextRun(selectedConfig.next_generation_at)}
+                    <div className="text-xs xs:text-sm text-muted-foreground hidden sm:block">
+                        Następny: {formatNextRun(selectedConfig.next_generation_at)}
                     </div>
                 )}
             </div>
 
-            {/* Right - Actions */}
-            <div className="flex items-center gap-3">
-                {/* Health Score */}
+            <div className="flex items-center gap-2 xs:gap-3 overflow-x-auto pb-1 sm:pb-0">
                 {selectedConfig?.health_score !== undefined && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border">
+                    <div className="flex items-center gap-1.5 xs:gap-2 px-2 xs:px-3 py-1.5 rounded-lg bg-card border flex-shrink-0">
                         <div
                             className="w-2 h-2 rounded-full"
                             style={{
@@ -168,41 +161,39 @@ export function AutopilotHeader({
                                         : '#EF4444'
                             }}
                         />
-                        <span className="text-sm font-medium">
+                        <span className="text-xs xs:text-sm font-medium">
                             {selectedConfig.health_score}%
                         </span>
                     </div>
                 )}
 
-                {/* Generate Now Button */}
                 <Button
                     variant="outline"
                     onClick={onGenerateNow}
                     disabled={!selectedConfig || isGenerating}
                     className={cn(
-                        "gap-2",
+                        "gap-1.5 xs:gap-2 h-10 xs:h-11 px-3 xs:px-4 flex-shrink-0",
                         isGenerating && "cursor-wait"
                     )}
                 >
                     {isGenerating ? (
                         <>
                             <RefreshCw className="w-4 h-4 animate-spin" />
-                            Generuję...
+                            <span className="hidden xs:inline">Generuję...</span>
                         </>
                     ) : (
                         <>
                             <Sparkles className="w-4 h-4" />
-                            Generuj teraz
+                            <span className="hidden xs:inline">Generuj</span>
                         </>
                     )}
                 </Button>
 
-                {/* Toggle Autopilot Button */}
                 <Button
                     onClick={onToggleAutopilot}
                     disabled={!selectedConfig}
                     className={cn(
-                        "gap-2 min-w-[140px]",
+                        "gap-1.5 xs:gap-2 h-10 xs:h-11 px-3 xs:px-4 min-w-0 xs:min-w-[110px] sm:min-w-[140px] flex-shrink-0",
                         isRunning
                             ? "bg-amber-500 hover:bg-amber-600"
                             : "bg-green-500 hover:bg-green-600"
@@ -211,18 +202,17 @@ export function AutopilotHeader({
                     {isRunning ? (
                         <>
                             <Pause className="w-4 h-4" />
-                            Wstrzymaj
+                            <span className="hidden xs:inline">Wstrzymaj</span>
                         </>
                     ) : (
                         <>
                             <Play className="w-4 h-4" />
-                            Uruchom
+                            <span className="hidden xs:inline">Uruchom</span>
                         </>
                     )}
                 </Button>
 
-                {/* Settings */}
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="h-10 w-10 xs:h-11 xs:w-11 flex-shrink-0">
                     <Settings className="w-5 h-5" />
                 </Button>
             </div>

@@ -42,8 +42,6 @@ import {
     getAccountTypeLabel,
 } from '@/lib/api/social';
 
-// ==================== Platform Config ====================
-
 interface PlatformConfig {
     platform: SocialPlatform;
     name: string;
@@ -58,45 +56,40 @@ const PLATFORMS: PlatformConfig[] = [
     {
         platform: 'facebook',
         name: 'Facebook',
-        icon: <Facebook className="w-5 h-5" />,
+        icon: <Facebook className="w-4 h-4 xs:w-5 xs:h-5" />,
         color: '#1877F2',
         accountTypes: ['facebook_page'],
-        description: 'Połącz strony Facebook do automatycznej publikacji',
+        description: 'Połącz strony Facebook',
     },
     {
         platform: 'instagram',
         name: 'Instagram',
-        icon: <Instagram className="w-5 h-5" />,
+        icon: <Instagram className="w-4 h-4 xs:w-5 xs:h-5" />,
         color: '#E4405F',
         gradient: 'bg-gradient-to-br from-[#833AB4] via-[#E1306C] to-[#F77737]',
         accountTypes: ['instagram_business', 'instagram_creator'],
-        description: 'Połącz konta biznesowe lub twórców Instagram',
+        description: 'Konta biznesowe lub twórców',
     },
     {
         platform: 'linkedin',
         name: 'LinkedIn',
-        icon: <Linkedin className="w-5 h-5" />,
+        icon: <Linkedin className="w-4 h-4 xs:w-5 xs:h-5" />,
         color: '#0A66C2',
         accountTypes: ['linkedin_profile', 'linkedin_company'],
-        description: 'Połącz profil osobisty lub stronę firmową',
+        description: 'Profil lub strona firmowa',
     },
 ];
-
-// ==================== Helper: Deduplikacja kont ====================
 
 function deduplicateAccounts(accounts: ConnectedAccount[]): ConnectedAccount[] {
     const seen = new Map<string, ConnectedAccount>();
 
     for (const account of accounts) {
-        // Klucz unikalności: platform + platform_user_id
         const key = `${account.platform}_${account.platform_user_id}`;
 
-        // Jeśli już widzieliśmy to konto, zachowaj nowsze (większe id) lub connected
         const existing = seen.get(key);
         if (!existing) {
             seen.set(key, account);
         } else {
-            // Priorytet: connected > expired > error > disconnected
             const statusPriority: Record<string, number> = {
                 connected: 4,
                 expired: 3,
@@ -107,8 +100,6 @@ function deduplicateAccounts(accounts: ConnectedAccount[]): ConnectedAccount[] {
             const existingPriority = statusPriority[existing.status] || 0;
             const newPriority = statusPriority[account.status] || 0;
 
-            // Zachowaj konto z wyższym priorytetem statusu
-            // Lub jeśli równe, zachowaj nowsze (większe id)
             if (newPriority > existingPriority ||
                 (newPriority === existingPriority && account.id > existing.id)) {
                 seen.set(key, account);
@@ -119,8 +110,6 @@ function deduplicateAccounts(accounts: ConnectedAccount[]): ConnectedAccount[] {
     return Array.from(seen.values());
 }
 
-// ==================== Main Component ====================
-
 export function ConnectedAccountsSection() {
     const { data, isLoading, error } = useConnectedAccounts();
     const initOAuth = useInitOAuth();
@@ -130,12 +119,10 @@ export function ConnectedAccountsSection() {
     const [disconnectingId, setDisconnectingId] = useState<number | null>(null);
     const [expandedPlatform, setExpandedPlatform] = useState<SocialPlatform | null>(null);
 
-    // ✅ Deduplikacja i filtrowanie odłączonych kont
     const rawAccounts = data?.accounts || [];
     const accounts = deduplicateAccounts(rawAccounts)
-        .filter(a => a.status !== 'disconnected'); // Nie pokazuj odłączonych
+        .filter(a => a.status !== 'disconnected');
 
-    // Group accounts by platform
     const accountsByPlatform = PLATFORMS.map(platform => ({
         ...platform,
         accounts: accounts.filter(a => a.platform === platform.platform),
@@ -155,7 +142,6 @@ export function ConnectedAccountsSection() {
         refreshToken.mutate(accountId);
     };
 
-    // Check if expiring soon (within 7 days)
     const isExpiringSoon = (expiresAt?: string) => {
         if (!expiresAt) return false;
         const days = (new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
@@ -178,47 +164,43 @@ export function ConnectedAccountsSection() {
         if (days < 0) return 'Wygasło';
         if (days === 0) return 'Wygasa dziś';
         if (days === 1) return 'Wygasa jutro';
-        if (days < 7) return `Wygasa za ${days} dni`;
-        return `Wygasa ${formatDate(dateStr)}`;
+        if (days < 7) return `Za ${days} dni`;
+        return `${formatDate(dateStr)}`;
     };
 
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-8"
+            className="space-y-6 sm:space-y-8"
         >
-            {/* Header */}
             <div>
-                <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-                    <Link2 className="w-5 h-5 text-primary" />
+                <h2 className="text-lg xs:text-xl font-semibold text-foreground flex items-center gap-2">
+                    <Link2 className="w-4 h-4 xs:w-5 xs:h-5 text-primary" />
                     Połączone konta
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                    Zarządzaj połączeniami z kontami social media
+                <p className="text-xs xs:text-sm text-muted-foreground mt-1">
+                    Zarządzaj połączeniami z social media
                 </p>
             </div>
 
-            {/* Loading State */}
             {isLoading && (
-                <div className="space-y-4">
+                <div className="space-y-3 xs:space-y-4">
                     {[1, 2, 3].map(i => (
-                        <div key={i} className="h-24 rounded-xl bg-muted animate-pulse" />
+                        <div key={i} className="h-20 xs:h-24 rounded-xl bg-muted animate-pulse" />
                     ))}
                 </div>
             )}
 
-            {/* Error State */}
             {error && (
-                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive">
-                    <p className="font-medium">Błąd ładowania kont</p>
-                    <p className="text-sm mt-1">{error.message}</p>
+                <div className="p-3 xs:p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive">
+                    <p className="font-medium text-sm">Błąd ładowania kont</p>
+                    <p className="text-xs xs:text-sm mt-1">{error.message}</p>
                 </div>
             )}
 
-            {/* Platforms */}
             {!isLoading && !error && (
-                <div className="space-y-4">
+                <div className="space-y-3 xs:space-y-4">
                     {accountsByPlatform.map((platform) => (
                         <PlatformCard
                             key={platform.platform}
@@ -239,18 +221,17 @@ export function ConnectedAccountsSection() {
                 </div>
             )}
 
-            {/* Summary */}
             {!isLoading && accounts.length > 0 && (
-                <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Check className="w-5 h-5 text-primary" />
+                <div className="p-3 xs:p-4 rounded-xl bg-primary/5 border border-primary/20">
+                    <div className="flex items-center gap-2 xs:gap-3">
+                        <div className="w-8 h-8 xs:w-10 xs:h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <Check className="w-4 h-4 xs:w-5 xs:h-5 text-primary" />
                         </div>
-                        <div>
-                            <p className="font-medium text-foreground">
+                        <div className="min-w-0">
+                            <p className="font-medium text-sm xs:text-base text-foreground">
                                 {accounts.filter(a => a.status === 'connected').length} aktywnych połączeń
                             </p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-xs xs:text-sm text-muted-foreground">
                                 Możesz publikować na {accounts.filter(a => a.status === 'connected').length} kontach
                             </p>
                         </div>
@@ -258,42 +239,36 @@ export function ConnectedAccountsSection() {
                 </div>
             )}
 
-            {/* Info */}
-            <div className="p-4 rounded-xl bg-muted/50 border border-border">
-                <div className="flex items-start gap-3">
-                    <ExternalLink className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                    <div className="text-sm text-muted-foreground space-y-2">
+            <div className="p-3 xs:p-4 rounded-xl bg-muted/50 border border-border">
+                <div className="flex items-start gap-2 xs:gap-3">
+                    <ExternalLink className="w-4 h-4 xs:w-5 xs:h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <div className="text-[10px] xs:text-xs sm:text-sm text-muted-foreground space-y-1.5 xs:space-y-2">
                         <p>
-                            <strong>Facebook:</strong> Wymagana Strona Facebook (nie profil osobisty)
+                            <strong>Facebook:</strong> Wymagana Strona Facebook
                         </p>
                         <p>
-                            <strong>Instagram:</strong> Wymagane konto Business lub Creator połączone ze Stroną Facebook
+                            <strong>Instagram:</strong> Konto Business/Creator + Strona FB
                         </p>
                         <p>
-                            <strong>LinkedIn:</strong> Możesz połączyć profil osobisty lub stronę firmową
-                        </p>
-                        <p className="pt-2 border-t border-border mt-2">
-                            Tokeny dostępu są bezpiecznie szyfrowane. Połączenie wymaga autoryzacji OAuth.
+                            <strong>LinkedIn:</strong> Profil lub strona firmowa
                         </p>
                     </div>
                 </div>
             </div>
 
-            {/* Disconnect Confirmation Dialog */}
             <AlertDialog open={disconnectingId !== null} onOpenChange={() => setDisconnectingId(null)}>
-                <AlertDialogContent>
+                <AlertDialogContent className="max-w-[calc(100vw-2rem)] xs:max-w-md">
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Rozłączyć konto?</AlertDialogTitle>
-                        <AlertDialogDescription>
+                        <AlertDialogTitle className="text-base xs:text-lg">Rozłączyć konto?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-xs xs:text-sm">
                             Po rozłączeniu nie będziesz mógł publikować na tym koncie.
-                            Możesz je połączyć ponownie w każdej chwili.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Anuluj</AlertDialogCancel>
+                    <AlertDialogFooter className="flex-col xs:flex-row gap-2">
+                        <AlertDialogCancel className="w-full xs:w-auto">Anuluj</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={() => disconnectingId && handleDisconnect(disconnectingId)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            className="w-full xs:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
                             {disconnectAccount.isPending ? (
                                 <RefreshCw className="w-4 h-4 animate-spin mr-2" />
@@ -308,8 +283,6 @@ export function ConnectedAccountsSection() {
         </motion.div>
     );
 }
-
-// ==================== Platform Card ====================
 
 interface PlatformCardProps {
     platform: PlatformConfig & { accounts: ConnectedAccount[] };
@@ -349,13 +322,11 @@ function PlatformCard({
                     : "border-border bg-card"
             )}
         >
-            {/* Header */}
-            <div className="p-5">
-                <div className="flex items-center gap-4">
-                    {/* Platform Icon */}
+            <div className="p-3 xs:p-4 sm:p-5">
+                <div className="flex items-center gap-2 xs:gap-3 sm:gap-4">
                     <div
                         className={cn(
-                            "w-12 h-12 rounded-xl flex items-center justify-center text-white flex-shrink-0",
+                            "w-10 h-10 xs:w-12 xs:h-12 rounded-lg xs:rounded-xl flex items-center justify-center text-white flex-shrink-0",
                             platform.gradient || ""
                         )}
                         style={{
@@ -365,57 +336,54 @@ function PlatformCard({
                         {platform.icon}
                     </div>
 
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                            <h3 className="font-semibold">{platform.name}</h3>
+                        <div className="flex items-center gap-1.5 xs:gap-2 flex-wrap">
+                            <h3 className="font-semibold text-sm xs:text-base">{platform.name}</h3>
                             {connectedCount > 0 && (
-                                <Badge variant="outline" className="text-green-500 border-green-500/50 gap-1">
-                                    <Check className="w-3 h-3" />
-                                    {connectedCount} {connectedCount === 1 ? 'konto' : 'kont'}
+                                <Badge variant="outline" className="text-green-500 border-green-500/50 gap-0.5 xs:gap-1 text-[10px] xs:text-xs px-1.5">
+                                    <Check className="w-2.5 h-2.5 xs:w-3 xs:h-3" />
+                                    {connectedCount}
                                 </Badge>
                             )}
                         </div>
-                        <p className="text-sm text-muted-foreground mt-0.5">
+                        <p className="text-[10px] xs:text-xs sm:text-sm text-muted-foreground mt-0.5 truncate">
                             {platform.description}
                         </p>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-1.5 xs:gap-2 flex-shrink-0">
                         {hasAccounts && (
                             <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={onToggleExpand}
-                                className="gap-1"
+                                className="gap-1 h-8 xs:h-9 px-2 xs:px-3 text-xs"
                             >
                                 <ChevronDown className={cn(
-                                    "w-4 h-4 transition-transform",
+                                    "w-3.5 h-3.5 xs:w-4 xs:h-4 transition-transform",
                                     isExpanded && "rotate-180"
                                 )} />
-                                Szczegóły
+                                <span className="hidden xs:inline">Szczegóły</span>
                             </Button>
                         )}
                         <Button
                             onClick={onConnect}
                             disabled={isConnecting}
                             size="sm"
-                            className="gap-1.5"
+                            className="gap-1 xs:gap-1.5 h-8 xs:h-9 px-2 xs:px-3 text-xs"
                             style={{ backgroundColor: platform.color }}
                         >
                             {isConnecting ? (
-                                <RefreshCw className="w-4 h-4 animate-spin" />
+                                <RefreshCw className="w-3.5 h-3.5 xs:w-4 xs:h-4 animate-spin" />
                             ) : (
-                                <Plus className="w-4 h-4" />
+                                <Plus className="w-3.5 h-3.5 xs:w-4 xs:h-4" />
                             )}
-                            {hasAccounts ? 'Dodaj kolejne' : 'Połącz'}
+                            <span className="hidden xs:inline">{hasAccounts ? 'Dodaj' : 'Połącz'}</span>
                         </Button>
                     </div>
                 </div>
             </div>
 
-            {/* Expanded Accounts List */}
             <AnimatePresence>
                 {isExpanded && hasAccounts && (
                     <motion.div
@@ -425,7 +393,7 @@ function PlatformCard({
                         transition={{ duration: 0.2 }}
                         className="border-t border-border"
                     >
-                        <div className="p-4 space-y-3">
+                        <div className="p-3 xs:p-4 space-y-2 xs:space-y-3">
                             {platform.accounts.map((account) => (
                                 <AccountItem
                                     key={account.id}
@@ -445,8 +413,6 @@ function PlatformCard({
         </motion.div>
     );
 }
-
-// ==================== Account Item ====================
 
 interface AccountItemProps {
     account: ConnectedAccount;
@@ -470,42 +436,39 @@ function AccountItem({
     const isExpired = account.status === 'expired';
     const [imageError, setImageError] = useState(false);
 
-    // ✅ Fallback dla avatara
     const showFallback = !account.avatar_url || imageError;
 
     return (
         <div className={cn(
-            "p-4 rounded-lg border transition-all",
+            "p-3 xs:p-4 rounded-lg border transition-all",
             isExpired
                 ? "border-destructive/30 bg-destructive/5"
                 : isExpiringSoon
                     ? "border-yellow-500/30 bg-yellow-500/5"
                     : "border-border bg-background"
         )}>
-            <div className="flex items-center gap-4">
-                {/* Avatar z kropką statusu */}
+            <div className="flex items-center gap-2 xs:gap-3 sm:gap-4">
                 <div className="relative flex-shrink-0">
                     {!showFallback ? (
                         <Image
                             src={account.avatar_url!}
                             alt=""
-                            width={48}
-                            height={48}
-                            className="rounded-full object-cover"
+                            width={40}
+                            height={40}
+                            className="rounded-full object-cover w-9 h-9 xs:w-10 xs:h-10 sm:w-12 sm:h-12"
                             onError={() => setImageError(true)}
-                            unoptimized // ✅ Pomija optymalizację Next.js dla zewnętrznych URL
+                            unoptimized
                         />
                     ) : (
                         <div
-                            className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                            className="w-9 h-9 xs:w-10 xs:h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-bold text-sm xs:text-base"
                             style={{ backgroundColor: platformColor }}
                         >
                             {(account.platform_username || 'U')[0].toUpperCase()}
                         </div>
                     )}
-                    {/* Status indicator */}
                     <div className={cn(
-                        "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-background",
+                        "absolute -bottom-0.5 -right-0.5 w-3 h-3 xs:w-3.5 xs:h-3.5 rounded-full border-2 border-background",
                         account.status === 'connected' && "bg-green-500",
                         account.status === 'expired' && "bg-yellow-500",
                         account.status === 'error' && "bg-red-500",
@@ -513,22 +476,22 @@ function AccountItem({
                     )} />
                 </div>
 
-                {/* Info - TYLKO jedna linia z nazwą */}
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                        <span className="font-semibold text-base truncate">
+                    <div className="flex items-center gap-1.5 xs:gap-2 flex-wrap">
+                        <span className="font-semibold text-xs xs:text-sm sm:text-base truncate">
                             {account.platform_username || 'Nieznane konto'}
                         </span>
-                        <Badge variant="secondary" className="text-xs flex-shrink-0">
+                        <Badge variant="secondary" className="text-[9px] xs:text-[10px] px-1 xs:px-1.5 flex-shrink-0">
                             {getAccountTypeLabel(account.account_type)}
                         </Badge>
                     </div>
 
-                    <p className="text-xs text-muted-foreground mt-1">
-                        Połączono {formatDate(account.connected_at)}
+                    <p className="text-[9px] xs:text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                        <span className="hidden xs:inline">Połączono {formatDate(account.connected_at)}</span>
+                        <span className="xs:hidden">{formatDate(account.connected_at)}</span>
                         {account.expires_at && (
                             <span className={cn(
-                                "ml-2",
+                                "ml-1 xs:ml-2",
                                 isExpired && "text-destructive font-medium",
                                 isExpiringSoon && !isExpired && "text-yellow-600 font-medium"
                             )}>
@@ -538,26 +501,25 @@ function AccountItem({
                     </p>
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-1 xs:gap-2 flex-shrink-0">
                     {(isExpired || isExpiringSoon) && (
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={onRefresh}
-                            className="gap-1 text-xs"
+                            className="gap-1 text-[10px] xs:text-xs h-7 xs:h-8 px-2"
                         >
                             <RefreshCw className="w-3 h-3" />
-                            Odśwież
+                            <span className="hidden xs:inline">Odśwież</span>
                         </Button>
                     )}
                     <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={onDisconnect}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 w-7 xs:h-8 xs:w-8"
                     >
-                        <Unlink className="w-4 h-4" />
+                        <Unlink className="w-3.5 h-3.5 xs:w-4 xs:h-4" />
                     </Button>
                 </div>
             </div>

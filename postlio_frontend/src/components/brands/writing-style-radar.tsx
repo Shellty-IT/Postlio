@@ -1,7 +1,7 @@
 // src/components/brands/writing-style-radar.tsx
 'use client';
 
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { BrandVoiceDNA } from '@/types/brand';
 
@@ -12,17 +12,34 @@ interface WritingStyleRadarProps {
     className?: string;
 }
 
-/**
- * Radar chart wizualizujący Styl pisania marki.
- * Dawniej: VoiceDNARadar
- */
 export function WritingStyleRadar({
                                       voiceDNA,
                                       primaryColor = '#8B5CF6',
-                                      size = 200,
+                                      size: propSize,
                                       className
                                   }: WritingStyleRadarProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [size, setSize] = useState(propSize || 200);
+
+    useEffect(() => {
+        if (propSize) {
+            setSize(propSize);
+            return;
+        }
+
+        const updateSize = () => {
+            if (containerRef.current) {
+                const containerWidth = containerRef.current.offsetWidth;
+                const newSize = Math.min(containerWidth, 220);
+                setSize(Math.max(newSize, 140));
+            }
+        };
+
+        updateSize();
+        window.addEventListener('resize', updateSize);
+        return () => window.removeEventListener('resize', updateSize);
+    }, [propSize]);
 
     const metrics = useMemo(() => [
         { key: 'formality', label: 'Formalność', value: voiceDNA.toneFormality },
@@ -38,14 +55,17 @@ export function WritingStyleRadar({
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = size * dpr;
+        canvas.height = size * dpr;
+        ctx.scale(dpr, dpr);
+
         const centerX = size / 2;
         const centerY = size / 2;
-        const radius = (size / 2) - 30;
+        const radius = (size / 2) - 25;
 
-        // Clear canvas
         ctx.clearRect(0, 0, size, size);
 
-        // Draw background circles
         const levels = 4;
         for (let i = levels; i > 0; i--) {
             const levelRadius = (radius / levels) * i;
@@ -56,7 +76,6 @@ export function WritingStyleRadar({
             ctx.stroke();
         }
 
-        // Draw axes
         const angleStep = (Math.PI * 2) / metrics.length;
         metrics.forEach((_, index) => {
             const angle = angleStep * index - Math.PI / 2;
@@ -71,7 +90,6 @@ export function WritingStyleRadar({
             ctx.stroke();
         });
 
-        // Draw data polygon
         ctx.beginPath();
         metrics.forEach((metric, index) => {
             const angle = angleStep * index - Math.PI / 2;
@@ -87,16 +105,13 @@ export function WritingStyleRadar({
         });
         ctx.closePath();
 
-        // Fill polygon
         ctx.fillStyle = `${primaryColor}30`;
         ctx.fill();
 
-        // Stroke polygon
         ctx.strokeStyle = primaryColor;
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Draw data points
         metrics.forEach((metric, index) => {
             const angle = angleStep * index - Math.PI / 2;
             const valueRadius = (metric.value / 100) * radius;
@@ -114,30 +129,30 @@ export function WritingStyleRadar({
 
     }, [metrics, primaryColor, size]);
 
+    const labelOffset = size < 180 ? 8 : 10;
+
     return (
-        <div className={cn("relative", className)}>
+        <div ref={containerRef} className={cn("relative w-full max-w-[220px]", className)}>
             <canvas
                 ref={canvasRef}
-                width={size}
-                height={size}
+                style={{ width: size, height: size }}
                 className="mx-auto"
             />
 
-            {/* Labels */}
             {metrics.map((metric, index) => {
                 const angleStep = (Math.PI * 2) / metrics.length;
                 const angle = angleStep * index - Math.PI / 2;
-                const labelRadius = (size / 2) - 10;
+                const labelRadius = (size / 2) - labelOffset;
                 const x = (size / 2) + Math.cos(angle) * labelRadius;
                 const y = (size / 2) + Math.sin(angle) * labelRadius;
 
                 return (
                     <div
                         key={metric.key}
-                        className="absolute text-xs font-medium text-muted-foreground transform -translate-x-1/2 -translate-y-1/2"
+                        className="absolute text-[10px] xs:text-xs font-medium text-muted-foreground transform -translate-x-1/2 -translate-y-1/2 whitespace-nowrap"
                         style={{ left: x, top: y }}
                     >
-                        {metric.label}
+                        {size < 160 ? metric.label.slice(0, 4) + '.' : metric.label}
                     </div>
                 );
             })}
@@ -145,5 +160,4 @@ export function WritingStyleRadar({
     );
 }
 
-// Alias dla kompatybilności wstecznej
 export const VoiceDNARadar = WritingStyleRadar;

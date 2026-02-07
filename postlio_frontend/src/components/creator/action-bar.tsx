@@ -9,7 +9,6 @@ import {
     Loader2,
     Clock,
     ChevronDown,
-    Zap,
     PenLine,
     CheckCircle2,
     ImageOff,
@@ -44,15 +43,10 @@ import {
 import { cn } from '@/lib/utils';
 import type { Platform } from '@/types';
 
-// ============================================================
-// TYPY
-// ============================================================
-
 interface ActionBarProps {
     onSaveDraft: () => Promise<void>;
     onSchedule: (scheduledAt: string) => Promise<void>;
     onPublishManually: () => void;
-    onShareNow?: () => void;
     isSaving: boolean;
     hasContent: boolean;
     hasImage?: boolean;
@@ -60,10 +54,6 @@ interface ActionBarProps {
     selectedPlatforms?: Platform[];
     isEditMode?: boolean;
 }
-
-// ============================================================
-// QUICK SCHEDULE OPTIONS
-// ============================================================
 
 const QUICK_SCHEDULE = [
     { label: 'Za 1 godzinę', hours: 1 },
@@ -88,10 +78,6 @@ function getScheduleDate(option: number | string): string {
     return tomorrow.toISOString();
 }
 
-// ============================================================
-// KOMPONENT STATUSU - ULEPSZONY
-// ============================================================
-
 interface StatusIndicatorProps {
     hasAnything: boolean;
     instagramNeedsImage: boolean;
@@ -103,13 +89,12 @@ function StatusIndicator({
                              instagramNeedsImage,
                              isEditMode
                          }: StatusIndicatorProps) {
-    // Określ status i styl
     const getStatus = () => {
-        // Tryb edycji
         if (isEditMode && hasAnything) {
             return {
                 icon: Pencil,
                 text: 'Tryb edycji',
+                shortText: 'Edycja',
                 color: 'text-violet-500',
                 bgColor: 'bg-violet-500/10',
                 borderColor: 'border-violet-500/30',
@@ -118,11 +103,11 @@ function StatusIndicator({
             };
         }
 
-        // Instagram wymaga zdjęcia
         if (instagramNeedsImage) {
             return {
                 icon: ImageOff,
                 text: 'Instagram wymaga zdjęcia',
+                shortText: 'Dodaj zdjęcie',
                 color: 'text-amber-500',
                 bgColor: 'bg-amber-500/10',
                 borderColor: 'border-amber-500/30',
@@ -131,11 +116,11 @@ function StatusIndicator({
             };
         }
 
-        // Gotowy do publikacji (ma cokolwiek - tekst lub zdjęcie)
         if (hasAnything) {
             return {
                 icon: CheckCircle2,
                 text: 'Gotowy do publikacji',
+                shortText: 'Gotowy',
                 color: 'text-emerald-500',
                 bgColor: 'bg-emerald-500/10',
                 borderColor: 'border-emerald-500/30',
@@ -144,10 +129,10 @@ function StatusIndicator({
             };
         }
 
-        // Brak treści
         return {
             icon: PenLine,
             text: 'Dodaj treść lub zdjęcie',
+            shortText: 'Dodaj treść',
             color: 'text-muted-foreground',
             bgColor: 'bg-muted/50',
             borderColor: 'border-border',
@@ -168,14 +153,13 @@ function StatusIndicator({
                 exit={{ opacity: 0, x: 10 }}
                 transition={{ duration: 0.2 }}
                 className={cn(
-                    'flex items-center gap-2.5 px-3 py-1.5 rounded-full border text-sm font-medium',
+                    'flex items-center gap-1.5 sm:gap-2.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border text-xs sm:text-sm font-medium',
                     status.bgColor,
                     status.borderColor,
                     status.color
                 )}
             >
-                {/* Animated dot */}
-                <span className="relative flex h-2.5 w-2.5">
+                <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5">
                     {status.pulse && (
                         <span className={cn(
                             'absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping',
@@ -183,30 +167,24 @@ function StatusIndicator({
                         )} />
                     )}
                     <span className={cn(
-                        'relative inline-flex rounded-full h-2.5 w-2.5',
+                        'relative inline-flex rounded-full h-full w-full',
                         status.dotColor
                     )} />
                 </span>
 
-                {/* Icon */}
-                <Icon className="w-4 h-4" />
+                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
 
-                {/* Text */}
+                <span className="hidden xs:inline sm:hidden">{status.shortText}</span>
                 <span className="hidden sm:inline">{status.text}</span>
             </motion.div>
         </AnimatePresence>
     );
 }
 
-// ============================================================
-// KOMPONENT GŁÓWNY
-// ============================================================
-
 export function ActionBar({
                               onSaveDraft,
                               onSchedule,
                               onPublishManually,
-                              onShareNow,
                               isSaving,
                               hasContent,
                               hasImage = false,
@@ -219,10 +197,8 @@ export function ActionBar({
     const [scheduleTime, setScheduleTime] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // ✅ POPRAWKA: Logika walidacji
-    const hasAnything = hasContent || hasImage; // Ma tekst LUB zdjęcie
+    const hasAnything = hasContent || hasImage;
 
-    // Sprawdź czy Instagram jest w wybranych platformach
     const platforms = selectedPlatforms.length > 0
         ? selectedPlatforms
         : (selectedPlatform ? [selectedPlatform as Platform] : []);
@@ -230,12 +206,7 @@ export function ActionBar({
     const hasInstagram = platforms.includes('instagram');
     const instagramNeedsImage = hasInstagram && !hasImage;
 
-    // ✅ POPRAWKA: Można zapisać jeśli jest COKOLWIEK (tekst lub zdjęcie)
     const canSave = hasAnything;
-
-    // ✅ POPRAWKA: Można opublikować jeśli:
-    // - Ma cokolwiek (tekst lub zdjęcie)
-    // - I jeśli jest Instagram - musi mieć zdjęcie
     const canPublish = hasAnything && !instagramNeedsImage;
 
     const handleSaveDraft = async () => {
@@ -276,67 +247,61 @@ export function ActionBar({
 
     return (
         <>
-            <div className="flex items-center justify-between p-4">
-                {/* Left side - Ulepszony status */}
+            <div className="flex items-center justify-between gap-2 p-3 sm:p-4">
                 <StatusIndicator
                     hasAnything={hasAnything}
                     instagramNeedsImage={instagramNeedsImage}
                     isEditMode={isEditMode}
                 />
 
-                {/* Right side - actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                     <TooltipProvider delayDuration={300}>
-                        {/* Save draft / Update */}
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button
                                     variant="outline"
+                                    size="sm"
                                     onClick={handleSaveDraft}
                                     disabled={!canSave || isLoading}
                                     className={cn(
+                                        "h-9 px-2 sm:px-3",
                                         isEditMode && 'border-violet-300 text-violet-600 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-400 dark:hover:bg-violet-950'
                                     )}
                                 >
                                     {isLoading ? (
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        <Loader2 className="w-4 h-4 animate-spin" />
                                     ) : isEditMode ? (
-                                        <Pencil className="w-4 h-4 mr-2" />
+                                        <Pencil className="w-4 h-4" />
                                     ) : (
-                                        <Save className="w-4 h-4 mr-2" />
+                                        <Save className="w-4 h-4" />
                                     )}
-                                    <span className="hidden sm:inline">
-                                        {isEditMode ? 'Aktualizuj' : 'Zapisz szkic'}
-                                    </span>
-                                    <span className="sm:hidden">
+                                    <span className="hidden sm:inline ml-2">
                                         {isEditMode ? 'Aktualizuj' : 'Zapisz'}
                                     </span>
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                {isEditMode
-                                    ? 'Zapisz zmiany w poście'
-                                    : 'Zapisz jako szkic do późniejszej edycji'
-                                }
+                                {isEditMode ? 'Zapisz zmiany' : 'Zapisz jako szkic'}
                             </TooltipContent>
                         </Tooltip>
 
-                        {/* Schedule dropdown */}
                         <DropdownMenu>
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <DropdownMenuTrigger asChild>
                                         <Button
                                             variant="outline"
+                                            size="sm"
                                             disabled={!canPublish || isLoading}
+                                            className="h-9 px-2 sm:px-3"
                                         >
-                                            <Calendar className="w-4 h-4 mr-2" />
-                                            <span className="hidden sm:inline">Zaplanuj</span>
-                                            <ChevronDown className="w-4 h-4 ml-1" />
+                                            <Calendar className="w-4 h-4" />
+                                            <span className="hidden sm:inline ml-2">Zaplanuj</span>
+                                            <ChevronDown className="w-3 h-3 ml-1" />
                                         </Button>
                                     </DropdownMenuTrigger>
                                 </TooltipTrigger>
-                                <TooltipContent>Zaplanuj publikację na później</TooltipContent>
+                                <TooltipContent>Zaplanuj publikację</TooltipContent>
                             </Tooltip>
                             <DropdownMenuContent align="end" className="w-48">
                                 {QUICK_SCHEDULE.map((option) => (
@@ -356,56 +321,32 @@ export function ActionBar({
                             </DropdownMenuContent>
                         </DropdownMenu>
 
-                        {/* Share Now */}
-                        {onShareNow && (
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        onClick={onShareNow}
-                                        disabled={!canPublish || isLoading}
-                                        className="gap-2 border-violet-300 text-violet-600 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-400 dark:hover:bg-violet-950"
-                                    >
-                                        <Zap className="w-4 h-4" />
-                                        <span className="hidden lg:inline">Udostępnij teraz</span>
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    Natychmiastowe udostępnienie przez Share Dialog
-                                </TooltipContent>
-                            </Tooltip>
-                        )}
-
-                        {/* Publish manually - GŁÓWNY PRZYCISK */}
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button
+                                    size="sm"
                                     onClick={onPublishManually}
                                     disabled={!canPublish || isLoading}
-                                    className="gap-2 bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90 shadow-lg shadow-primary/25"
+                                    className="h-9 px-2 sm:px-3 gap-1.5 bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90 shadow-lg shadow-primary/25"
                                 >
                                     <Sparkles className="w-4 h-4" />
-                                    <span className="hidden sm:inline">Opublikuj</span>
-                                    <span className="sm:hidden">Publikuj</span>
+                                    <span className="hidden xs:inline">Publikuj</span>
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                Otwórz modal z instrukcjami ręcznej publikacji
+                                Otwórz modal publikacji
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
                 </div>
             </div>
 
-            {/* Custom schedule dialog */}
             <Dialog open={isScheduleOpen} onOpenChange={setIsScheduleOpen}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Zaplanuj publikację</DialogTitle>
                         <DialogDescription>
-                            Wybierz datę i godzinę. Post zostanie dodany do kalendarza
-                            i może być opublikowany automatycznie przez Autopilota
-                            (wymaga Facebook Page lub Instagram Business).
+                            Wybierz datę i godzinę publikacji.
                         </DialogDescription>
                     </DialogHeader>
 

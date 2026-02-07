@@ -1,14 +1,8 @@
 // src/app/(dashboard)/calendar/page.tsx
-/**
- * Strona kalendarza
- *
- * ✅ NAPRAWIONE: Obsługa platforms[] w ScheduledPost
- */
-
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { useCallback, useMemo, useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import {
     DndContext,
@@ -16,6 +10,7 @@ import {
     DragStartEvent,
     DragEndEvent,
     PointerSensor,
+    TouchSensor,
     useSensor,
     useSensors,
     closestCenter,
@@ -27,6 +22,7 @@ import {
     startOfWeek,
     endOfWeek,
 } from 'date-fns';
+import { FileText } from 'lucide-react';
 import {
     CalendarHeader,
     MonthView,
@@ -35,8 +31,12 @@ import {
     CalendarStats,
     DraftsSidebar,
     DragOverlayContent,
+    MobileAgendaView,
 } from '@/components/calendar';
 import { FeatureLocked, CalendarLimitedBanner } from '@/components/common';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Badge } from '@/components/ui/badge';
 import { useCalendarStore } from '@/store/calendar-store';
 import { useAuthStore } from '@/store/auth-store';
 import { useCalendarPosts, useUpdatePost, usePosts } from '@/hooks';
@@ -44,10 +44,6 @@ import type { ScheduledPost } from '@/types/calendar';
 import type { CalendarEvent } from '@/types/post';
 import type { Post } from '@/types/post';
 import type { Platform } from '@/types';
-
-// ============================================================
-// HELPER: Konwersja CalendarEvent -> ScheduledPost
-// ============================================================
 
 function convertToScheduledPost(event: CalendarEvent): ScheduledPost {
     const platformsArray: Platform[] = Array.isArray(event.platforms) && event.platforms.length > 0
@@ -65,38 +61,41 @@ function convertToScheduledPost(event: CalendarEvent): ScheduledPost {
         platform_statuses: event.platform_statuses || {},
         scheduledAt: new Date(`${event.date}T${event.time}`),
         status: event.status,
-        brandId: event.brand_id ?? undefined,  // ✅ NAPRAWIONE: null → undefined
+        brandId: event.brand_id ?? undefined,
         brandName: undefined,
         aiGenerated: false,
-        imageUrl: event.image_url ?? undefined,  // ✅ NAPRAWIONE: null → undefined
+        imageUrl: event.image_url ?? undefined,
     };
 }
-
-// ============================================================
-// KOMPONENT
-// ============================================================
 
 export default function CalendarPage() {
     const { view, currentDate } = useCalendarStore();
     const { capabilities } = useAuthStore();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [activeDraft, setActiveDraft] = useState<Post | null>(null);
+    const [isMobile, setIsMobile] = useState(false);
+    const [isDraftSheetOpen, setIsDraftSheetOpen] = useState(false);
 
-    // Sprawdź dostęp
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
     const accessLevel = capabilities.access_level;
     const canUseCalendar = capabilities.can_use_calendar;
     const canAutoPublish = capabilities.can_auto_publish;
 
-    // DnD sensors
     const sensors = useSensors(
         useSensor(PointerSensor, {
-            activationConstraint: {
-                distance: 8,
-            },
+            activationConstraint: { distance: 8 },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: { delay: 250, tolerance: 5 },
         })
     );
 
-    // Oblicz zakres dat dla API
     const dateRange = useMemo(() => {
         const monthStart = startOfMonth(currentDate);
         const monthEnd = endOfMonth(currentDate);
@@ -109,30 +108,24 @@ export default function CalendarPage() {
         };
     }, [currentDate]);
 
-    // Pobierz posty z API (kalendarz) - tylko jeśli ma dostęp
     const {
         data: apiEvents = [],
         isLoading: isLoadingCalendar,
         isError
     } = useCalendarPosts(dateRange);
 
-    // Pobierz wszystkie posty (dla draftów)
     const {
         data: allPostsData,
         isLoading: isLoadingPosts,
     } = usePosts({ status: 'draft' });
 
     const drafts = allPostsData?.posts || [];
-
-    // Mutation do aktualizacji
     const updatePost = useUpdatePost();
 
-    // Konwertuj API events na ScheduledPost
     const posts = useMemo(() => {
         return apiEvents.map(convertToScheduledPost);
     }, [apiEvents]);
 
-    // Handler przenoszenia posta (istniejącego w kalendarzu)
     const handlePostMove = useCallback(async (postId: string, newDate: Date) => {
         const event = apiEvents.find(e => e.id === postId);
         if (!event) return;
@@ -140,9 +133,7 @@ export default function CalendarPage() {
         try {
             await updatePost.mutateAsync({
                 id: event.post_id,
-                data: {
-                    scheduled_at: newDate.toISOString(),
-                },
+                data: { scheduled_at: newDate.toISOString() },
             });
 
             toast.success('Post został przeniesiony', {
@@ -153,13 +144,10 @@ export default function CalendarPage() {
         }
     }, [apiEvents, updatePost]);
 
-    // DnD handlers
     const handleDragStart = useCallback((event: DragStartEvent) => {
         const { active } = event;
         const draft = active.data.current?.draft as Post | undefined;
-        if (draft) {
-            setActiveDraft(draft);
-        }
+        if (draft) setActiveDraft(draft);
     }, []);
 
     const handleDragEnd = useCallback(async (event: DragEndEvent) => {
@@ -173,7 +161,6 @@ export default function CalendarPage() {
 
         if (!draft || !targetDate) return;
 
-        // Ustaw domyślną godzinę na 12:00 jeśli to dzień
         const scheduledDate = new Date(targetDate);
         if (scheduledDate.getHours() === 0 && scheduledDate.getMinutes() === 0) {
             scheduledDate.setHours(12, 0, 0, 0);
@@ -188,14 +175,15 @@ export default function CalendarPage() {
                 },
             });
 
-            // Różny komunikat w zależności od możliwości auto-publish
+            setIsDraftSheetOpen(false);
+
             if (canAutoPublish) {
                 toast.success('Post zaplanowany!', {
-                    description: `${format(scheduledDate, 'dd.MM.yyyy')} o ${format(scheduledDate, 'HH:mm')} - zostanie opublikowany automatycznie`,
+                    description: `${format(scheduledDate, 'dd.MM.yyyy')} o ${format(scheduledDate, 'HH:mm')}`,
                 });
             } else {
                 toast.success('Przypomnienie ustawione!', {
-                    description: `${format(scheduledDate, 'dd.MM.yyyy')} o ${format(scheduledDate, 'HH:mm')} - otrzymasz powiadomienie`,
+                    description: `${format(scheduledDate, 'dd.MM.yyyy')} o ${format(scheduledDate, 'HH:mm')}`,
                 });
             }
         } catch {
@@ -207,24 +195,17 @@ export default function CalendarPage() {
         setActiveDraft(null);
     }, []);
 
-    // ============================================================
-    // BLOKADA - Brak konta (tryb demo)
-    // ============================================================
     if (!canUseCalendar) {
         return (
-            <div className="p-6">
-                <FeatureLocked
-                    feature="calendar"
-                    accessLevel={accessLevel}
-                />
+            <div className="p-4 sm:p-6">
+                <FeatureLocked feature="calendar" accessLevel={accessLevel} />
             </div>
         );
     }
 
-    // Loading state
     if (isLoadingCalendar) {
         return (
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
                 <div className="flex items-center justify-center h-96">
                     <div className="flex flex-col items-center gap-4">
                         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -235,10 +216,9 @@ export default function CalendarPage() {
         );
     }
 
-    // Error state
     if (isError) {
         return (
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
                 <div className="flex items-center justify-center h-96">
                     <div className="text-center">
                         <p className="text-destructive mb-2">Błąd ładowania kalendarza</p>
@@ -254,6 +234,8 @@ export default function CalendarPage() {
         );
     }
 
+    const draftCount = drafts.filter(d => d.status === 'draft').length;
+
     return (
         <DndContext
             sensors={sensors}
@@ -262,62 +244,92 @@ export default function CalendarPage() {
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
         >
-            <div className="flex h-[calc(100vh-4rem)]">
-                {/* Main Calendar Area */}
+            <div className="flex h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] -mx-3 xs:-mx-4 sm:-mx-6 lg:-mx-8 -mb-4">
                 <div className="flex-1 flex flex-col overflow-hidden">
-                    <div className="flex-1 overflow-auto p-6 space-y-6">
-                        {/* Banner dla konta osobistego (limited) */}
-                        {accessLevel === 'limited' && (
-                            <CalendarLimitedBanner />
-                        )}
+                    <div className="flex-1 overflow-auto p-3 xs:p-4 sm:p-6 space-y-4 sm:space-y-6 pb-20 md:pb-6">
+                        {accessLevel === 'limited' && <CalendarLimitedBanner />}
 
-                        {/* Stats */}
-                        <CalendarStats posts={posts} />
+                        <div className="flex items-center justify-between gap-2">
+                            <CalendarStats posts={posts} />
 
-                        {/* Calendar Header with controls */}
-                        <CalendarHeader />
-
-                        {/* Calendar Views */}
-                        <motion.div
-                            key={view}
-                            initial={{ opacity: 0, x: view === 'month' ? -20 : 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.3 }}
-                        >
-                            {view === 'month' ? (
-                                <MonthView
-                                    posts={posts}
-                                    onPostMove={handlePostMove}
-                                    enableDroppable
-                                />
-                            ) : (
-                                <WeekView
-                                    posts={posts}
-                                    onPostMove={handlePostMove}
-                                    enableDroppable
-                                />
+                            {isMobile && (
+                                <Sheet open={isDraftSheetOpen} onOpenChange={setIsDraftSheetOpen}>
+                                    <SheetTrigger asChild>
+                                        <Button variant="outline" size="sm" className="gap-2 flex-shrink-0">
+                                            <FileText className="h-4 w-4" />
+                                            <span className="hidden xs:inline">Szkice</span>
+                                            {draftCount > 0 && (
+                                                <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                                                    {draftCount}
+                                                </Badge>
+                                            )}
+                                        </Button>
+                                    </SheetTrigger>
+                                    <SheetContent side="right" className="w-full xs:w-80 p-0">
+                                        <SheetHeader className="p-4 border-b">
+                                            <SheetTitle className="flex items-center gap-2">
+                                                <FileText className="h-4 w-4" />
+                                                Szkice
+                                            </SheetTitle>
+                                        </SheetHeader>
+                                        <DraftsSidebar
+                                            drafts={drafts}
+                                            isLoading={isLoadingPosts}
+                                            isCollapsed={false}
+                                            isMobileSheet
+                                        />
+                                    </SheetContent>
+                                </Sheet>
                             )}
-                        </motion.div>
+                        </div>
+
+                        <CalendarHeader isMobile={isMobile} />
+
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={`${view}-${isMobile}`}
+                                initial={{ opacity: 0, x: view === 'month' ? -20 : 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                {isMobile ? (
+                                    <MobileAgendaView
+                                        posts={posts}
+                                        onPostMove={handlePostMove}
+                                    />
+                                ) : view === 'month' ? (
+                                    <MonthView
+                                        posts={posts}
+                                        onPostMove={handlePostMove}
+                                        enableDroppable
+                                    />
+                                ) : (
+                                    <WeekView
+                                        posts={posts}
+                                        onPostMove={handlePostMove}
+                                        enableDroppable
+                                    />
+                                )}
+                            </motion.div>
+                        </AnimatePresence>
                     </div>
                 </div>
 
-                {/* Drafts Sidebar */}
-                <DraftsSidebar
-                    drafts={drafts}
-                    isLoading={isLoadingPosts}
-                    isCollapsed={isSidebarCollapsed}
-                    onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                />
+                {!isMobile && (
+                    <DraftsSidebar
+                        drafts={drafts}
+                        isLoading={isLoadingPosts}
+                        isCollapsed={isSidebarCollapsed}
+                        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                    />
+                )}
             </div>
 
-            {/* Schedule Modal */}
             <ScheduleModal />
 
-            {/* Drag Overlay */}
             <DragOverlay>
-                {activeDraft && (
-                    <DragOverlayContent draft={activeDraft} />
-                )}
+                {activeDraft && <DragOverlayContent draft={activeDraft} />}
             </DragOverlay>
         </DndContext>
     );

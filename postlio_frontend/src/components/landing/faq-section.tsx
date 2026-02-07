@@ -1,3 +1,4 @@
+// src/components/landing/faq-section.tsx
 'use client';
 
 import { useState } from 'react';
@@ -46,15 +47,13 @@ export function FAQSection() {
     const [openIndex, setOpenIndex] = useState<number | null>(0);
 
     return (
-        <section id="faq" className="py-24 md:py-32 relative overflow-hidden">
-            {/* Background decoration */}
+        <section id="faq" className="py-16 xs:py-20 md:py-24 lg:py-32 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-primary/5 blur-3xl -z-10" />
             <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-violet-500/5 blur-3xl -z-10" />
 
             <div className="container mx-auto px-4">
                 <div className="max-w-4xl mx-auto">
-                    {/* Section Header */}
-                    <div className="text-center mb-12">
+                    <div className="text-center mb-8 sm:mb-12">
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
@@ -63,14 +62,14 @@ export function FAQSection() {
                         >
                             <Badge
                                 variant="secondary"
-                                className="mb-4 px-4 py-2 bg-primary/10 text-primary border-primary/20"
+                                className="mb-3 sm:mb-4 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-primary/10 text-primary border-primary/20"
                             >
                                 FAQ
                             </Badge>
                         </motion.div>
 
                         <motion.h2
-                            className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6"
+                            className="text-2xl xs:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6"
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
@@ -81,7 +80,7 @@ export function FAQSection() {
                         </motion.h2>
 
                         <motion.p
-                            className="text-lg text-muted-foreground"
+                            className="text-sm sm:text-base md:text-lg text-muted-foreground px-2"
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
@@ -91,9 +90,8 @@ export function FAQSection() {
                         </motion.p>
                     </div>
 
-                    {/* FAQ List */}
                     <motion.div
-                        className="bg-card rounded-3xl border border-border/50 p-6 md:p-8"
+                        className="bg-card rounded-2xl sm:rounded-3xl border border-border/50 p-4 xs:p-5 sm:p-6 md:p-8"
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
@@ -111,15 +109,14 @@ export function FAQSection() {
                         ))}
                     </motion.div>
 
-                    {/* Contact CTA */}
                     <motion.div
-                        className="mt-12 text-center"
+                        className="mt-8 sm:mt-12 text-center"
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.5, delay: 0.4 }}
                     >
-                        <p className="text-muted-foreground mb-4">
+                        <p className="text-sm sm:text-base text-muted-foreground mb-3 sm:mb-4">
                             Nie znalazłeś odpowiedzi na swoje pytanie?
                         </p>
                         <Button variant="outline" className="gap-2">

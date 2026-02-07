@@ -31,30 +31,28 @@ export function NotificationsSection() {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-8"
+            className="space-y-6 sm:space-y-8"
         >
-            {/* Header */}
             <div>
-                <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-                    <Bell className="w-5 h-5 text-primary" />
+                <h2 className="text-lg xs:text-xl font-semibold text-foreground flex items-center gap-2">
+                    <Bell className="w-4 h-4 xs:w-5 xs:h-5 text-primary" />
                     Powiadomienia
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-xs xs:text-sm text-muted-foreground mt-1">
                     Zarządzaj jak i kiedy otrzymujesz powiadomienia
                 </p>
             </div>
 
-            {/* Email Notifications */}
-            <div className="p-6 rounded-xl border border-border bg-card space-y-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                            <Mail className="w-5 h-5 text-primary" />
+            <div className="p-4 xs:p-6 rounded-xl border border-border bg-card space-y-4 xs:space-y-6">
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 xs:gap-3 min-w-0">
+                        <div className="p-1.5 xs:p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                            <Mail className="w-4 h-4 xs:w-5 xs:h-5 text-primary" />
                         </div>
-                        <div>
-                            <h3 className="font-medium">Powiadomienia email</h3>
-                            <p className="text-sm text-muted-foreground">
-                                Otrzymuj powiadomienia na swoją skrzynkę
+                        <div className="min-w-0">
+                            <h3 className="font-medium text-sm xs:text-base">Powiadomienia email</h3>
+                            <p className="text-[10px] xs:text-sm text-muted-foreground hidden xs:block">
+                                Otrzymuj powiadomienia na skrzynkę
                             </p>
                         </div>
                     </div>
@@ -68,14 +66,13 @@ export function NotificationsSection() {
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
-                        className="space-y-4 pl-12 border-l-2 border-border"
+                        className="space-y-3 xs:space-y-4 pl-6 xs:pl-10 sm:pl-12 border-l-2 border-border"
                     >
-                        {/* Email Digest */}
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Label className="text-sm">Podsumowanie email</Label>
-                                <p className="text-xs text-muted-foreground">
-                                    Jak często otrzymywać zbiorcze podsumowanie
+                        <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2">
+                            <div className="min-w-0">
+                                <Label className="text-xs xs:text-sm">Podsumowanie email</Label>
+                                <p className="text-[10px] xs:text-xs text-muted-foreground">
+                                    Częstotliwość zbiorczych powiadomień
                                 </p>
                             </div>
                             <Select
@@ -84,7 +81,7 @@ export function NotificationsSection() {
                                     updateNotifications({ emailDigest: v })
                                 }
                             >
-                                <SelectTrigger className="w-32">
+                                <SelectTrigger className="w-full xs:w-32 h-9 xs:h-10">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -95,11 +92,10 @@ export function NotificationsSection() {
                             </Select>
                         </div>
 
-                        {/* Email on Publish */}
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Check className="w-4 h-4 text-green-500" />
-                                <Label className="text-sm">Po opublikowaniu posta</Label>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <Check className="w-3.5 h-3.5 xs:w-4 xs:h-4 text-green-500 flex-shrink-0" />
+                                <Label className="text-xs xs:text-sm">Po opublikowaniu</Label>
                             </div>
                             <Switch
                                 checked={notifications.emailOnPublish}
@@ -107,11 +103,10 @@ export function NotificationsSection() {
                             />
                         </div>
 
-                        {/* Email on Error */}
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <AlertCircle className="w-4 h-4 text-destructive" />
-                                <Label className="text-sm">Przy błędach</Label>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <AlertCircle className="w-3.5 h-3.5 xs:w-4 xs:h-4 text-destructive flex-shrink-0" />
+                                <Label className="text-xs xs:text-sm">Przy błędach</Label>
                             </div>
                             <Switch
                                 checked={notifications.emailOnError}
@@ -119,11 +114,10 @@ export function NotificationsSection() {
                             />
                         </div>
 
-                        {/* Email on Approval Needed */}
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-amber-500" />
-                                <Label className="text-sm">Gdy post czeka na zatwierdzenie</Label>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <Clock className="w-3.5 h-3.5 xs:w-4 xs:h-4 text-amber-500 flex-shrink-0" />
+                                <Label className="text-xs xs:text-sm">Czeka na zatwierdzenie</Label>
                             </div>
                             <Switch
                                 checked={notifications.emailOnApprovalNeeded}
@@ -134,17 +128,16 @@ export function NotificationsSection() {
                 )}
             </div>
 
-            {/* Push Notifications */}
-            <div className="p-6 rounded-xl border border-border bg-card space-y-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-violet-500/10">
-                            <Smartphone className="w-5 h-5 text-violet-500" />
+            <div className="p-4 xs:p-6 rounded-xl border border-border bg-card space-y-4 xs:space-y-6">
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 xs:gap-3 min-w-0">
+                        <div className="p-1.5 xs:p-2 rounded-lg bg-violet-500/10 flex-shrink-0">
+                            <Smartphone className="w-4 h-4 xs:w-5 xs:h-5 text-violet-500" />
                         </div>
-                        <div>
-                            <h3 className="font-medium">Powiadomienia push</h3>
-                            <p className="text-sm text-muted-foreground">
-                                Powiadomienia w przeglądarce i na urządzeniach mobilnych
+                        <div className="min-w-0">
+                            <h3 className="font-medium text-sm xs:text-base">Powiadomienia push</h3>
+                            <p className="text-[10px] xs:text-sm text-muted-foreground hidden xs:block">
+                                Przeglądarka i urządzenia mobilne
                             </p>
                         </div>
                     </div>
@@ -158,13 +151,12 @@ export function NotificationsSection() {
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
-                        className="space-y-4 pl-12 border-l-2 border-border"
+                        className="space-y-3 xs:space-y-4 pl-6 xs:pl-10 sm:pl-12 border-l-2 border-border"
                     >
-                        {/* Push on Publish */}
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Check className="w-4 h-4 text-green-500" />
-                                <Label className="text-sm">Po opublikowaniu posta</Label>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <Check className="w-3.5 h-3.5 xs:w-4 xs:h-4 text-green-500 flex-shrink-0" />
+                                <Label className="text-xs xs:text-sm">Po opublikowaniu</Label>
                             </div>
                             <Switch
                                 checked={notifications.pushOnPublish}
@@ -172,11 +164,10 @@ export function NotificationsSection() {
                             />
                         </div>
 
-                        {/* Push on Error */}
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <AlertCircle className="w-4 h-4 text-destructive" />
-                                <Label className="text-sm">Przy błędach</Label>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <AlertCircle className="w-3.5 h-3.5 xs:w-4 xs:h-4 text-destructive flex-shrink-0" />
+                                <Label className="text-xs xs:text-sm">Przy błędach</Label>
                             </div>
                             <Switch
                                 checked={notifications.pushOnError}
@@ -184,11 +175,10 @@ export function NotificationsSection() {
                             />
                         </div>
 
-                        {/* Push on Approval Needed */}
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-amber-500" />
-                                <Label className="text-sm">Gdy post czeka na zatwierdzenie</Label>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <Clock className="w-3.5 h-3.5 xs:w-4 xs:h-4 text-amber-500 flex-shrink-0" />
+                                <Label className="text-xs xs:text-sm">Czeka na zatwierdzenie</Label>
                             </div>
                             <Switch
                                 checked={notifications.pushOnApprovalNeeded}
@@ -199,17 +189,16 @@ export function NotificationsSection() {
                 )}
             </div>
 
-            {/* In-App Notifications */}
-            <div className="p-6 rounded-xl border border-border bg-card space-y-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-blue-500/10">
-                            <Monitor className="w-5 h-5 text-blue-500" />
+            <div className="p-4 xs:p-6 rounded-xl border border-border bg-card space-y-4 xs:space-y-6">
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 xs:gap-3 min-w-0">
+                        <div className="p-1.5 xs:p-2 rounded-lg bg-blue-500/10 flex-shrink-0">
+                            <Monitor className="w-4 h-4 xs:w-5 xs:h-5 text-blue-500" />
                         </div>
-                        <div>
-                            <h3 className="font-medium">Powiadomienia w aplikacji</h3>
-                            <p className="text-sm text-muted-foreground">
-                                Powiadomienia wyświetlane podczas korzystania z aplikacji
+                        <div className="min-w-0">
+                            <h3 className="font-medium text-sm xs:text-base">W aplikacji</h3>
+                            <p className="text-[10px] xs:text-sm text-muted-foreground hidden xs:block">
+                                Powiadomienia podczas korzystania
                             </p>
                         </div>
                     </div>
@@ -223,12 +212,12 @@ export function NotificationsSection() {
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
-                        className="pl-12 border-l-2 border-border"
+                        className="pl-6 xs:pl-10 sm:pl-12 border-l-2 border-border"
                     >
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Volume2 className="w-4 h-4 text-muted-foreground" />
-                                <Label className="text-sm">Dźwięki powiadomień</Label>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <Volume2 className="w-3.5 h-3.5 xs:w-4 xs:h-4 text-muted-foreground flex-shrink-0" />
+                                <Label className="text-xs xs:text-sm">Dźwięki powiadomień</Label>
                             </div>
                             <Switch
                                 checked={notifications.soundEnabled}

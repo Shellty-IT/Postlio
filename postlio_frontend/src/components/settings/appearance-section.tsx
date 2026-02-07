@@ -22,9 +22,9 @@ import {
 } from '@/types/settings';
 
 const THEME_ICONS: Record<ThemeMode, React.ReactNode> = {
-    light: <Sun className="w-5 h-5" />,
-    dark: <Moon className="w-5 h-5" />,
-    system: <Monitor className="w-5 h-5" />,
+    light: <Sun className="w-4 h-4 xs:w-5 xs:h-5" />,
+    dark: <Moon className="w-4 h-4 xs:w-5 xs:h-5" />,
+    system: <Monitor className="w-4 h-4 xs:w-5 xs:h-5" />,
 };
 
 export function AppearanceSection() {
@@ -35,24 +35,22 @@ export function AppearanceSection() {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-8"
+            className="space-y-6 sm:space-y-8"
         >
-            {/* Header */}
             <div>
-                <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-                    <Palette className="w-5 h-5 text-primary" />
+                <h2 className="text-lg xs:text-xl font-semibold text-foreground flex items-center gap-2">
+                    <Palette className="w-4 h-4 xs:w-5 xs:h-5 text-primary" />
                     Wygląd
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-xs xs:text-sm text-muted-foreground mt-1">
                     Dostosuj wygląd aplikacji do swoich preferencji
                 </p>
             </div>
 
-            {/* Theme Selection */}
-            <div className="space-y-4">
-                <Label className="text-base">Motyw</Label>
+            <div className="space-y-3 xs:space-y-4">
+                <Label className="text-sm xs:text-base">Motyw</Label>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-2 xs:gap-3 sm:gap-4">
                     {THEME_OPTIONS.map((option) => {
                         const isSelected = appearance.theme === option.value;
 
@@ -61,22 +59,22 @@ export function AppearanceSection() {
                                 key={option.value}
                                 onClick={() => setTheme(option.value)}
                                 className={cn(
-                                    "relative p-6 rounded-xl border-2 text-center transition-all",
-                                    "hover:border-primary/50",
+                                    "relative p-3 xs:p-4 sm:p-6 rounded-xl border-2 text-center transition-all",
+                                    "hover:border-primary/50 min-h-[80px] xs:min-h-[100px]",
                                     isSelected
                                         ? "border-primary bg-primary/5"
                                         : "border-border bg-card"
                                 )}
                             >
                                 <div className={cn(
-                                    "w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center",
+                                    "w-10 h-10 xs:w-12 xs:h-12 rounded-full mx-auto mb-2 xs:mb-3 flex items-center justify-center",
                                     option.value === 'light' && "bg-amber-100 text-amber-600",
                                     option.value === 'dark' && "bg-slate-800 text-slate-200",
                                     option.value === 'system' && "bg-gradient-to-br from-amber-100 to-slate-800 text-white"
                                 )}>
                                     {THEME_ICONS[option.value]}
                                 </div>
-                                <span className="font-medium">{option.label}</span>
+                                <span className="font-medium text-xs xs:text-sm">{option.label}</span>
 
                                 {isSelected && (
                                     <motion.div
@@ -91,14 +89,13 @@ export function AppearanceSection() {
                 </div>
             </div>
 
-            {/* Accent Color */}
-            <div className="space-y-4">
-                <Label className="text-base">Kolor akcentu</Label>
-                <p className="text-sm text-muted-foreground -mt-2">
-                    Główny kolor używany w przyciskach i podświetleniach
+            <div className="space-y-3 xs:space-y-4">
+                <Label className="text-sm xs:text-base">Kolor akcentu</Label>
+                <p className="text-xs xs:text-sm text-muted-foreground -mt-2">
+                    Główny kolor używany w przyciskach
                 </p>
 
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2 xs:gap-3">
                     {ACCENT_COLORS.map((color) => {
                         const isSelected = appearance.accentColor === color.value;
 
@@ -107,8 +104,8 @@ export function AppearanceSection() {
                                 key={color.value}
                                 onClick={() => updateAppearance({ accentColor: color.value })}
                                 className={cn(
-                                    "flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all",
-                                    "hover:scale-105",
+                                    "flex items-center gap-2 xs:gap-3 px-3 xs:px-4 py-2 xs:py-3 rounded-xl border-2 transition-all",
+                                    "hover:scale-105 min-h-[44px]",
                                     isSelected
                                         ? "border-current shadow-lg"
                                         : "border-border bg-card"
@@ -119,66 +116,63 @@ export function AppearanceSection() {
                                 }}
                             >
                                 <div
-                                    className="w-6 h-6 rounded-full shadow-inner"
+                                    className="w-5 h-5 xs:w-6 xs:h-6 rounded-full shadow-inner flex-shrink-0"
                                     style={{ backgroundColor: color.color }}
                                 />
-                                <span className="font-medium text-sm">{color.label}</span>
+                                <span className="font-medium text-xs xs:text-sm">{color.label}</span>
                             </button>
                         );
                     })}
                 </div>
             </div>
 
-            {/* Preview */}
-            <div className="p-6 rounded-xl border border-border bg-card space-y-4">
-                <h3 className="font-medium flex items-center gap-2">
+            <div className="p-4 xs:p-6 rounded-xl border border-border bg-card space-y-3 xs:space-y-4">
+                <h3 className="font-medium flex items-center gap-2 text-sm xs:text-base">
                     <Eye className="w-4 h-4" />
                     Podgląd
                 </h3>
 
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2 xs:gap-3">
                     <button
-                        className="px-4 py-2 rounded-lg text-white font-medium"
+                        className="px-3 xs:px-4 py-1.5 xs:py-2 rounded-lg text-white font-medium text-xs xs:text-sm"
                         style={{ backgroundColor: ACCENT_COLORS.find(c => c.value === appearance.accentColor)?.color }}
                     >
                         Przycisk główny
                     </button>
                     <button
-                        className="px-4 py-2 rounded-lg border-2 font-medium"
+                        className="px-3 xs:px-4 py-1.5 xs:py-2 rounded-lg border-2 font-medium text-xs xs:text-sm"
                         style={{
                             borderColor: ACCENT_COLORS.find(c => c.value === appearance.accentColor)?.color,
                             color: ACCENT_COLORS.find(c => c.value === appearance.accentColor)?.color,
                         }}
                     >
-                        Przycisk outline
+                        Outline
                     </button>
                     <span
-                        className="px-3 py-1 rounded-full text-sm font-medium"
+                        className="px-2 xs:px-3 py-1 rounded-full text-[10px] xs:text-xs font-medium"
                         style={{
                             backgroundColor: `${ACCENT_COLORS.find(c => c.value === appearance.accentColor)?.color}20`,
                             color: ACCENT_COLORS.find(c => c.value === appearance.accentColor)?.color,
                         }}
                     >
-            Badge
-          </span>
+                        Badge
+                    </span>
                 </div>
             </div>
 
-            {/* Additional Options */}
-            <div className="space-y-4">
-                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            <div className="space-y-3 xs:space-y-4">
+                <h3 className="text-[10px] xs:text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Dodatkowe opcje
                 </h3>
 
-                <div className="space-y-3">
-                    {/* Reduced Motion */}
-                    <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card">
-                        <div className="flex items-center gap-3">
-                            <Zap className="w-5 h-5 text-muted-foreground" />
-                            <div>
-                                <Label className="text-sm">Ogranicz animacje</Label>
-                                <p className="text-xs text-muted-foreground">
-                                    Wyłącz lub ogranicz animacje interfejsu
+                <div className="space-y-2 xs:space-y-3">
+                    <div className="flex items-center justify-between p-3 xs:p-4 rounded-xl border border-border bg-card gap-3">
+                        <div className="flex items-center gap-2 xs:gap-3 min-w-0">
+                            <Zap className="w-4 h-4 xs:w-5 xs:h-5 text-muted-foreground flex-shrink-0" />
+                            <div className="min-w-0">
+                                <Label className="text-xs xs:text-sm">Ogranicz animacje</Label>
+                                <p className="text-[10px] xs:text-xs text-muted-foreground hidden xs:block">
+                                    Wyłącz lub ogranicz animacje
                                 </p>
                             </div>
                         </div>
@@ -188,14 +182,13 @@ export function AppearanceSection() {
                         />
                     </div>
 
-                    {/* Compact Mode */}
-                    <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card">
-                        <div className="flex items-center gap-3">
-                            <Minimize2 className="w-5 h-5 text-muted-foreground" />
-                            <div>
-                                <Label className="text-sm">Tryb kompaktowy</Label>
-                                <p className="text-xs text-muted-foreground">
-                                    Zmniejsz odstępy i rozmiar elementów
+                    <div className="flex items-center justify-between p-3 xs:p-4 rounded-xl border border-border bg-card gap-3">
+                        <div className="flex items-center gap-2 xs:gap-3 min-w-0">
+                            <Minimize2 className="w-4 h-4 xs:w-5 xs:h-5 text-muted-foreground flex-shrink-0" />
+                            <div className="min-w-0">
+                                <Label className="text-xs xs:text-sm">Tryb kompaktowy</Label>
+                                <p className="text-[10px] xs:text-xs text-muted-foreground hidden xs:block">
+                                    Zmniejsz odstępy i rozmiary
                                 </p>
                             </div>
                         </div>
@@ -205,14 +198,13 @@ export function AppearanceSection() {
                         />
                     </div>
 
-                    {/* Show Avatars */}
-                    <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card">
-                        <div className="flex items-center gap-3">
-                            <Eye className="w-5 h-5 text-muted-foreground" />
-                            <div>
-                                <Label className="text-sm">Pokazuj awatary</Label>
-                                <p className="text-xs text-muted-foreground">
-                                    Wyświetlaj zdjęcia profilowe na listach
+                    <div className="flex items-center justify-between p-3 xs:p-4 rounded-xl border border-border bg-card gap-3">
+                        <div className="flex items-center gap-2 xs:gap-3 min-w-0">
+                            <Eye className="w-4 h-4 xs:w-5 xs:h-5 text-muted-foreground flex-shrink-0" />
+                            <div className="min-w-0">
+                                <Label className="text-xs xs:text-sm">Pokazuj awatary</Label>
+                                <p className="text-[10px] xs:text-xs text-muted-foreground hidden xs:block">
+                                    Wyświetlaj zdjęcia profilowe
                                 </p>
                             </div>
                         </div>

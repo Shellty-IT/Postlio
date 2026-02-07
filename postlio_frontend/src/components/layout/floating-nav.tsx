@@ -47,8 +47,8 @@ export function FloatingNav() {
     const { open: openModal } = useModal();
 
     return (
-        <nav className="floating-island pb-safe">
-            <div className="flex items-center gap-1">
+        <nav className="floating-island" role="navigation" aria-label="Główna nawigacja mobilna">
+            <div className="flex items-center justify-center gap-0.5 xs:gap-1">
                 {navItems.map((item) => {
                     const isActive = !item.isAction && (
                         pathname === item.href || pathname.startsWith(`${item.href}/`)
@@ -61,18 +61,23 @@ export function FloatingNav() {
                             <button
                                 key={item.title}
                                 onClick={() => openModal('create-post')}
+                                aria-label="Utwórz nowy post"
                                 className={cn(
                                     'relative flex flex-col items-center justify-center',
-                                    'w-14 h-14 -mt-6',
-                                    'rounded-2xl',
+                                    // ✅ Responsywne rozmiary
+                                    'w-12 h-12 xs:w-14 xs:h-14',
+                                    '-mt-4 xs:-mt-6',
+                                    'rounded-xl xs:rounded-2xl',
                                     'bg-gradient-to-br from-primary to-accent',
                                     'text-white shadow-lg shadow-primary/30',
                                     'transition-all duration-300',
                                     'hover:shadow-xl hover:shadow-primary/40 hover:scale-105',
-                                    'active:scale-95'
+                                    'active:scale-95',
+                                    // ✅ Touch-friendly
+                                    'touch-target'
                                 )}
                             >
-                                <Icon className="h-6 w-6" />
+                                <Icon className="h-5 w-5 xs:h-6 xs:w-6" />
                             </button>
                         );
                     }
@@ -81,22 +86,34 @@ export function FloatingNav() {
                         <Link
                             key={item.href}
                             href={item.href}
+                            aria-label={item.title}
+                            aria-current={isActive ? 'page' : undefined}
                             className={cn(
                                 'flex flex-col items-center justify-center',
-                                'w-14 h-14 rounded-xl',
+                                // ✅ Responsywne rozmiary - mniejsze na bardzo małych ekranach
+                                'w-11 h-11 xs:w-14 xs:h-14',
+                                'rounded-lg xs:rounded-xl',
                                 'transition-all duration-200',
+                                // ✅ Touch-friendly minimum
+                                'touch-target',
                                 isActive
                                     ? 'text-primary bg-primary/10'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary active:bg-secondary/80'
                             )}
                         >
-                            <Icon className={cn('h-5 w-5', isActive && 'text-primary')} />
-                            <span className={cn(
-                                'text-[10px] mt-1 font-medium',
+                            <Icon className={cn(
+                                'h-5 w-5',
                                 isActive && 'text-primary'
+                            )} />
+                            <span className={cn(
+                                // ✅ Responsywna typografia - ukryj na bardzo małych
+                                'text-[9px] xs:text-[10px] mt-0.5 xs:mt-1 font-medium',
+                                // Na bardzo małych ekranach pokazuj tylko dla aktywnego
+                                'hidden xs:block',
+                                isActive && 'block text-primary'
                             )}>
-                {item.title}
-              </span>
+                                {item.title}
+                            </span>
                         </Link>
                     );
                 })}

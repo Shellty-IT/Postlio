@@ -1,3 +1,4 @@
+// src/components/landing/faq-item.tsx
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,18 +24,18 @@ export function FAQItem({ question, answer, index, isOpen, onToggle }: FAQItemPr
         >
             <button
                 onClick={onToggle}
-                className="w-full py-6 flex items-center justify-between text-left group"
+                className="w-full py-4 sm:py-6 flex items-center justify-between text-left group min-h-[44px]"
                 aria-expanded={isOpen}
             >
-        <span className={cn(
-            'text-lg font-medium pr-8 transition-colors',
-            isOpen ? 'text-primary' : 'text-foreground group-hover:text-primary'
-        )}>
-          {question}
-        </span>
+                <span className={cn(
+                    'text-sm sm:text-base md:text-lg font-medium pr-4 sm:pr-8 transition-colors',
+                    isOpen ? 'text-primary' : 'text-foreground group-hover:text-primary'
+                )}>
+                    {question}
+                </span>
                 <motion.div
                     className={cn(
-                        'flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors',
+                        'flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center transition-colors',
                         isOpen
                             ? 'bg-primary text-white'
                             : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'
@@ -42,7 +43,7 @@ export function FAQItem({ question, answer, index, isOpen, onToggle }: FAQItemPr
                     animate={{ rotate: isOpen ? 180 : 0 }}
                     transition={{ duration: 0.3 }}
                 >
-                    <ChevronDown className="w-5 h-5" />
+                    <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
                 </motion.div>
             </button>
 
@@ -55,8 +56,8 @@ export function FAQItem({ question, answer, index, isOpen, onToggle }: FAQItemPr
                         transition={{ duration: 0.3, ease: 'easeInOut' }}
                         className="overflow-hidden"
                     >
-                        <div className="pb-6 pr-16">
-                            <p className="text-muted-foreground leading-relaxed">
+                        <div className="pb-4 sm:pb-6 pr-4 sm:pr-16">
+                            <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                                 {answer}
                             </p>
                         </div>

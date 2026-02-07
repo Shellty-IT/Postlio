@@ -1,15 +1,4 @@
 // src/components/creator/post-editor.tsx
-/**
- * Edytor posta z obsługą AI, wyborem providerów i modeli, edycją obrazu
- *
- * NAPRAWIONE:
- * - SOFT_LIMIT zmieniony z 700 na 500
- * - Dodane liczniki znaków w dialogach (max 500)
- * - Sync providerów z propsów przez useEffect
- * - Podpowiedzi DODAJĄ tekst po spacji zamiast nadpisywać
- * - Obsługa wyboru modelu dla Pollinations (flux/nanobanana)
- */
-
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -52,10 +41,6 @@ import { cn } from '@/lib/utils';
 import type { Platform } from '@/types';
 import type { TextProvider, ImageProvider } from '@/lib/api/ai';
 
-// ============================================================
-// TYPY
-// ============================================================
-
 interface PostEditorProps {
     content: string;
     onChange: (content: string) => void;
@@ -72,10 +57,6 @@ interface PostEditorProps {
     defaultImageModel?: string;
 }
 
-// ============================================================
-// LIMITY
-// ============================================================
-
 const PLATFORM_LIMITS: Record<Platform, number> = {
     facebook: 63206,
     instagram: 2200,
@@ -84,10 +65,6 @@ const PLATFORM_LIMITS: Record<Platform, number> = {
 
 const PROMPT_LIMIT = 500;
 const SOFT_LIMIT = 500;
-
-// ============================================================
-// KOMPONENT LICZNIKA ZNAKÓW (reużywalny)
-// ============================================================
 
 interface CharCounterProps {
     current: number;
@@ -102,7 +79,7 @@ function CharCounter({ current, max, className }: CharCounterProps) {
 
     return (
         <div className={cn('flex items-center gap-2 text-xs', className)}>
-            <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div className="w-12 sm:w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                 <motion.div
                     className={cn(
                         'h-full transition-colors duration-300',
@@ -115,7 +92,7 @@ function CharCounter({ current, max, className }: CharCounterProps) {
                 />
             </div>
             <span className={cn(
-                'font-medium tabular-nums',
+                'font-medium tabular-nums text-[10px] sm:text-xs',
                 isOverLimit ? 'text-red-500' :
                     isNearLimit ? 'text-amber-500' : 'text-muted-foreground'
             )}>
@@ -124,10 +101,6 @@ function CharCounter({ current, max, className }: CharCounterProps) {
         </div>
     );
 }
-
-// ============================================================
-// KOMPONENT GŁÓWNY
-// ============================================================
 
 export function PostEditor({
                                content,
@@ -155,12 +128,10 @@ export function PostEditor({
     const [imagePrompt, setImagePrompt] = useState('');
     const [isGeneratingLocal, setIsGeneratingLocal] = useState(false);
 
-    // Provider state
     const [selectedTextProvider, setSelectedTextProvider] = useState<TextProvider>(defaultTextProvider);
     const [selectedImageProvider, setSelectedImageProvider] = useState<ImageProvider>(defaultImageProvider);
     const [selectedImageModel, setSelectedImageModel] = useState<string>(defaultImageModel);
 
-    // Synchronizacja providerów z propsów
     useEffect(() => {
         setSelectedTextProvider(defaultTextProvider);
     }, [defaultTextProvider]);
@@ -173,14 +144,12 @@ export function PostEditor({
         setSelectedImageModel(defaultImageModel);
     }, [defaultImageModel]);
 
-    // Limit znaków (najmniejszy z wybranych platform)
     const charLimit = Math.min(...platforms.map((p) => PLATFORM_LIMITS[p]));
     const charCount = content.length;
     const isOverLimit = charCount > charLimit;
     const isNearSoftLimit = charCount >= SOFT_LIMIT * 0.8 && charCount <= SOFT_LIMIT;
     const isOverSoftLimit = charCount > SOFT_LIMIT && charCount <= charLimit;
 
-    // Określ kolor licznika
     const getCounterColor = () => {
         if (isOverLimit) return 'text-red-500';
         if (isOverSoftLimit) return 'text-amber-500';
@@ -188,10 +157,8 @@ export function PostEditor({
         return 'text-muted-foreground';
     };
 
-    // Procent wypełnienia (dla soft limitu)
     const softLimitPercentage = Math.min((charCount / SOFT_LIMIT) * 100, 100);
 
-    // Dodaj hashtag
     const handleAddHashtag = useCallback(() => {
         const tag = newHashtag.trim().replace(/^#/, '');
         if (tag && !hashtags.includes(tag)) {
@@ -200,12 +167,10 @@ export function PostEditor({
         setNewHashtag('');
     }, [newHashtag, hashtags, onHashtagsChange]);
 
-    // Usuń hashtag
     const handleRemoveHashtag = useCallback((tag: string) => {
         onHashtagsChange(hashtags.filter((h) => h !== tag));
     }, [hashtags, onHashtagsChange]);
 
-    // Handler dla podpowiedzi tekstu - DODAJE po spacji
     const handleTextSuggestionClick = useCallback((suggestion: string) => {
         setTextPrompt(prev => {
             if (!prev.trim()) return suggestion;
@@ -213,7 +178,6 @@ export function PostEditor({
         });
     }, []);
 
-    // Handler dla stylów obrazu - DODAJE po przecinku
     const handleImageStyleClick = useCallback((style: string) => {
         setImagePrompt(prev => {
             if (!prev.trim()) return style.toLowerCase();
@@ -221,7 +185,6 @@ export function PostEditor({
         });
     }, []);
 
-    // Generuj tekst
     const handleGenerateText = useCallback(async () => {
         if (!textPrompt.trim() || !onGenerateText) return;
 
@@ -237,7 +200,6 @@ export function PostEditor({
         }
     }, [textPrompt, onGenerateText, selectedTextProvider]);
 
-    // Generuj obraz - ✅ NAPRAWIONE: przekazuje model
     const handleGenerateImage = useCallback(async () => {
         if (!imagePrompt.trim() || !onGenerateImage) return;
 
@@ -254,7 +216,6 @@ export function PostEditor({
         }
     }, [imagePrompt, onGenerateImage, selectedImageProvider, selectedImageModel]);
 
-    // Upload obrazu
     const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -266,10 +227,8 @@ export function PostEditor({
         }
     }, [onImageChange]);
 
-    // ✅ NAPRAWIONE: Handler zmiany providera obrazu z modelem
     const handleImageProviderChange = (provider: string, model?: string) => {
         setSelectedImageProvider(provider as ImageProvider);
-        // Dla pollinations domyślnie flux, dla innych undefined
         if (provider === 'pollinations') {
             setSelectedImageModel(model || 'flux');
         } else {
@@ -277,12 +236,10 @@ export function PostEditor({
         }
     };
 
-    // Handler cropped image
     const handleCropComplete = useCallback((croppedUrl: string) => {
         onImageChange(croppedUrl);
     }, [onImageChange]);
 
-    // Handler dla textarea z limitem w dialogach
     const handleTextPromptChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const value = e.target.value;
         if (value.length <= PROMPT_LIMIT) {
@@ -298,8 +255,7 @@ export function PostEditor({
     }, []);
 
     return (
-        <div className="space-y-4">
-            {/* Główny edytor */}
+        <div className="space-y-3 sm:space-y-4">
             <div className="relative">
                 <Textarea
                     ref={textareaRef}
@@ -307,13 +263,12 @@ export function PostEditor({
                     onChange={(e) => onChange(e.target.value)}
                     placeholder="Co chcesz opublikować? Napisz sam lub użyj AI..."
                     className={cn(
-                        'min-h-[200px] resize-none text-base leading-relaxed pb-10',
+                        'min-h-[150px] sm:min-h-[200px] resize-none text-sm sm:text-base leading-relaxed pb-10',
                         isOverLimit && 'border-red-500 focus-visible:ring-red-500'
                     )}
                     disabled={isGenerating}
                 />
 
-                {/* AI Generating overlay */}
                 <AnimatePresence>
                     {isGenerating && (
                         <motion.div
@@ -324,17 +279,15 @@ export function PostEditor({
                         >
                             <div className="flex items-center gap-3 text-primary">
                                 <Loader2 className="w-5 h-5 animate-spin" />
-                                <span className="font-medium">AI generuje treść...</span>
+                                <span className="font-medium text-sm sm:text-base">AI generuje treść...</span>
                             </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
 
-                {/* Character counter with visual indicator */}
-                <div className="absolute bottom-3 right-3 flex items-center gap-3">
-                    {/* Soft limit progress bar */}
-                    <div className="hidden sm:flex items-center gap-2">
-                        <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 flex items-center gap-2 sm:gap-3">
+                    <div className="hidden xs:flex items-center gap-2">
+                        <div className="w-16 sm:w-20 h-1.5 bg-muted rounded-full overflow-hidden">
                             <motion.div
                                 className={cn(
                                     'h-full transition-colors duration-300',
@@ -350,17 +303,18 @@ export function PostEditor({
                         </div>
                     </div>
 
-                    {/* Character count */}
-                    <div className={cn('flex items-center gap-1.5 text-xs font-medium', getCounterColor())}>
+                    <div className={cn('flex items-center gap-1 text-[10px] sm:text-xs font-medium', getCounterColor())}>
                         {isOverSoftLimit && !isOverLimit && (
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <AlertTriangle className="h-3.5 w-3.5" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Długi post może mieć mniejsze zaangażowanie</p>
-                                </TooltipContent>
-                            </Tooltip>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger>
+                                        <AlertTriangle className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Długi post może mieć mniejsze zaangażowanie</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                         )}
                         <span className={cn(isOverLimit && 'animate-pulse')}>
                             {charCount.toLocaleString()}
@@ -373,10 +327,8 @@ export function PostEditor({
                 </div>
             </div>
 
-            {/* Toolbar */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <TooltipProvider>
-                    {/* Generuj tekst AI */}
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
@@ -384,16 +336,16 @@ export function PostEditor({
                                 size="sm"
                                 onClick={() => setIsGenerateTextOpen(true)}
                                 disabled={isGenerating}
-                                className="gap-2"
+                                className="gap-1.5 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3"
                             >
-                                <Sparkles className="w-4 h-4 text-violet-500" />
-                                Generuj tekst
+                                <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
+                                <span className="hidden xs:inline">Generuj tekst</span>
+                                <span className="xs:hidden">Tekst</span>
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>Wygeneruj tekst z AI</TooltipContent>
                     </Tooltip>
 
-                    {/* Generuj obraz AI */}
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
@@ -401,16 +353,16 @@ export function PostEditor({
                                 size="sm"
                                 onClick={() => setIsGenerateImageOpen(true)}
                                 disabled={isGenerating}
-                                className="gap-2"
+                                className="gap-1.5 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3"
                             >
-                                <Wand2 className="w-4 h-4 text-violet-500" />
-                                Generuj obraz
+                                <Wand2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
+                                <span className="hidden xs:inline">Generuj obraz</span>
+                                <span className="xs:hidden">Obraz</span>
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>Wygeneruj obraz z AI</TooltipContent>
                     </Tooltip>
 
-                    {/* Upload obrazu */}
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
@@ -418,26 +370,30 @@ export function PostEditor({
                                 size="sm"
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={isGenerating}
+                                className="h-8 w-8 sm:h-9 sm:w-9 p-0"
                             >
-                                <Upload className="w-4 h-4" />
+                                <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>Dodaj obraz</TooltipContent>
                     </Tooltip>
 
-                    {/* Emoji */}
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="outline" size="sm" disabled={isGenerating}>
-                                <Smile className="w-4 h-4" />
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={isGenerating}
+                                className="h-8 w-8 sm:h-9 sm:w-9 p-0"
+                            >
+                                <Smile className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>Dodaj emoji</TooltipContent>
                     </Tooltip>
 
-                    {/* Hashtag input */}
                     <div className="flex items-center gap-1 ml-auto">
-                        <Hash className="w-4 h-4 text-muted-foreground" />
+                        <Hash className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground hidden xs:block" />
                         <Input
                             value={newHashtag}
                             onChange={(e) => setNewHashtag(e.target.value)}
@@ -447,8 +403,8 @@ export function PostEditor({
                                     handleAddHashtag();
                                 }
                             }}
-                            placeholder="Dodaj hashtag"
-                            className="w-32 h-8 text-sm"
+                            placeholder="Hashtag"
+                            className="w-20 xs:w-28 sm:w-32 h-8 sm:h-9 text-xs sm:text-sm"
                             disabled={isGenerating}
                         />
                         <Button
@@ -456,8 +412,10 @@ export function PostEditor({
                             size="sm"
                             onClick={handleAddHashtag}
                             disabled={!newHashtag.trim() || isGenerating}
+                            className="h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm"
                         >
-                            Dodaj
+                            <span className="hidden xs:inline">Dodaj</span>
+                            <span className="xs:hidden">+</span>
                         </Button>
                     </div>
                 </TooltipProvider>
@@ -471,24 +429,22 @@ export function PostEditor({
                 />
             </div>
 
-            {/* Hashtagi */}
             {hashtags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                     {hashtags.map((tag) => (
                         <Badge
                             key={tag}
                             variant="secondary"
-                            className="gap-1 cursor-pointer hover:bg-destructive/10"
+                            className="gap-1 cursor-pointer hover:bg-destructive/10 text-xs sm:text-sm py-0.5 sm:py-1"
                             onClick={() => handleRemoveHashtag(tag)}
                         >
                             #{tag}
-                            <X className="w-3 h-3" />
+                            <X className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                         </Badge>
                     ))}
                 </div>
             )}
 
-            {/* Podgląd obrazu */}
             <AnimatePresence>
                 {imageUrl && (
                     <motion.div
@@ -497,7 +453,7 @@ export function PostEditor({
                         exit={{ opacity: 0, scale: 0.95 }}
                         className="relative rounded-lg overflow-hidden border border-border"
                     >
-                        <div className="relative w-full h-80">
+                        <div className="relative w-full h-48 xs:h-64 sm:h-80">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 src={imageUrl}
@@ -505,53 +461,49 @@ export function PostEditor({
                                 className="absolute inset-0 w-full h-full object-cover"
                             />
                         </div>
-                        <div className="absolute top-2 right-2 flex gap-2">
+                        <div className="absolute top-2 right-2 flex gap-1.5 sm:gap-2">
                             <Button
                                 variant="secondary"
                                 size="icon"
-                                className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+                                className="h-7 w-7 sm:h-8 sm:w-8 bg-background/80 backdrop-blur-sm"
                                 onClick={() => setIsCropModalOpen(true)}
                             >
-                                <Crop className="w-4 h-4" />
+                                <Crop className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </Button>
                             <Button
                                 variant="secondary"
                                 size="icon"
-                                className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+                                className="h-7 w-7 sm:h-8 sm:w-8 bg-background/80 backdrop-blur-sm"
                                 onClick={() => setIsGenerateImageOpen(true)}
                             >
-                                <RefreshCw className="w-4 h-4" />
+                                <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </Button>
                             <Button
                                 variant="secondary"
                                 size="icon"
-                                className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+                                className="h-7 w-7 sm:h-8 sm:w-8 bg-background/80 backdrop-blur-sm"
                                 onClick={() => onImageChange(undefined)}
                             >
-                                <X className="w-4 h-4" />
+                                <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </Button>
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* ============================================================ */}
-            {/* Dialog: Generuj tekst */}
-            {/* ============================================================ */}
             <Dialog open={isGenerateTextOpen} onOpenChange={setIsGenerateTextOpen}>
-                <DialogContent className="sm:max-w-lg">
+                <DialogContent className="w-[calc(100%-2rem)] sm:max-w-lg">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <Sparkles className="w-5 h-5 text-violet-500" />
+                        <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+                            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-violet-500" />
                             Generuj tekst z AI
                         </DialogTitle>
-                        <DialogDescription>
-                            Opisz, jaki post chcesz stworzyć. Wybierz model AI, który najlepiej pasuje do Twoich potrzeb.
+                        <DialogDescription className="text-xs sm:text-sm">
+                            Opisz, jaki post chcesz stworzyć.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-4 py-4">
-                        {/* Provider selector */}
+                    <div className="space-y-4 py-2 sm:py-4">
                         <AIProviderSelector
                             type="text"
                             value={selectedTextProvider}
@@ -560,37 +512,35 @@ export function PostEditor({
 
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                                <Label htmlFor="text-prompt">Opis posta</Label>
+                                <Label htmlFor="text-prompt" className="text-sm">Opis posta</Label>
                                 <CharCounter current={textPrompt.length} max={PROMPT_LIMIT} />
                             </div>
                             <Textarea
                                 id="text-prompt"
                                 value={textPrompt}
                                 onChange={handleTextPromptChange}
-                                placeholder="np. Post o nowej kolekcji wiosennej, zachęcający do zakupów z kodem rabatowym WIOSNA20"
-                                className="min-h-[100px]"
+                                placeholder="np. Post o nowej kolekcji wiosennej..."
+                                className="min-h-[80px] sm:min-h-[100px] text-sm"
                                 maxLength={PROMPT_LIMIT}
                             />
                         </div>
 
-                        {/* Quick prompts */}
                         <div className="space-y-2">
                             <Label className="text-xs text-muted-foreground">
-                                Szybkie podpowiedzi (kliknij, aby dodać)
+                                Szybkie podpowiedzi
                             </Label>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                 {[
                                     'Post promocyjny',
                                     'Inspirujący cytat',
                                     'Ogłoszenie nowości',
                                     'Post angażujący',
-                                    'Porada ekspercka',
                                 ].map((suggestion) => (
                                     <Button
                                         key={suggestion}
                                         variant="outline"
                                         size="sm"
-                                        className="text-xs"
+                                        className="text-[10px] sm:text-xs h-7 sm:h-8"
                                         onClick={() => handleTextSuggestionClick(suggestion)}
                                     >
                                         {suggestion}
@@ -600,22 +550,23 @@ export function PostEditor({
                         </div>
                     </div>
 
-                    <DialogFooter>
+                    <DialogFooter className="gap-2 sm:gap-0">
                         <Button
                             variant="outline"
                             onClick={() => setIsGenerateTextOpen(false)}
+                            className="flex-1 sm:flex-none"
                         >
                             Anuluj
                         </Button>
                         <Button
                             onClick={handleGenerateText}
                             disabled={!textPrompt.trim() || isGeneratingLocal}
-                            className="gap-2 bg-gradient-to-r from-primary to-violet-500"
+                            className="flex-1 sm:flex-none gap-2 bg-gradient-to-r from-primary to-violet-500"
                         >
                             {isGeneratingLocal ? (
                                 <>
                                     <Loader2 className="w-4 h-4 animate-spin" />
-                                    Generowanie...
+                                    <span className="hidden xs:inline">Generowanie...</span>
                                 </>
                             ) : (
                                 <>
@@ -628,23 +579,19 @@ export function PostEditor({
                 </DialogContent>
             </Dialog>
 
-            {/* ============================================================ */}
-            {/* Dialog: Generuj obraz - Z WYBOREM MODELU */}
-            {/* ============================================================ */}
             <Dialog open={isGenerateImageOpen} onOpenChange={setIsGenerateImageOpen}>
-                <DialogContent className="sm:max-w-lg">
+                <DialogContent className="w-[calc(100%-2rem)] sm:max-w-lg">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <Wand2 className="w-5 h-5 text-violet-500" />
+                        <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+                            <Wand2 className="w-4 h-4 sm:w-5 sm:h-5 text-violet-500" />
                             Generuj obraz z AI
                         </DialogTitle>
-                        <DialogDescription>
-                            Opisz obraz, który chcesz wygenerować. Pollinations automatycznie ulepsza i tłumaczy prompty.
+                        <DialogDescription className="text-xs sm:text-sm">
+                            Opisz obraz, który chcesz wygenerować.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-4 py-4">
-                        {/* Provider selector z wyborem modelu */}
+                    <div className="space-y-4 py-2 sm:py-4">
                         <AIProviderSelector
                             type="image"
                             value={selectedImageProvider}
@@ -654,41 +601,38 @@ export function PostEditor({
 
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                                <Label htmlFor="image-prompt">Opis obrazu</Label>
+                                <Label htmlFor="image-prompt" className="text-sm">Opis obrazu</Label>
                                 <CharCounter current={imagePrompt.length} max={PROMPT_LIMIT} />
                             </div>
                             <Textarea
                                 id="image-prompt"
                                 value={imagePrompt}
                                 onChange={handleImagePromptChange}
-                                placeholder="np. Minimalistyczne zdjęcie kawy latte art na drewnianym stole, ciepłe światło poranne"
-                                className="min-h-[100px]"
+                                placeholder="np. Minimalistyczne zdjęcie kawy..."
+                                className="min-h-[80px] sm:min-h-[100px] text-sm"
                                 maxLength={PROMPT_LIMIT}
                             />
-                            <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                                ✨ Prompt zostanie automatycznie ulepszony i przetłumaczony
+                            <p className="text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400">
+                                ✨ Prompt zostanie automatycznie ulepszony
                             </p>
                         </div>
 
-                        {/* Style presets */}
                         <div className="space-y-2">
                             <Label className="text-xs text-muted-foreground">
-                                Style (kliknij, aby dodać)
+                                Style
                             </Label>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                 {[
                                     'Minimalistyczny',
                                     'Profesjonalny',
                                     'Kolorowy',
-                                    'Vintage',
-                                    'Nowoczesny',
                                     'Naturalny',
                                 ].map((style) => (
                                     <Button
                                         key={style}
                                         variant="outline"
                                         size="sm"
-                                        className="text-xs"
+                                        className="text-[10px] sm:text-xs h-7 sm:h-8"
                                         onClick={() => handleImageStyleClick(style)}
                                     >
                                         {style}
@@ -698,22 +642,23 @@ export function PostEditor({
                         </div>
                     </div>
 
-                    <DialogFooter>
+                    <DialogFooter className="gap-2 sm:gap-0">
                         <Button
                             variant="outline"
                             onClick={() => setIsGenerateImageOpen(false)}
+                            className="flex-1 sm:flex-none"
                         >
                             Anuluj
                         </Button>
                         <Button
                             onClick={handleGenerateImage}
                             disabled={!imagePrompt.trim() || isGeneratingLocal}
-                            className="gap-2 bg-gradient-to-r from-primary to-violet-500"
+                            className="flex-1 sm:flex-none gap-2 bg-gradient-to-r from-primary to-violet-500"
                         >
                             {isGeneratingLocal ? (
                                 <>
                                     <Loader2 className="w-4 h-4 animate-spin" />
-                                    Generowanie...
+                                    <span className="hidden xs:inline">Generowanie...</span>
                                 </>
                             ) : (
                                 <>
@@ -726,7 +671,6 @@ export function PostEditor({
                 </DialogContent>
             </Dialog>
 
-            {/* Image Crop Modal */}
             {imageUrl && (
                 <ImageCropModal
                     open={isCropModalOpen}

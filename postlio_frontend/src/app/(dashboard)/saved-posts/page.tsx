@@ -1,11 +1,4 @@
 // src/app/(dashboard)/saved-posts/page.tsx
-/**
- * Strona "Materiały" - zarządzanie zapisanymi postami
- *
- * ✅ NAPRAWIONE: Obsługa platforms[] zamiast platform
- * ✅ NOWE: Przekazywanie platforms[] i postId do modalu publikacji
- */
-
 'use client';
 
 import { useCallback, useState } from 'react';
@@ -22,13 +15,6 @@ import { usePosts, useDeletePost, useDuplicatePost, useBulkPostsAction, useBrand
 import type { Post } from '@/types/post';
 import type { Platform } from '@/types';
 
-// ============================================================
-// HELPER
-// ============================================================
-
-/**
- * Pobierz wszystkie platformy z posta (obsługa platforms[] i legacy platform)
- */
 function getPostPlatforms(post: Post): Platform[] {
     if (post.platforms && post.platforms.length > 0) {
         return post.platforms;
@@ -36,24 +22,17 @@ function getPostPlatforms(post: Post): Platform[] {
     return post.platform ? [post.platform] : ['facebook'];
 }
 
-// ============================================================
-// KOMPONENT
-// ============================================================
-
 export default function SavedPostsPage() {
     const router = useRouter();
 
-    // State
     const [publishModalData, setPublishModalData] = useState<ManualPublishData | null>(null);
-    const [publishModalPlatforms, setPublishModalPlatforms] = useState<Platform[]>([]); // ✅ NOWE
-    const [publishModalPostId, setPublishModalPostId] = useState<number | null>(null); // ✅ NOWE
+    const [publishModalPlatforms, setPublishModalPlatforms] = useState<Platform[]>([]);
+    const [publishModalPostId, setPublishModalPostId] = useState<number | null>(null);
     const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
 
-    // Data fetching
     const { data: postsData, isLoading: isLoadingPosts } = usePosts();
     const { data: brandsData } = useBrands();
 
-    // Mutations
     const deletePost = useDeletePost();
     const duplicatePost = useDuplicatePost();
     const bulkAction = useBulkPostsAction();
@@ -61,7 +40,6 @@ export default function SavedPostsPage() {
     const posts = postsData?.posts || [];
     const brands = brandsData?.brands || [];
 
-    // Handlers
     const handleEdit = useCallback((post: Post) => {
         sessionStorage.setItem('editPost', JSON.stringify(post));
         router.push('/creator?mode=edit');
@@ -72,16 +50,13 @@ export default function SavedPostsPage() {
         router.push('/calendar?action=schedule');
     }, [router]);
 
-    // ✅ NOWE: Ulepszone handlePublish z platforms[]
     const handlePublish = useCallback((post: Post) => {
         const hashtagsFromContent = post.content?.match(/#\w+/g)?.map(h => h.slice(1)) || [];
         const hashtags = post.hashtags?.length ? post.hashtags : hashtagsFromContent;
 
-        // Pobierz wszystkie platformy z posta
         const platforms = getPostPlatforms(post);
         const primaryPlatform = platforms[0];
 
-        // Przygotuj dane dla modalu (używa primaryPlatform dla kompatybilności wstecznej)
         const publishData = createManualPublishData({
             id: typeof post.id === 'string' ? parseInt(post.id, 10) : post.id,
             post_id: typeof post.id === 'string' ? parseInt(post.id, 10) : post.id,
@@ -91,7 +66,6 @@ export default function SavedPostsPage() {
             platform: primaryPlatform,
         });
 
-        // ✅ NOWE: Ustaw wszystkie dane dla modalu
         setPublishModalData(publishData);
         setPublishModalPlatforms(platforms);
         setPublishModalPostId(typeof post.id === 'string' ? parseInt(post.id, 10) : post.id);
@@ -130,7 +104,6 @@ export default function SavedPostsPage() {
         router.push('/calendar?action=bulk-schedule');
     }, [router]);
 
-    // ✅ NOWE: Handler zamknięcia modalu
     const handleClosePublishModal = useCallback((open: boolean) => {
         setIsPublishModalOpen(open);
         if (!open) {
@@ -140,48 +113,51 @@ export default function SavedPostsPage() {
         }
     }, []);
 
-    // ✅ NOWE: Handler dla pojedynczej platformy opublikowanej
     const handlePlatformPublished = useCallback((postId?: number, platform?: Platform) => {
-        // Modal sam zapisuje status do backendu przez useUpdatePlatformStatus
         console.log(`Platform ${platform} marked as published for post ${postId}`);
     }, []);
 
-    // ✅ NOWE: Handler gdy wszystkie platformy opublikowane
     const handleAllPublished = useCallback(() => {
         toast.success('Wszystkie platformy opublikowane! 🎉');
-        // Modal zamknie się automatycznie
         setPublishModalData(null);
         setPublishModalPlatforms([]);
         setPublishModalPostId(null);
     }, []);
 
     return (
-        <div className="p-6 space-y-6">
-            {/* Actions Bar */}
+        <div className="space-y-4 sm:space-y-6">
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-end gap-2"
+                className="flex flex-col xs:flex-row xs:items-center justify-between gap-3"
             >
-                <Button variant="outline" className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Eksportuj
-                </Button>
-                <Button
-                    onClick={() => router.push('/creator')}
-                    className="gap-2 bg-gradient-to-r from-primary to-violet-500"
-                >
-                    <Plus className="h-4 w-4" />
-                    Nowy post
-                </Button>
+                <div>
+                    <h2 className="text-lg sm:text-xl font-semibold">Materiały</h2>
+                    <p className="text-sm text-muted-foreground hidden sm:block">
+                        Zarządzaj zapisanymi postami
+                    </p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="gap-2">
+                        <Download className="h-4 w-4" />
+                        <span className="hidden xs:inline">Eksportuj</span>
+                    </Button>
+                    <Button
+                        onClick={() => router.push('/creator')}
+                        size="sm"
+                        className="gap-2 bg-gradient-to-r from-primary to-violet-500"
+                    >
+                        <Plus className="h-4 w-4" />
+                        <span className="hidden xs:inline">Nowy post</span>
+                    </Button>
+                </div>
             </motion.div>
 
-            {/* Stats summary */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="grid grid-cols-2 sm:grid-cols-4 gap-4"
+                className="grid grid-cols-2 gap-2 sm:gap-4 sm:grid-cols-4"
             >
                 {[
                     {
@@ -207,15 +183,14 @@ export default function SavedPostsPage() {
                 ].map((stat) => (
                     <div
                         key={stat.label}
-                        className={`rounded-xl p-4 ${stat.color}`}
+                        className={`rounded-lg sm:rounded-xl p-3 sm:p-4 ${stat.color}`}
                     >
-                        <div className="text-2xl font-bold">{stat.value}</div>
-                        <div className="text-sm opacity-80">{stat.label}</div>
+                        <div className="text-xl sm:text-2xl font-bold">{stat.value}</div>
+                        <div className="text-xs sm:text-sm opacity-80">{stat.label}</div>
                     </div>
                 ))}
             </motion.div>
 
-            {/* Posts List */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -235,7 +210,6 @@ export default function SavedPostsPage() {
                 />
             </motion.div>
 
-            {/* ✅ NOWE: Manual Publish Modal z platforms[] i postId */}
             <ManualPublishModal
                 open={isPublishModalOpen}
                 onOpenChange={handleClosePublishModal}

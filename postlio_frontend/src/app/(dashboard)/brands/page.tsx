@@ -25,11 +25,9 @@ export default function BrandsPage() {
     const [viewMode, setViewMode] = useState<ViewMode>('grid');
     const [sortBy, setSortBy] = useState<SortOption>('date');
 
-    // Filter and sort brands
     const filteredBrands = useMemo(() => {
         let result = [...brands];
 
-        // Filter by search query
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             result = result.filter(
@@ -40,7 +38,6 @@ export default function BrandsPage() {
             );
         }
 
-        // Sort
         result.sort((a, b) => {
             switch (sortBy) {
                 case 'name':
@@ -68,31 +65,29 @@ export default function BrandsPage() {
         selectBrand(null);
     };
 
-    // Loading state
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="text-muted-foreground">Ładowanie marek...</p>
+            <div className="flex items-center justify-center min-h-[300px] xs:min-h-[400px]">
+                <div className="flex flex-col items-center gap-3 xs:gap-4">
+                    <Loader2 className="h-6 w-6 xs:h-8 xs:w-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground">Ładowanie marek...</p>
                 </div>
             </div>
         );
     }
 
-    // Error state
     if (isError) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="flex flex-col items-center gap-4 text-center">
-                    <div className="text-4xl">😕</div>
-                    <h3 className="text-lg font-semibold">Nie udało się załadować marek</h3>
-                    <p className="text-muted-foreground">
-                        Sprawdź połączenie z internetem i spróbuj ponownie.
+            <div className="flex items-center justify-center min-h-[300px] xs:min-h-[400px]">
+                <div className="flex flex-col items-center gap-3 xs:gap-4 text-center px-4">
+                    <div className="text-3xl xs:text-4xl">😕</div>
+                    <h3 className="text-base xs:text-lg font-semibold">Nie udało się załadować marek</h3>
+                    <p className="text-sm text-muted-foreground">
+                        Sprawdź połączenie i spróbuj ponownie.
                     </p>
                     <button
                         onClick={() => refetch()}
-                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm"
                     >
                         Spróbuj ponownie
                     </button>
@@ -102,8 +97,7 @@ export default function BrandsPage() {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
+        <div className="space-y-4 sm:space-y-6">
             <BrandsHeader
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
@@ -113,7 +107,6 @@ export default function BrandsPage() {
                 onSortChange={setSortBy}
             />
 
-            {/* Content */}
             {hasNoBrands ? (
                 <EmptyState />
             ) : hasNoResults ? (
@@ -122,10 +115,8 @@ export default function BrandsPage() {
                 <BrandsGrid brands={filteredBrands} viewMode={viewMode} />
             )}
 
-            {/* Brand Form Modal */}
             <BrandFormModal />
 
-            {/* Brand Details Panel */}
             <AnimatePresence>
                 {selectedBrand && (
                     <BrandDetailsPanel

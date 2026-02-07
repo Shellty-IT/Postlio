@@ -5,8 +5,10 @@ import { useEffect, Suspense, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Menu } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
     SettingsHeader,
     SettingsNav,
@@ -29,11 +31,11 @@ function SettingsContent() {
     const queryClient = useQueryClient();
 
     const [showOverlay, setShowOverlay] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+    const [isNavOpen, setIsNavOpen] = useState(false);
 
-    // ✅ Ref do śledzenia czy już przetworzono - NIE powoduje re-renderów
     const processedRef = useRef(false);
 
-    // Pobierz parametry raz
     const oauthSuccess = searchParams.get('oauth_success');
     const oauthError = searchParams.get('oauth_error');
     const platform = searchParams.get('platform') as SocialPlatform | null;
@@ -41,7 +43,13 @@ function SettingsContent() {
     const state = searchParams.get('oauth_state');
 
     useEffect(() => {
-        // ✅ KLUCZOWE: Sprawdź ref, nie state
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    useEffect(() => {
         if (processedRef.current) {
             return;
         }
@@ -49,15 +57,12 @@ function SettingsContent() {
         const hasOAuthParams = oauthSuccess === 'true' && platform && code && state;
         const hasOAuthError = oauthError && platform;
 
-        // Brak parametrów - nic nie rób
         if (!hasOAuthParams && !hasOAuthError) {
             return;
         }
 
-        // ✅ Oznacz jako przetworzone NATYCHMIAST
         processedRef.current = true;
 
-        // Obsłuż błąd OAuth
         if (hasOAuthError) {
             const errorDescription = searchParams.get('oauth_error_description');
             toast.error(`Błąd połączenia ${platform}`, {
@@ -68,7 +73,6 @@ function SettingsContent() {
             return;
         }
 
-        // Obsłuż sukces OAuth
         if (hasOAuthParams) {
             setShowOverlay(true);
 
@@ -97,9 +101,7 @@ function SettingsContent() {
                 });
         }
     }, [oauthSuccess, oauthError, platform, code, state, setActiveSection, queryClient, searchParams]);
-    // ✅ USUNIĘTO showOverlay z dependencies!
 
-    // Render active section
     const renderSection = () => {
         switch (activeSection) {
             case 'profile':
@@ -119,9 +121,17 @@ function SettingsContent() {
         }
     };
 
+    const sectionTitles: Record<string, string> = {
+        profile: 'Profil',
+        ai: 'Preferencje AI',
+        notifications: 'Powiadomienia',
+        appearance: 'Wygląd',
+        accounts: 'Połączone konta',
+        danger: 'Strefa niebezpieczna',
+    };
+
     return (
-        <div className="p-6 h-[calc(100vh-4rem)]">
-            {/* OAuth Processing Overlay */}
+        <div className="h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] -mx-3 xs:-mx-4 sm:-mx-6 lg:-mx-8 -mb-4 overflow-hidden">
             {showOverlay && (
                 <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
                     <div className="bg-card border rounded-lg p-6 shadow-lg flex flex-col items-center gap-4">
@@ -134,33 +144,70 @@ function SettingsContent() {
                 </div>
             )}
 
-            {/* Header */}
-            <SettingsHeader />
+            <div className="flex h-full">
+                {isMobile ? (
+                    <>
+                        <div className="flex-1 flex flex-col overflow-hidden">
+                            <div className="flex items-center gap-3 p-4 border-b">
+                                <Sheet open={isNavOpen} onOpenChange={setIsNavOpen}>
+                                    <SheetTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9">
+                                            <Menu className="h-5 w-5" />
+                                        </Button>
+                                    </SheetTrigger>
+                                    <SheetContent side="left" className="w-72 p-0">
+                                        <div className="p-4 border-b">
+                                            <h2 className="font-semibold">Ustawienia</h2>
+                                        </div>
+                                        <div onClick={() => setIsNavOpen(false)}>
+                                            <SettingsNav />
+                                        </div>
+                                    </SheetContent>
+                                </Sheet>
+                                <h1 className="text-lg font-semibold">
+                                    {sectionTitles[activeSection]}
+                                </h1>
+                            </div>
+                            <ScrollArea className="flex-1">
+                                <div className="p-4">
+                                    <motion.div
+                                        key={activeSection}
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                    >
+                                        {renderSection()}
+                                    </motion.div>
+                                </div>
+                            </ScrollArea>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <aside className="w-64 lg:w-72 flex-shrink-0 border-r bg-card/50">
+                            <div className="p-6">
+                                <SettingsHeader />
+                            </div>
+                            <SettingsNav />
+                        </aside>
 
-            {/* Main Content */}
-            <div className="flex gap-8 mt-6 h-[calc(100%-5rem)]">
-                {/* Sidebar Navigation */}
-                <aside className="w-72 flex-shrink-0">
-                    <div className="sticky top-6">
-                        <SettingsNav />
-                    </div>
-                </aside>
-
-                {/* Content Area */}
-                <main className="flex-1 min-w-0">
-                    <ScrollArea className="h-full pr-4">
-                        <motion.div
-                            key={activeSection}
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            transition={{ duration: 0.2 }}
-                            className="pb-8"
-                        >
-                            {renderSection()}
-                        </motion.div>
-                    </ScrollArea>
-                </main>
+                        <main className="flex-1 overflow-hidden">
+                            <ScrollArea className="h-full">
+                                <div className="p-6 lg:p-8">
+                                    <motion.div
+                                        key={activeSection}
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="max-w-3xl"
+                                    >
+                                        {renderSection()}
+                                    </motion.div>
+                                </div>
+                            </ScrollArea>
+                        </main>
+                    </>
+                )}
             </div>
         </div>
     );
@@ -169,7 +216,7 @@ function SettingsContent() {
 export default function SettingsPage() {
     return (
         <Suspense fallback={
-            <div className="p-6 h-[calc(100vh-4rem)] flex items-center justify-center">
+            <div className="h-[calc(100vh-4rem)] flex items-center justify-center">
                 <div className="animate-pulse text-muted-foreground">Ładowanie...</div>
             </div>
         }>

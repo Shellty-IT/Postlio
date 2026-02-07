@@ -10,31 +10,31 @@ export function SettingsHeader() {
     const { hasUnsavedChanges, isSaving, saveSettings, resetToDefaults } = useSettingsStore();
 
     return (
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-end gap-2 xs:gap-3">
             {hasUnsavedChanges && (
-                <Badge variant="outline" className="text-amber-500 border-amber-500">
-                    Niezapisane zmiany
+                <Badge variant="outline" className="text-amber-500 border-amber-500 text-[10px] xs:text-xs px-1.5 xs:px-2">
+                    <span className="hidden xs:inline">Niezapisane zmiany</span>
+                    <span className="xs:hidden">Zmiany</span>
                 </Badge>
             )}
 
             <Button
                 variant="outline"
-                size="sm"
                 onClick={resetToDefaults}
-                className="gap-2"
+                className="gap-1.5 xs:gap-2 h-9 xs:h-10 px-2.5 xs:px-4"
             >
                 <RotateCcw className="w-4 h-4" />
-                Resetuj
+                <span className="hidden xs:inline">Resetuj</span>
             </Button>
 
             <Button
-                size="sm"
                 onClick={saveSettings}
                 disabled={!hasUnsavedChanges || isSaving}
-                className="gap-2"
+                className="gap-1.5 xs:gap-2 h-9 xs:h-10 px-2.5 xs:px-4"
             >
                 <Save className="w-4 h-4" />
-                {isSaving ? 'Zapisuję...' : 'Zapisz zmiany'}
+                <span className="hidden xs:inline">{isSaving ? 'Zapisuję...' : 'Zapisz zmiany'}</span>
+                <span className="xs:hidden">{isSaving ? '...' : 'Zapisz'}</span>
             </Button>
         </div>
     );

@@ -30,7 +30,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import type { Platform } from '@/types';  // <-- DODAJ TO
+import type { Platform } from '@/types';
 import type {
     BackendAutopilotConfigCreate,
     DayOfWeekName,
@@ -52,11 +52,11 @@ interface CreateConfigModalProps {
 
 type Step = 'brand' | 'platforms' | 'schedule' | 'ai';
 
-const STEPS: { id: Step; title: string; icon: React.ReactNode }[] = [
-    { id: 'brand', title: 'Marka', icon: <Building2 className="w-4 h-4" /> },
-    { id: 'platforms', title: 'Platformy', icon: <Share2 className="w-4 h-4" /> },
-    { id: 'schedule', title: 'Harmonogram', icon: <Calendar className="w-4 h-4" /> },
-    { id: 'ai', title: 'AI', icon: <Sparkles className="w-4 h-4" /> },
+const STEPS: { id: Step; title: string; shortTitle: string; icon: React.ReactNode }[] = [
+    { id: 'brand', title: 'Marka', shortTitle: 'Marka', icon: <Building2 className="w-3.5 h-3.5 xs:w-4 xs:h-4" /> },
+    { id: 'platforms', title: 'Platformy', shortTitle: 'Platf.', icon: <Share2 className="w-3.5 h-3.5 xs:w-4 xs:h-4" /> },
+    { id: 'schedule', title: 'Harmonogram', shortTitle: 'Czas', icon: <Calendar className="w-3.5 h-3.5 xs:w-4 xs:h-4" /> },
+    { id: 'ai', title: 'AI', shortTitle: 'AI', icon: <Sparkles className="w-3.5 h-3.5 xs:w-4 xs:h-4" /> },
 ];
 
 export function CreateConfigModal({
@@ -68,7 +68,6 @@ export function CreateConfigModal({
     const [currentStep, setCurrentStep] = useState<Step>('brand');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Form state
     const [selectedBrandId, setSelectedBrandId] = useState<number | null>(null);
     const [platforms, setPlatforms] = useState<Platform[]>([]);
     const [scheduleDays, setScheduleDays] = useState<DayOfWeekName[]>(['monday', 'wednesday', 'friday']);
@@ -84,7 +83,6 @@ export function CreateConfigModal({
     const isFirstStep = currentStepIndex === 0;
     const isLastStep = currentStepIndex === STEPS.length - 1;
 
-    // Walidacja kroku
     const isStepValid = (): boolean => {
         switch (currentStep) {
             case 'brand':
@@ -100,7 +98,6 @@ export function CreateConfigModal({
         }
     };
 
-    // Nawigacja
     const goNext = () => {
         if (isLastStep) {
             handleSubmit();
@@ -115,7 +112,6 @@ export function CreateConfigModal({
         }
     };
 
-    // Toggle platform
     const togglePlatform = (platform: Platform) => {
         setPlatforms(prev =>
             prev.includes(platform)
@@ -124,7 +120,6 @@ export function CreateConfigModal({
         );
     };
 
-    // Toggle day
     const toggleDay = (day: DayOfWeekName) => {
         setScheduleDays(prev =>
             prev.includes(day)
@@ -133,7 +128,6 @@ export function CreateConfigModal({
         );
     };
 
-    // Submit
     const handleSubmit = async () => {
         if (!selectedBrandId) return;
 
@@ -163,7 +157,6 @@ export function CreateConfigModal({
         }
     };
 
-    // Reset i zamknij
     const handleClose = () => {
         setCurrentStep('brand');
         setSelectedBrandId(null);
@@ -182,23 +175,19 @@ export function CreateConfigModal({
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent className="max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden">
-                {/* Header */}
-                <DialogHeader className="p-6 pb-0">
-                    <div className="flex items-center justify-between">
-                        <DialogTitle className="text-xl">
-                            Nowa konfiguracja Autopilota
-                        </DialogTitle>
-                    </div>
+                <DialogHeader className="p-4 xs:p-6 pb-0">
+                    <DialogTitle className="text-base xs:text-lg sm:text-xl">
+                        Nowa konfiguracja Autopilota
+                    </DialogTitle>
 
-                    {/* Step indicators */}
-                    <div className="flex items-center gap-2 mt-6 overflow-x-auto pb-2">
+                    <div className="flex items-center gap-1 xs:gap-2 mt-4 xs:mt-6 overflow-x-auto pb-2">
                         {STEPS.map((step, index) => (
                             <div key={step.id} className="flex items-center flex-shrink-0">
                                 <button
                                     onClick={() => index <= currentStepIndex && setCurrentStep(step.id)}
                                     disabled={index > currentStepIndex}
                                     className={cn(
-                                        "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-all",
+                                        "flex items-center gap-1 xs:gap-2 px-2 xs:px-3 py-1 xs:py-1.5 rounded-full text-xs xs:text-sm transition-all",
                                         currentStep === step.id
                                             ? "bg-primary text-primary-foreground"
                                             : index < currentStepIndex
@@ -207,22 +196,22 @@ export function CreateConfigModal({
                                     )}
                                 >
                                     {index < currentStepIndex ? (
-                                        <Check className="w-3.5 h-3.5" />
+                                        <Check className="w-3 h-3 xs:w-3.5 xs:h-3.5" />
                                     ) : (
                                         step.icon
                                     )}
-                                    <span className="hidden sm:inline">{step.title}</span>
+                                    <span className="hidden xs:inline">{step.title}</span>
+                                    <span className="xs:hidden">{step.shortTitle}</span>
                                 </button>
                                 {index < STEPS.length - 1 && (
-                                    <ChevronRight className="w-4 h-4 text-muted-foreground mx-1 flex-shrink-0" />
+                                    <ChevronRight className="w-3 h-3 xs:w-4 xs:h-4 text-muted-foreground mx-0.5 xs:mx-1 flex-shrink-0" />
                                 )}
                             </div>
                         ))}
                     </div>
                 </DialogHeader>
 
-                {/* Content */}
-                <div className="p-6 overflow-y-auto max-h-[50vh]">
+                <div className="p-4 xs:p-6 overflow-y-auto max-h-[45vh] xs:max-h-[50vh]">
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={currentStep}
@@ -231,26 +220,25 @@ export function CreateConfigModal({
                             exit={{ opacity: 0, x: -20 }}
                             transition={{ duration: 0.2 }}
                         >
-                            {/* Step 1: Brand Selection */}
                             {currentStep === 'brand' && (
-                                <div className="space-y-4">
-                                    <Label>Wybierz markę *</Label>
-                                    <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-3 xs:space-y-4">
+                                    <Label className="text-xs xs:text-sm">Wybierz markę *</Label>
+                                    <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 xs:gap-3">
                                         {brands.map((brand) => (
                                             <button
                                                 key={brand.id}
                                                 onClick={() => setSelectedBrandId(Number(brand.id))}
                                                 className={cn(
-                                                    "p-4 rounded-xl border-2 text-left transition-all",
+                                                    "p-3 xs:p-4 rounded-xl border-2 text-left transition-all",
                                                     "hover:border-primary/50",
                                                     selectedBrandId === Number(brand.id)
                                                         ? "border-primary bg-primary/5"
                                                         : "border-border bg-card"
                                                 )}
                                             >
-                                                <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-2 xs:gap-3">
                                                     <div
-                                                        className="w-10 h-10 rounded-lg flex items-center justify-center text-lg"
+                                                        className="w-8 h-8 xs:w-10 xs:h-10 rounded-lg flex items-center justify-center text-sm xs:text-lg flex-shrink-0"
                                                         style={{
                                                             backgroundColor: `${brand.primaryColor}20`,
                                                             color: brand.primaryColor
@@ -258,9 +246,9 @@ export function CreateConfigModal({
                                                     >
                                                         {brand.name[0]}
                                                     </div>
-                                                    <div>
-                                                        <h4 className="font-medium text-sm">{brand.name}</h4>
-                                                        <p className="text-xs text-muted-foreground">
+                                                    <div className="min-w-0">
+                                                        <h4 className="font-medium text-xs xs:text-sm truncate">{brand.name}</h4>
+                                                        <p className="text-[10px] xs:text-xs text-muted-foreground truncate">
                                                             {brand.industry || 'Brak branży'}
                                                         </p>
                                                     </div>
@@ -270,22 +258,21 @@ export function CreateConfigModal({
                                     </div>
 
                                     {brands.length === 0 && (
-                                        <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-border rounded-xl">
-                                            <Building2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                            <p className="text-sm">Najpierw utwórz markę</p>
+                                        <div className="text-center py-6 xs:py-8 text-muted-foreground border-2 border-dashed border-border rounded-xl">
+                                            <Building2 className="w-6 h-6 xs:w-8 xs:h-8 mx-auto mb-2 opacity-50" />
+                                            <p className="text-xs xs:text-sm">Najpierw utwórz markę</p>
                                         </div>
                                     )}
                                 </div>
                             )}
 
-                            {/* Step 2: Platforms */}
                             {currentStep === 'platforms' && (
-                                <div className="space-y-4">
-                                    <p className="text-sm text-muted-foreground">
-                                        Wybierz platformy, na których będą publikowane posty
+                                <div className="space-y-3 xs:space-y-4">
+                                    <p className="text-xs xs:text-sm text-muted-foreground">
+                                        Wybierz platformy do publikacji
                                     </p>
 
-                                    <div className="grid grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-3 gap-2 xs:gap-4">
                                         {([
                                             { id: 'facebook' as Platform, name: 'Facebook', color: '#1877F2' },
                                             { id: 'instagram' as Platform, name: 'Instagram', color: '#E4405F' },
@@ -298,7 +285,7 @@ export function CreateConfigModal({
                                                     key={platform.id}
                                                     onClick={() => togglePlatform(platform.id)}
                                                     className={cn(
-                                                        "relative p-6 rounded-xl border-2 text-center transition-all",
+                                                        "relative p-3 xs:p-4 sm:p-6 rounded-xl border-2 text-center transition-all",
                                                         "hover:scale-105",
                                                         isSelected
                                                             ? "border-primary bg-primary/5"
@@ -306,20 +293,20 @@ export function CreateConfigModal({
                                                     )}
                                                 >
                                                     <div
-                                                        className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center text-white text-xl font-bold"
+                                                        className="w-10 h-10 xs:w-12 xs:h-12 sm:w-14 sm:h-14 rounded-xl xs:rounded-2xl mx-auto mb-2 xs:mb-3 flex items-center justify-center text-white text-base xs:text-lg sm:text-xl font-bold"
                                                         style={{ backgroundColor: platform.color }}
                                                     >
                                                         {platform.id[0].toUpperCase()}
                                                     </div>
-                                                    <span className="font-medium">{platform.name}</span>
+                                                    <span className="font-medium text-xs xs:text-sm">{platform.name}</span>
 
                                                     {isSelected && (
                                                         <motion.div
                                                             initial={{ scale: 0 }}
                                                             animate={{ scale: 1 }}
-                                                            className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center"
+                                                            className="absolute top-1 right-1 xs:top-2 xs:right-2 w-5 h-5 xs:w-6 xs:h-6 rounded-full bg-primary flex items-center justify-center"
                                                         >
-                                                            <Check className="w-4 h-4 text-primary-foreground" />
+                                                            <Check className="w-3 h-3 xs:w-4 xs:h-4 text-primary-foreground" />
                                                         </motion.div>
                                                     )}
                                                 </button>
@@ -329,12 +316,10 @@ export function CreateConfigModal({
                                 </div>
                             )}
 
-                            {/* Step 3: Schedule */}
                             {currentStep === 'schedule' && (
-                                <div className="space-y-6">
-                                    {/* Posts per week */}
-                                    <div className="space-y-3">
-                                        <Label>Posty tygodniowo: {postsPerWeek}</Label>
+                                <div className="space-y-4 xs:space-y-6">
+                                    <div className="space-y-2 xs:space-y-3">
+                                        <Label className="text-xs xs:text-sm">Posty tygodniowo: {postsPerWeek}</Label>
                                         <Input
                                             type="range"
                                             min={1}
@@ -346,16 +331,16 @@ export function CreateConfigModal({
                                         />
                                     </div>
 
-                                    {/* Days */}
-                                    <div className="space-y-3">
-                                        <Label>Dni publikacji</Label>
-                                        <div className="flex flex-wrap gap-2">
+                                    <div className="space-y-2 xs:space-y-3">
+                                        <Label className="text-xs xs:text-sm">Dni publikacji</Label>
+                                        <div className="flex flex-wrap gap-1.5 xs:gap-2">
                                             {DAYS_OF_WEEK.map((day) => (
                                                 <Button
                                                     key={day.name}
                                                     variant={scheduleDays.includes(day.name) ? "default" : "outline"}
                                                     size="sm"
                                                     onClick={() => toggleDay(day.name)}
+                                                    className="h-8 xs:h-9 px-2 xs:px-3 text-xs"
                                                 >
                                                     {day.short}
                                                 </Button>
@@ -363,24 +348,22 @@ export function CreateConfigModal({
                                         </div>
                                     </div>
 
-                                    {/* Time */}
                                     <div className="space-y-2">
-                                        <Label>Godzina publikacji</Label>
+                                        <Label className="text-xs xs:text-sm">Godzina publikacji</Label>
                                         <Input
                                             type="time"
                                             value={scheduleTime}
                                             onChange={(e) => setScheduleTime(e.target.value)}
+                                            className="h-10 xs:h-11"
                                         />
                                     </div>
                                 </div>
                             )}
 
-                            {/* Step 4: AI Settings */}
                             {currentStep === 'ai' && (
-                                <div className="space-y-6">
-                                    {/* Creativity */}
-                                    <div className="space-y-3">
-                                        <Label>Poziom kreatywności: {creativityLevel}%</Label>
+                                <div className="space-y-4 xs:space-y-6">
+                                    <div className="space-y-2 xs:space-y-3">
+                                        <Label className="text-xs xs:text-sm">Kreatywność: {creativityLevel}%</Label>
                                         <Input
                                             type="range"
                                             min={0}
@@ -392,11 +375,10 @@ export function CreateConfigModal({
                                         />
                                     </div>
 
-                                    {/* Post Length */}
                                     <div className="space-y-2">
-                                        <Label>Długość postów</Label>
+                                        <Label className="text-xs xs:text-sm">Długość postów</Label>
                                         <Select value={postLength} onValueChange={(v: PostLength) => setPostLength(v)}>
-                                            <SelectTrigger>
+                                            <SelectTrigger className="h-10 xs:h-11">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -409,23 +391,21 @@ export function CreateConfigModal({
                                         </Select>
                                     </div>
 
-                                    {/* Text Provider */}
                                     <div className="space-y-2">
-                                        <Label>Model AI (tekst)</Label>
+                                        <Label className="text-xs xs:text-sm">Model AI (tekst)</Label>
                                         <Select value={textProvider} onValueChange={setTextProvider}>
-                                            <SelectTrigger>
+                                            <SelectTrigger className="h-10 xs:h-11">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="gemini">Gemini 2.5 ✨</SelectItem>
-                                                <SelectItem value="groq">Groq (Llama 3.3) ⚡</SelectItem>
+                                                <SelectItem value="groq">Groq ⚡</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
 
-                                    {/* Include Images */}
                                     <div className="flex items-center justify-between">
-                                        <Label>Generuj obrazy</Label>
+                                        <Label className="text-xs xs:text-sm">Generuj obrazy</Label>
                                         <Switch
                                             checked={includeImages}
                                             onCheckedChange={setIncludeImages}
@@ -434,15 +414,14 @@ export function CreateConfigModal({
 
                                     {includeImages && (
                                         <div className="space-y-2">
-                                            <Label>Model AI (obrazy)</Label>
+                                            <Label className="text-xs xs:text-sm">Model AI (obrazy)</Label>
                                             <Select value={imageProvider} onValueChange={setImageProvider}>
-                                                <SelectTrigger>
+                                                <SelectTrigger className="h-10 xs:h-11">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="pollinations">Pollinations 🌸</SelectItem>
                                                     <SelectItem value="huggingface">HuggingFace 🤗</SelectItem>
-                                                    <SelectItem value="clipdrop">ClipDrop ✂️</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -453,26 +432,25 @@ export function CreateConfigModal({
                     </AnimatePresence>
                 </div>
 
-                {/* Footer */}
-                <div className="p-6 pt-4 flex items-center justify-between border-t border-border">
+                <div className="p-4 xs:p-6 pt-3 xs:pt-4 flex items-center justify-between border-t border-border">
                     <Button
                         variant="ghost"
                         onClick={goBack}
                         disabled={isFirstStep}
-                        className="gap-2"
+                        className="gap-1 xs:gap-2 h-9 xs:h-10"
                     >
                         <ChevronLeft className="w-4 h-4" />
-                        Wstecz
+                        <span className="hidden xs:inline">Wstecz</span>
                     </Button>
 
-                    <div className="text-sm text-muted-foreground">
-                        Krok {currentStepIndex + 1} z {STEPS.length}
+                    <div className="text-xs xs:text-sm text-muted-foreground">
+                        {currentStepIndex + 1} / {STEPS.length}
                     </div>
 
                     <Button
                         onClick={goNext}
                         disabled={!isStepValid() || isSubmitting}
-                        className="gap-2"
+                        className="gap-1 xs:gap-2 h-9 xs:h-10"
                     >
                         {isLastStep ? (
                             <>
@@ -481,7 +459,7 @@ export function CreateConfigModal({
                             </>
                         ) : (
                             <>
-                                Dalej
+                                <span className="hidden xs:inline">Dalej</span>
                                 <ChevronRight className="w-4 h-4" />
                             </>
                         )}

@@ -1,3 +1,4 @@
+// src/components/landing/how-it-works-section.tsx
 'use client';
 
 import { motion } from 'framer-motion';
@@ -39,7 +40,7 @@ const steps = [
 
 export function HowItWorksSection() {
     return (
-        <section id="how-it-works" className="py-24 md:py-32 bg-muted/30 relative overflow-hidden">
+        <section id="how-it-works" className="py-16 xs:py-20 md:py-24 lg:py-32 bg-muted/30 relative overflow-hidden">
             {/* Background pattern */}
             <div className="absolute inset-0 opacity-[0.02]">
                 <div
@@ -52,8 +53,7 @@ export function HowItWorksSection() {
             </div>
 
             <div className="container mx-auto px-4 relative">
-                {/* Section Header */}
-                <div className="text-center max-w-3xl mx-auto mb-16 md:mb-20">
+                <div className="text-center max-w-3xl mx-auto mb-10 xs:mb-12 md:mb-16 lg:mb-20">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -62,14 +62,14 @@ export function HowItWorksSection() {
                     >
                         <Badge
                             variant="secondary"
-                            className="mb-4 px-4 py-2 bg-primary/10 text-primary border-primary/20"
+                            className="mb-3 sm:mb-4 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-primary/10 text-primary border-primary/20"
                         >
                             Jak to działa
                         </Badge>
                     </motion.div>
 
                     <motion.h2
-                        className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6"
+                        className="text-2xl xs:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6"
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
@@ -80,7 +80,7 @@ export function HowItWorksSection() {
                     </motion.h2>
 
                     <motion.p
-                        className="text-lg text-muted-foreground"
+                        className="text-sm sm:text-base md:text-lg text-muted-foreground px-2"
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
@@ -91,12 +91,10 @@ export function HowItWorksSection() {
                     </motion.p>
                 </div>
 
-                {/* Steps */}
                 <div className="relative">
-                    {/* Connection line - desktop */}
                     <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-border to-transparent -translate-y-1/2" />
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-12">
                         {steps.map((step, index) => (
                             <motion.div
                                 key={index}
@@ -106,14 +104,12 @@ export function HowItWorksSection() {
                                 viewport={{ once: true }}
                                 transition={{ duration: 0.5, delay: index * 0.15 }}
                             >
-                                {/* Card */}
-                                <div className="relative p-8 rounded-3xl bg-card border border-border/50 h-full">
-                                    {/* Step number */}
-                                    <div className="absolute -top-5 left-8">
+                                <div className="relative p-5 xs:p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-card border border-border/50 h-full">
+                                    <div className="absolute -top-5 left-6 sm:left-8">
                                         <motion.div
                                             className={`
-                                                w-10 h-10 rounded-xl bg-gradient-to-br ${step.color} 
-                                                flex items-center justify-center text-white font-bold text-sm
+                                                w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br ${step.color} 
+                                                flex items-center justify-center text-white font-bold text-xs sm:text-sm
                                                 shadow-lg
                                             `}
                                             whileHover={{ scale: 1.1, rotate: 5 }}
@@ -122,17 +118,16 @@ export function HowItWorksSection() {
                                         </motion.div>
                                     </div>
 
-                                    {/* Icon */}
-                                    <div className="mt-4 mb-6">
+                                    <div className="mt-3 sm:mt-4 mb-4 sm:mb-6">
                                         <motion.div
                                             className={`
-                                                w-16 h-16 rounded-2xl bg-gradient-to-br ${step.color}/10
+                                                w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-br ${step.color}/10
                                                 flex items-center justify-center
                                             `}
                                             whileHover={{ scale: 1.05 }}
                                         >
                                             <step.icon
-                                                className="w-8 h-8"
+                                                className="w-6 h-6 sm:w-8 sm:h-8"
                                                 style={{
                                                     color: step.color.includes('blue')
                                                         ? '#3B82F6'
@@ -144,23 +139,21 @@ export function HowItWorksSection() {
                                         </motion.div>
                                     </div>
 
-                                    {/* Content */}
-                                    <h3 className="text-xl font-semibold mb-3">{step.title}</h3>
-                                    <p className="text-muted-foreground mb-6">{step.description}</p>
+                                    <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">{step.title}</h3>
+                                    <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6">{step.description}</p>
 
-                                    {/* Features list */}
                                     <ul className="space-y-2">
                                         {step.features.map((feature, featureIndex) => (
                                             <motion.li
                                                 key={featureIndex}
-                                                className="flex items-center gap-2 text-sm text-muted-foreground"
+                                                className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground"
                                                 initial={{ opacity: 0, x: -10 }}
                                                 whileInView={{ opacity: 1, x: 0 }}
                                                 viewport={{ once: true }}
                                                 transition={{ delay: 0.3 + index * 0.15 + featureIndex * 0.05 }}
                                             >
-                                                <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${step.color}/20 flex items-center justify-center flex-shrink-0`}>
-                                                    <Check className="w-3 h-3 text-primary" />
+                                                <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-gradient-to-br ${step.color}/20 flex items-center justify-center flex-shrink-0`}>
+                                                    <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary" />
                                                 </div>
                                                 {feature}
                                             </motion.li>
@@ -168,14 +161,13 @@ export function HowItWorksSection() {
                                     </ul>
                                 </div>
 
-                                {/* Arrow between steps - mobile */}
                                 {index < steps.length - 1 && (
-                                    <div className="flex justify-center my-4 lg:hidden">
+                                    <div className="flex justify-center my-3 sm:my-4 lg:hidden">
                                         <motion.div
                                             animate={{ y: [0, 5, 0] }}
                                             transition={{ duration: 2, repeat: Infinity }}
                                         >
-                                            <ArrowRight className="w-6 h-6 text-muted-foreground/50 rotate-90" />
+                                            <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground/50 rotate-90" />
                                         </motion.div>
                                     </div>
                                 )}

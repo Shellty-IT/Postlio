@@ -45,7 +45,6 @@ import {
 } from '@/hooks/useAutopilot';
 import type { BackendQueueItem, BackendQueueStatus } from '@/types/autopilot';
 
-// Status config
 const STATUS_CONFIG: Record<BackendQueueStatus, { label: string; color: string; bgColor: string }> = {
     pending: { label: 'Do przeglądu', color: '#F59E0B', bgColor: 'rgba(245, 158, 11, 0.1)' },
     approved: { label: 'Zatwierdzony', color: '#10B981', bgColor: 'rgba(16, 185, 129, 0.1)' },
@@ -64,19 +63,16 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const { queueFilter, setQueueFilter } = useAutopilotStore();
 
-    // Mutations
     const approveItem = useApproveQueueItem();
     const rejectItem = useRejectQueueItem();
     const deleteItem = useDeleteQueueItem();
 
-    // Filter by search
     const filteredPosts = queueItems.filter(post =>
         post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
         post.topic_used?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         post.category?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // Format date
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
         const now = new Date();
@@ -93,7 +89,6 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
         return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     };
 
-    // Status badge
     const StatusBadge = ({ status }: { status: BackendQueueStatus }) => {
         const config = STATUS_CONFIG[status];
         if (!config) return null;
@@ -101,18 +96,19 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
         return (
             <Badge
                 variant="outline"
+                className="text-[10px] xs:text-xs px-1.5 xs:px-2"
                 style={{
                     borderColor: config.color,
                     color: config.color,
                     backgroundColor: config.bgColor,
                 }}
             >
-                {config.label}
+                <span className="hidden xs:inline">{config.label}</span>
+                <span className="xs:hidden">{config.label.split(' ')[0]}</span>
             </Badge>
         );
     };
 
-    // Platform badge
     const PlatformBadge = ({ platform }: { platform: string }) => {
         const colors: Record<string, string> = {
             facebook: '#1877F2',
@@ -122,7 +118,7 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
 
         return (
             <div
-                className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                className="w-5 h-5 xs:w-6 xs:h-6 rounded-full flex items-center justify-center text-white text-[10px] xs:text-xs font-bold flex-shrink-0"
                 style={{ backgroundColor: colors[platform] || '#6B7280' }}
             >
                 {platform[0].toUpperCase()}
@@ -130,7 +126,6 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
         );
     };
 
-// Handlers
     const handleApprove = (postId: number) => {
         approveItem.mutate({ itemId: postId });
     };
@@ -140,33 +135,31 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
     };
 
     const handleDelete = (postId: number) => {
-        deleteItem.mutate(postId);  // Ten jest OK - hook przyjmuje number
+        deleteItem.mutate(postId);
     };
 
-    // No config selected
     if (!configId) {
         return (
-            <div className="text-center py-12 text-muted-foreground">
-                <Calendar className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                <h3 className="font-medium mb-1">Wybierz konfigurację</h3>
-                <p className="text-sm">
-                    Wybierz konfigurację Autopilota aby zobaczyć kolejkę postów
+            <div className="text-center py-8 xs:py-12 text-muted-foreground">
+                <Calendar className="w-10 h-10 xs:w-12 xs:h-12 mx-auto mb-3 xs:mb-4 opacity-30" />
+                <h3 className="font-medium mb-1 text-sm xs:text-base">Wybierz konfigurację</h3>
+                <p className="text-xs xs:text-sm">
+                    Wybierz konfigurację aby zobaczyć kolejkę
                 </p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-4">
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4">
+        <div className="space-y-3 xs:space-y-4">
+            <div className="flex flex-col xs:flex-row gap-2 xs:gap-4">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
-                        placeholder="Szukaj w treści lub temacie..."
+                        placeholder="Szukaj..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
+                        className="pl-10 h-10 xs:h-11"
                     />
                 </div>
 
@@ -174,9 +167,9 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
                     value={queueFilter}
                     onValueChange={(v) => setQueueFilter(v as BackendQueueStatus | 'all')}
                 >
-                    <SelectTrigger className="w-full sm:w-48">
-                        <Filter className="w-4 h-4 mr-2" />
-                        <SelectValue placeholder="Filtruj status" />
+                    <SelectTrigger className="w-full xs:w-40 sm:w-48 h-10 xs:h-11">
+                        <Filter className="w-4 h-4 mr-2 flex-shrink-0" />
+                        <SelectValue placeholder="Filtruj" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">Wszystkie</SelectItem>
@@ -190,19 +183,18 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
                 </Select>
             </div>
 
-            {/* Queue List */}
-            <ScrollArea className="h-[calc(100vh-320px)]">
-                <div className="space-y-3 pr-4">
+            <ScrollArea className="h-[calc(100vh-280px)] xs:h-[calc(100vh-300px)] sm:h-[calc(100vh-320px)]">
+                <div className="space-y-2 xs:space-y-3 pr-2 xs:pr-4">
                     <AnimatePresence mode="popLayout">
                         {filteredPosts.length === 0 ? (
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="text-center py-12 text-muted-foreground"
+                                className="text-center py-8 xs:py-12 text-muted-foreground"
                             >
-                                <Calendar className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                                <h3 className="font-medium mb-1">Brak postów w kolejce</h3>
-                                <p className="text-sm">
+                                <Calendar className="w-10 h-10 xs:w-12 xs:h-12 mx-auto mb-3 xs:mb-4 opacity-30" />
+                                <h3 className="font-medium mb-1 text-sm xs:text-base">Brak postów w kolejce</h3>
+                                <p className="text-xs xs:text-sm">
                                     {queueFilter !== 'all'
                                         ? 'Zmień filtr lub wygeneruj nowe posty'
                                         : 'Uruchom Autopilota aby wygenerować posty'}
@@ -217,52 +209,38 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
                                     exit={{ opacity: 0, x: -100 }}
                                     transition={{ delay: index * 0.05 }}
                                     className={cn(
-                                        "p-4 rounded-xl border bg-card",
+                                        "p-3 xs:p-4 rounded-xl border bg-card",
                                         "hover:border-primary/30 transition-all"
                                     )}
                                 >
-                                    <div className="flex items-start gap-4">
-                                        {/* Platform */}
-                                        <div className="flex flex-col gap-1">
-                                            <PlatformBadge platform={post.platform} />
-                                        </div>
+                                    <div className="flex items-start gap-2 xs:gap-4">
+                                        <PlatformBadge platform={post.platform} />
 
-                                        {/* Content */}
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-2">
+                                            <div className="flex items-center gap-1.5 xs:gap-2 mb-1.5 xs:mb-2 flex-wrap">
                                                 <StatusBadge status={post.status} />
                                                 {post.category && (
-                                                    <span className="text-xs text-muted-foreground">
+                                                    <span className="text-[10px] xs:text-xs text-muted-foreground hidden xs:inline">
                                                         {post.category}
                                                     </span>
                                                 )}
-                                                {post.edit_count > 0 && (
-                                                    <span className="text-xs text-muted-foreground">
-                                                        • edytowano {post.edit_count}x
-                                                    </span>
-                                                )}
                                             </div>
 
-                                            <p className="text-sm line-clamp-3 mb-3">
+                                            <p className="text-xs xs:text-sm line-clamp-2 xs:line-clamp-3 mb-2 xs:mb-3">
                                                 {post.content}
                                             </p>
 
-                                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                            <div className="flex items-center gap-2 xs:gap-4 text-[10px] xs:text-xs text-muted-foreground">
                                                 <span className="flex items-center gap-1">
                                                     <Clock className="w-3 h-3" />
-                                                    {formatDate(post.scheduled_for)}
+                                                    <span className="hidden xs:inline">{formatDate(post.scheduled_for)}</span>
+                                                    <span className="xs:hidden">{new Date(post.scheduled_for).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}</span>
                                                 </span>
-                                                {post.text_provider_used && (
-                                                    <span>
-                                                        via {post.text_provider_used}
-                                                    </span>
-                                                )}
                                             </div>
                                         </div>
 
-                                        {/* Image Preview */}
                                         {post.image_url && (
-                                            <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 relative">
+                                            <div className="w-14 h-14 xs:w-16 xs:h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden flex-shrink-0 relative">
                                                 <Image
                                                     src={post.image_url}
                                                     alt="Post preview"
@@ -273,44 +251,41 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
                                             </div>
                                         )}
 
-                                        {/* Actions */}
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1 xs:gap-2 flex-shrink-0">
                                             {post.status === 'pending' && (
                                                 <>
                                                     <Button
-                                                        size="sm"
+                                                        size="icon"
                                                         variant="outline"
                                                         onClick={() => handleApprove(post.id)}
                                                         disabled={approveItem.isPending}
-                                                        className="gap-1 text-green-500 hover:text-green-600 hover:bg-green-500/10"
+                                                        className="h-8 w-8 xs:h-9 xs:w-9 text-green-500 hover:text-green-600 hover:bg-green-500/10"
                                                     >
                                                         {approveItem.isPending ? (
                                                             <Loader2 className="w-4 h-4 animate-spin" />
                                                         ) : (
                                                             <Check className="w-4 h-4" />
                                                         )}
-                                                        <span className="hidden sm:inline">Zatwierdź</span>
                                                     </Button>
                                                     <Button
-                                                        size="sm"
+                                                        size="icon"
                                                         variant="outline"
                                                         onClick={() => handleReject(post.id)}
                                                         disabled={rejectItem.isPending}
-                                                        className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                        className="h-8 w-8 xs:h-9 xs:w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
                                                     >
                                                         {rejectItem.isPending ? (
                                                             <Loader2 className="w-4 h-4 animate-spin" />
                                                         ) : (
                                                             <X className="w-4 h-4" />
                                                         )}
-                                                        <span className="hidden sm:inline">Odrzuć</span>
                                                     </Button>
                                                 </>
                                             )}
 
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button size="sm" variant="ghost">
+                                                    <Button size="icon" variant="ghost" className="h-8 w-8 xs:h-9 xs:w-9">
                                                         <MoreHorizontal className="w-4 h-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
@@ -346,9 +321,8 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
                 </div>
             </ScrollArea>
 
-            {/* Summary */}
             {filteredPosts.length > 0 && (
-                <div className="text-sm text-muted-foreground text-center">
+                <div className="text-xs xs:text-sm text-muted-foreground text-center">
                     Pokazano {filteredPosts.length} postów
                 </div>
             )}

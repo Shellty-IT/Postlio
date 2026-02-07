@@ -1,3 +1,4 @@
+// src/components/landing/features-section.tsx
 'use client';
 
 import { motion } from 'framer-motion';
@@ -59,13 +60,11 @@ const features = [
 
 export function FeaturesSection() {
     return (
-        <section id="features" className="py-24 md:py-32 relative overflow-hidden">
-            {/* Background decoration */}
+        <section id="features" className="py-16 xs:py-20 md:py-24 lg:py-32 relative overflow-hidden">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] rounded-full bg-primary/5 blur-3xl -z-10" />
 
             <div className="container mx-auto px-4">
-                {/* Section Header */}
-                <div className="text-center max-w-3xl mx-auto mb-16 md:mb-20">
+                <div className="text-center max-w-3xl mx-auto mb-10 xs:mb-12 md:mb-16 lg:mb-20">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -74,14 +73,14 @@ export function FeaturesSection() {
                     >
                         <Badge
                             variant="secondary"
-                            className="mb-4 px-4 py-2 bg-primary/10 text-primary border-primary/20"
+                            className="mb-3 sm:mb-4 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-primary/10 text-primary border-primary/20"
                         >
                             Funkcje
                         </Badge>
                     </motion.div>
 
                     <motion.h2
-                        className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6"
+                        className="text-2xl xs:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6"
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
@@ -92,7 +91,7 @@ export function FeaturesSection() {
                     </motion.h2>
 
                     <motion.p
-                        className="text-lg text-muted-foreground"
+                        className="text-sm sm:text-base md:text-lg text-muted-foreground px-2"
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
@@ -103,8 +102,7 @@ export function FeaturesSection() {
                     </motion.p>
                 </div>
 
-                {/* Features Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
                     {features.map((feature, index) => (
                         <FeatureCard
                             key={index}
@@ -118,20 +116,19 @@ export function FeaturesSection() {
                     ))}
                 </div>
 
-                {/* Bottom CTA */}
                 <motion.div
-                    className="mt-16 text-center"
+                    className="mt-10 sm:mt-16 text-center"
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: 0.6 }}
                 >
-                    <p className="text-muted-foreground mb-4">
+                    <p className="text-sm sm:text-base text-muted-foreground mb-3 sm:mb-4">
                         I to dopiero początek. Odkryj wszystkie możliwości.
                     </p>
                     <motion.a
                         href="/features"
-                        className="inline-flex items-center gap-2 text-primary font-medium hover:underline"
+                        className="inline-flex items-center gap-2 text-sm sm:text-base text-primary font-medium hover:underline"
                         whileHover={{ x: 5 }}
                     >
                         Zobacz wszystkie funkcje

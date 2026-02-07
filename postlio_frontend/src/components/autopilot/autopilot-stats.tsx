@@ -26,15 +26,14 @@ interface AutopilotStatsProps {
 export function AutopilotStats({ configId, config, stats }: AutopilotStatsProps) {
     if (!configId || !config) {
         return (
-            <div className="text-center py-12 text-muted-foreground">
-                <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                <h3 className="font-medium mb-1">Brak statystyk</h3>
-                <p className="text-sm">Wybierz konfigurację aby zobaczyć statystyki</p>
+            <div className="text-center py-8 xs:py-12 text-muted-foreground">
+                <BarChart3 className="w-10 h-10 xs:w-12 xs:h-12 mx-auto mb-3 xs:mb-4 opacity-30" />
+                <h3 className="font-medium mb-1 text-sm xs:text-base">Brak statystyk</h3>
+                <p className="text-xs xs:text-sm">Wybierz konfigurację aby zobaczyć statystyki</p>
             </div>
         );
     }
 
-    // Oblicz health score (jeśli nie ma z backendu, użyj domyślnego)
     const healthScore = config.health_score ?? 75;
     const streakDays = config.streak_days ?? 0;
 
@@ -69,7 +68,6 @@ export function AutopilotStats({ configId, config, stats }: AutopilotStatsProps)
         },
     ];
 
-    // Statystyki platform (symulowane na podstawie danych)
     const platformStats = config.platforms.map((platform: string) => ({
         platform,
         postsPublished: Math.floor(config.total_published / config.platforms.length),
@@ -77,9 +75,8 @@ export function AutopilotStats({ configId, config, stats }: AutopilotStatsProps)
     }));
 
     return (
-        <div className="space-y-6">
-            {/* Stat Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 xs:gap-3 sm:gap-4">
                 {statCards.map((stat, index) => (
                     <motion.div
                         key={stat.title}
@@ -88,14 +85,14 @@ export function AutopilotStats({ configId, config, stats }: AutopilotStatsProps)
                         transition={{ delay: index * 0.1 }}
                     >
                         <Card>
-                            <CardContent className="p-4">
+                            <CardContent className="p-3 xs:p-4">
                                 <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">{stat.title}</p>
-                                        <p className="text-2xl font-bold mt-1">{stat.value}</p>
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] xs:text-xs sm:text-sm text-muted-foreground truncate">{stat.title}</p>
+                                        <p className="text-lg xs:text-xl sm:text-2xl font-bold mt-0.5 xs:mt-1">{stat.value}</p>
                                     </div>
-                                    <div className={cn("p-3 rounded-xl", stat.bgColor)}>
-                                        <stat.icon className={cn("w-5 h-5", stat.color)} />
+                                    <div className={cn("p-2 xs:p-2.5 sm:p-3 rounded-lg xs:rounded-xl flex-shrink-0", stat.bgColor)}>
+                                        <stat.icon className={cn("w-4 h-4 xs:w-5 xs:h-5", stat.color)} />
                                     </div>
                                 </div>
                             </CardContent>
@@ -104,37 +101,35 @@ export function AutopilotStats({ configId, config, stats }: AutopilotStatsProps)
                 ))}
             </div>
 
-            {/* Health Score & Streak */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Health Score */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <CardHeader className="pb-2 p-3 xs:p-4 sm:p-6 sm:pb-2">
+                        <CardTitle className="text-xs xs:text-sm font-medium flex items-center gap-2">
                             <Target className="w-4 h-4 text-primary" />
                             Health Score
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <div className="flex items-center gap-4">
-                            <div className="relative w-20 h-20">
-                                <svg className="w-20 h-20 -rotate-90">
+                    <CardContent className="p-3 xs:p-4 sm:p-6 pt-0 sm:pt-0">
+                        <div className="flex items-center gap-3 xs:gap-4">
+                            <div className="relative w-16 h-16 xs:w-20 xs:h-20 flex-shrink-0">
+                                <svg className="w-16 h-16 xs:w-20 xs:h-20 -rotate-90">
                                     <circle
-                                        cx="40"
-                                        cy="40"
-                                        r="35"
+                                        cx="50%"
+                                        cy="50%"
+                                        r="45%"
                                         stroke="currentColor"
                                         strokeWidth="6"
                                         fill="none"
                                         className="text-muted"
                                     />
                                     <circle
-                                        cx="40"
-                                        cy="40"
-                                        r="35"
+                                        cx="50%"
+                                        cy="50%"
+                                        r="45%"
                                         stroke="currentColor"
                                         strokeWidth="6"
                                         fill="none"
-                                        strokeDasharray={`${(healthScore / 100) * 220} 220`}
+                                        strokeDasharray={`${(healthScore / 100) * 180} 180`}
                                         className={cn(
                                             healthScore >= 80 ? "text-green-500" :
                                                 healthScore >= 50 ? "text-amber-500" : "text-red-500"
@@ -142,39 +137,38 @@ export function AutopilotStats({ configId, config, stats }: AutopilotStatsProps)
                                     />
                                 </svg>
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                    <span className="text-xl font-bold">{healthScore}</span>
+                                    <span className="text-base xs:text-xl font-bold">{healthScore}</span>
                                 </div>
                             </div>
-                            <div className="flex-1">
-                                <p className="text-sm text-muted-foreground">
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs xs:text-sm text-muted-foreground">
                                     {healthScore >= 80 ? 'Świetnie! Autopilot działa optymalnie.' :
                                         healthScore >= 50 ? 'Dobrze, ale jest miejsce na poprawę.' :
-                                            'Wymaga uwagi. Sprawdź konfigurację.'}
+                                            'Wymaga uwagi.'}
                                 </p>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Streak */}
                 <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <CardHeader className="pb-2 p-3 xs:p-4 sm:p-6 sm:pb-2">
+                        <CardTitle className="text-xs xs:text-sm font-medium flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-orange-500" />
                             Seria publikacji
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <div className="flex items-center gap-4">
-                            <div className="text-4xl font-bold text-orange-500">
+                    <CardContent className="p-3 xs:p-4 sm:p-6 pt-0 sm:pt-0">
+                        <div className="flex items-center gap-3 xs:gap-4">
+                            <div className="text-3xl xs:text-4xl font-bold text-orange-500 flex-shrink-0">
                                 {streakDays}
                             </div>
-                            <div className="flex-1">
-                                <p className="font-medium">dni z rzędu</p>
-                                <p className="text-sm text-muted-foreground">
+                            <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm xs:text-base">dni z rzędu</p>
+                                <p className="text-xs xs:text-sm text-muted-foreground">
                                     {streakDays > 0
-                                        ? 'Świetna passa! Kontynuuj tak dalej.'
-                                        : 'Uruchom Autopilota aby rozpocząć serię.'}
+                                        ? 'Świetna passa!'
+                                        : 'Uruchom Autopilota.'}
                                 </p>
                             </div>
                         </div>
@@ -182,16 +176,15 @@ export function AutopilotStats({ configId, config, stats }: AutopilotStatsProps)
                 </Card>
             </div>
 
-            {/* Platform Performance */}
             <Card>
-                <CardHeader>
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <CardHeader className="p-3 xs:p-4 sm:p-6">
+                    <CardTitle className="text-xs xs:text-sm font-medium flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-primary" />
                         Wydajność platform
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
+                <CardContent className="p-3 xs:p-4 sm:p-6 pt-0 sm:pt-0">
+                    <div className="space-y-3 xs:space-y-4">
                         {platformStats.map((platformStat) => {
                             const colors: Record<string, string> = {
                                 facebook: '#1877F2',
@@ -202,22 +195,22 @@ export function AutopilotStats({ configId, config, stats }: AutopilotStatsProps)
                             const totalPublished = config.total_published || 1;
 
                             return (
-                                <div key={platformStat.platform} className="space-y-2">
-                                    <div className="flex items-center justify-between text-sm">
+                                <div key={platformStat.platform} className="space-y-1.5 xs:space-y-2">
+                                    <div className="flex items-center justify-between text-xs xs:text-sm">
                                         <div className="flex items-center gap-2">
                                             <div
-                                                className="w-3 h-3 rounded-full"
+                                                className="w-2.5 h-2.5 xs:w-3 xs:h-3 rounded-full flex-shrink-0"
                                                 style={{ backgroundColor: colors[platformStat.platform] || '#6B7280' }}
                                             />
                                             <span className="capitalize">{platformStat.platform}</span>
                                         </div>
-                                        <span className="text-muted-foreground">
-                                            {platformStat.postsPublished} postów • {platformStat.avgEngagement.toFixed(1)}% engagement
+                                        <span className="text-muted-foreground text-[10px] xs:text-xs">
+                                            {platformStat.postsPublished} postów
                                         </span>
                                     </div>
                                     <Progress
                                         value={(platformStat.postsPublished / totalPublished) * 100}
-                                        className="h-2"
+                                        className="h-1.5 xs:h-2"
                                     />
                                 </div>
                             );
@@ -226,51 +219,49 @@ export function AutopilotStats({ configId, config, stats }: AutopilotStatsProps)
                 </CardContent>
             </Card>
 
-            {/* Queue Stats */}
             {stats && (
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-sm font-medium">Statystyki kolejki</CardTitle>
+                    <CardHeader className="p-3 xs:p-4 sm:p-6">
+                        <CardTitle className="text-xs xs:text-sm font-medium">Statystyki kolejki</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <CardContent className="p-3 xs:p-4 sm:p-6 pt-0 sm:pt-0">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 xs:gap-4 text-center">
                             <div>
-                                <p className="text-2xl font-bold text-amber-500">{stats.pending_count}</p>
-                                <p className="text-xs text-muted-foreground">Do przeglądu</p>
+                                <p className="text-lg xs:text-xl sm:text-2xl font-bold text-amber-500">{stats.pending_count}</p>
+                                <p className="text-[10px] xs:text-xs text-muted-foreground">Do przeglądu</p>
                             </div>
                             <div>
-                                <p className="text-2xl font-bold text-green-500">{stats.approved_count}</p>
-                                <p className="text-xs text-muted-foreground">Zatwierdzone</p>
+                                <p className="text-lg xs:text-xl sm:text-2xl font-bold text-green-500">{stats.approved_count}</p>
+                                <p className="text-[10px] xs:text-xs text-muted-foreground">Zatwierdzone</p>
                             </div>
                             <div>
-                                <p className="text-2xl font-bold text-blue-500">{stats.published_today}</p>
-                                <p className="text-xs text-muted-foreground">Dziś opublikowane</p>
+                                <p className="text-lg xs:text-xl sm:text-2xl font-bold text-blue-500">{stats.published_today}</p>
+                                <p className="text-[10px] xs:text-xs text-muted-foreground">Dziś</p>
                             </div>
                             <div>
-                                <p className="text-2xl font-bold text-purple-500">{stats.published_this_week}</p>
-                                <p className="text-xs text-muted-foreground">Ten tydzień</p>
+                                <p className="text-lg xs:text-xl sm:text-2xl font-bold text-purple-500">{stats.published_this_week}</p>
+                                <p className="text-[10px] xs:text-xs text-muted-foreground">Ten tydzień</p>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
             )}
 
-            {/* Next Run */}
             {config.next_generation_at && (
                 <Card>
-                    <CardContent className="p-4">
+                    <CardContent className="p-3 xs:p-4">
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg bg-primary/10">
-                                    <Clock className="w-5 h-5 text-primary" />
+                            <div className="flex items-center gap-2 xs:gap-3 min-w-0">
+                                <div className="p-1.5 xs:p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                                    <Clock className="w-4 h-4 xs:w-5 xs:h-5 text-primary" />
                                 </div>
-                                <div>
-                                    <p className="font-medium">Następne generowanie</p>
-                                    <p className="text-sm text-muted-foreground">
+                                <div className="min-w-0">
+                                    <p className="font-medium text-sm xs:text-base">Następne generowanie</p>
+                                    <p className="text-xs xs:text-sm text-muted-foreground truncate">
                                         {new Date(config.next_generation_at).toLocaleString('pl-PL', {
-                                            weekday: 'long',
+                                            weekday: 'short',
                                             day: 'numeric',
-                                            month: 'long',
+                                            month: 'short',
                                             hour: '2-digit',
                                             minute: '2-digit',
                                         })}

@@ -235,20 +235,20 @@ function PlatformTabContent({
 
     if (isPublished) {
         return (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
                 <div
-                    className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+                    className="w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mb-3 sm:mb-4"
                     style={{ backgroundColor: platformConfig.bgColor }}
                 >
                     <CheckCircle2
-                        className="w-8 h-8"
+                        className="w-6 h-6 sm:w-8 sm:h-8"
                         style={{ color: platformConfig.color }}
                     />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">
+                <h3 className="text-base sm:text-lg font-semibold mb-1.5 sm:mb-2">
                     Opublikowano na {platformConfig.name}!
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                     Ten post został oznaczony jako opublikowany.
                 </p>
             </div>
@@ -256,14 +256,13 @@ function PlatformTabContent({
     }
 
     return (
-        <div className="space-y-4">
-            {/* Treść posta */}
+        <div className="space-y-3 sm:space-y-4">
             <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center justify-center gap-2">
-                    <FileText className="w-4 h-4 text-muted-foreground" />
+                <label className="text-xs sm:text-sm font-medium flex items-center justify-center gap-2">
+                    <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                     Treść posta
                 </label>
-                <div className="p-3 bg-muted/50 rounded-lg text-sm whitespace-pre-wrap max-h-32 overflow-y-auto">
+                <div className="p-2.5 sm:p-3 bg-muted/50 rounded-lg text-xs sm:text-sm whitespace-pre-wrap max-h-24 xs:max-h-28 sm:max-h-32 overflow-y-auto">
                     {content}
                 </div>
                 <Button
@@ -285,12 +284,11 @@ function PlatformTabContent({
                 </Button>
             </div>
 
-            {/* Hashtagi */}
             {hashtags.length > 0 && (
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium flex items-center gap-2">
-                            <Hash className="w-4 h-4 text-muted-foreground" />
+                        <label className="text-xs sm:text-sm font-medium flex items-center gap-2">
+                            <Hash className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                             Hashtagi
                         </label>
                         <Button
@@ -302,21 +300,21 @@ function PlatformTabContent({
                             {copiedField === 'hashtags' ? (
                                 <span className="flex items-center gap-1 text-green-500">
                                     <Check className="w-4 h-4" />
-                                    Skopiowano
+                                    <span className="hidden xs:inline">Skopiowano</span>
                                 </span>
                             ) : (
                                 <span className="flex items-center gap-1">
                                     <Copy className="w-4 h-4" />
-                                    Kopiuj
+                                    <span className="hidden xs:inline">Kopiuj</span>
                                 </span>
                             )}
                         </Button>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1 xs:gap-1.5">
                         {hashtags.map((tag, index) => (
                             <span
                                 key={index}
-                                className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
+                                className="px-1.5 xs:px-2 py-0.5 xs:py-1 bg-primary/10 text-primary text-[10px] xs:text-xs rounded-full"
                             >
                                 {tag}
                             </span>
@@ -325,14 +323,13 @@ function PlatformTabContent({
                 </div>
             )}
 
-            {/* Zdjęcie */}
             {imageUrl && (
                 <>
                     <Separator />
                     <div className="space-y-2">
                         {/* ✅ ZMIANA: Nagłówek wycentrowany */}
-                        <label className="text-sm font-medium flex items-center justify-center gap-2">
-                            <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                        <label className="text-xs sm:text-sm font-medium flex items-center justify-center gap-2">
+                            <ImageIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                             Zdjęcie
                         </label>
                         <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
@@ -344,7 +341,7 @@ function PlatformTabContent({
                                 unoptimized
                             />
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col xs:flex-row gap-2">
                             <Button
                                 variant="outline"
                                 className="flex-1"
@@ -354,7 +351,7 @@ function PlatformTabContent({
                                 {isCopyingImage ? (
                                     <span className="flex items-center gap-2">
                                         <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                        Kopiowanie...
+                                        <span className="text-xs xs:text-sm">Kopiowanie...</span>
                                     </span>
                                 ) : copiedField === 'image' ? (
                                     <span className="flex items-center gap-2 text-green-500">
@@ -377,7 +374,7 @@ function PlatformTabContent({
                                 {isDownloading ? (
                                     <span className="flex items-center gap-2">
                                         <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                        Pobieranie...
+                                        <span className="text-xs xs:text-sm">Pobieranie...</span>
                                     </span>
                                 ) : (
                                     <>
@@ -393,18 +390,16 @@ function PlatformTabContent({
 
             <Separator />
 
-            {/* Instrukcje */}
             <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center justify-center gap-2">
-                    <FileText className="w-4 h-4 text-muted-foreground" />
+                <label className="text-xs sm:text-sm font-medium flex items-center justify-center gap-2">
+                    <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                     Instrukcje dla {platformConfig.name}
                 </label>
-                <div className="p-3 bg-muted/30 rounded-lg text-sm whitespace-pre-line text-muted-foreground">
+                <div className="p-2.5 xs:p-3 bg-muted/30 rounded-lg text-xs sm:text-sm whitespace-pre-line text-muted-foreground">
                     {instructions}
                 </div>
             </div>
 
-            {/* Akcje */}
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
                 <Button
                     variant="outline"
@@ -414,12 +409,12 @@ function PlatformTabContent({
                     {shareUrl ? (
                         <>
                             <Share2 className="w-4 h-4 mr-2" />
-                            Udostępnij na {platformConfig.name}
+                            <span className="truncate">Udostępnij na {platformConfig.name}</span>
                         </>
                     ) : (
                         <>
                             <ExternalLink className="w-4 h-4 mr-2" />
-                            Otwórz {platformConfig.name}
+                            <span className="truncate">Otwórz {platformConfig.name}</span>
                         </>
                     )}
                 </Button>
@@ -441,7 +436,7 @@ function PlatformTabContent({
                     ) : (
                         <>
                             <CheckCircle2 className="w-4 h-4 mr-2" />
-                            Opublikowałem na {platformConfig.name}
+                            <span className="truncate">Opublikowałem</span>
                         </>
                     )}
                 </Button>
@@ -504,34 +499,28 @@ export function ManualPublishModal({
                 });
             } catch (error) {
                 console.error('Failed to update platform status:', error);
-                // Kontynuuj mimo błędu - user i tak opublikował ręcznie
             }
         }
 
-        // Aktualizuj lokalny stan
         setPublishedPlatforms((prev) => {
             const next = new Set(prev);
             next.add(platform);
             return next;
         });
 
-        // Notify parent
         const numericPostId = normalizedPostId ? parseInt(normalizedPostId, 10) : undefined;
         onMarkAsPublished?.(numericPostId, platform);
 
-        // Check if all platforms are published
         const newPublishedCount = publishedPlatforms.size + 1;
 
         if (newPublishedCount === activePlatforms.length) {
             toast.success('Wszystkie platformy opublikowane! 🎉');
             onAllPublished?.(numericPostId);
 
-            // Auto-close after short delay
             setTimeout(() => {
                 onOpenChange(false);
             }, 1500);
         } else {
-            // Move to next unpublished platform
             const newPublished = new Set(publishedPlatforms);
             newPublished.add(platform);
 
@@ -553,7 +542,6 @@ export function ManualPublishModal({
         onOpenChange,
     ]);
 
-    // Legacy single-platform handler
     const handleMarkAsPublished = useCallback(() => {
         if (data?.platform) {
             handleMarkPlatformPublished(data.platform);
@@ -573,7 +561,7 @@ export function ManualPublishModal({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-3">
+                    <DialogTitle className="flex items-center gap-2 sm:gap-3">
                         <div className="flex items-center gap-1">
                             {activePlatforms.map((platform) => {
                                 const config = PLATFORM_CONFIG[platform];
@@ -584,23 +572,23 @@ export function ManualPublishModal({
                                     <div
                                         key={platform}
                                         className={cn(
-                                            'w-8 h-8 rounded-lg flex items-center justify-center transition-all',
+                                            'w-7 h-7 xs:w-8 xs:h-8 rounded-lg flex items-center justify-center transition-all',
                                             isPublished && 'ring-2 ring-green-500'
                                         )}
                                         style={{ backgroundColor: config.bgColor }}
                                     >
                                         {isPublished ? (
-                                            <Check className="w-4 h-4 text-green-500" />
+                                            <Check className="w-3.5 h-3.5 xs:w-4 xs:h-4 text-green-500" />
                                         ) : (
-                                            <Icon className="w-4 h-4" style={{ color: config.color }} />
+                                            <Icon className="w-3.5 h-3.5 xs:w-4 xs:h-4" style={{ color: config.color }} />
                                         )}
                                     </div>
                                 );
                             })}
                         </div>
-                        <div>
-                            <span>Opublikuj ręcznie</span>
-                            <DialogDescription className="text-left mt-1">
+                        <div className="min-w-0">
+                            <span className="text-base sm:text-lg">Opublikuj ręcznie</span>
+                            <DialogDescription className="text-left mt-0.5 sm:mt-1">
                                 {isMultiPlatform
                                     ? `${publishedPlatforms.size}/${activePlatforms.length} platform opublikowanych`
                                     : `Skopiuj treść i opublikuj na ${PLATFORM_CONFIG[data.platform].name}`}
@@ -609,11 +597,10 @@ export function ManualPublishModal({
                     </DialogTitle>
                 </DialogHeader>
 
-                {/* Progress bar for multi-platform */}
                 {isMultiPlatform && (
-                    <div className="space-y-2">
+                    <div className="space-y-1.5 sm:space-y-2">
                         <Progress value={progress} className="h-2" />
-                        <div className="flex justify-between text-xs text-muted-foreground">
+                        <div className="flex justify-between text-[10px] xs:text-xs text-muted-foreground">
                             <span>Postęp publikacji</span>
                             <span>
                                 {publishedPlatforms.size}/{activePlatforms.length}
@@ -622,9 +609,8 @@ export function ManualPublishModal({
                     </div>
                 )}
 
-                {/* Single platform mode */}
                 {!isMultiPlatform && activePlatforms.length === 1 && (
-                    <div className="mt-4">
+                    <div className="mt-3 sm:mt-4">
                         <PlatformTabContent
                             platform={data.platform}
                             content={data.content}
@@ -641,12 +627,11 @@ export function ManualPublishModal({
                     </div>
                 )}
 
-                {/* Multi-platform mode with tabs */}
                 {isMultiPlatform && (
                     <Tabs
                         value={activeTab}
                         onValueChange={(v) => setActiveTab(v as Platform)}
-                        className="mt-4"
+                        className="mt-3 sm:mt-4"
                     >
                         <TabsList
                             className="w-full grid"
@@ -662,20 +647,20 @@ export function ManualPublishModal({
                                         key={platform}
                                         value={platform}
                                         className={cn(
-                                            'flex items-center gap-2',
+                                            'flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3',
                                             isPublished && 'text-green-600'
                                         )}
                                     >
                                         {isPublished ? (
-                                            <Check className="w-4 h-4" />
+                                            <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                         ) : (
-                                            <Icon className="w-4 h-4" />
+                                            <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                         )}
                                         <span className="hidden sm:inline">{config.name}</span>
                                         {isPublished && (
                                             <Badge
                                                 variant="secondary"
-                                                className="ml-1 bg-green-100 text-green-700 text-[10px] px-1"
+                                                className="ml-0.5 sm:ml-1 bg-green-100 text-green-700 text-[10px] px-1"
                                             >
                                                 ✓
                                             </Badge>
@@ -686,7 +671,7 @@ export function ManualPublishModal({
                         </TabsList>
 
                         {activePlatforms.map((platform) => (
-                            <TabsContent key={platform} value={platform} className="mt-4">
+                            <TabsContent key={platform} value={platform} className="mt-3 sm:mt-4">
                                 <PlatformTabContent
                                     platform={platform}
                                     content={data.content}
@@ -705,8 +690,7 @@ export function ManualPublishModal({
                     </Tabs>
                 )}
 
-                {/* Info */}
-                <p className="text-xs text-center text-muted-foreground mt-4">
+                <p className="text-[10px] xs:text-xs text-center text-muted-foreground mt-3 sm:mt-4">
                     {isMultiPlatform
                         ? 'Kliknij "Opublikowałem" po publikacji na każdej platformie.'
                         : 'Po opublikowaniu kliknij "Opublikowałem" aby oznaczyć post.'}

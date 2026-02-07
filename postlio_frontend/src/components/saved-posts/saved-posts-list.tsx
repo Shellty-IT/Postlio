@@ -61,12 +61,10 @@ interface SavedPostsListProps {
 function postHasPlatform(post: Post, platforms: Platform[]): boolean {
     if (platforms.length === 0) return true;
 
-    // Sprawdź nowe pole platforms[]
     if (post.platforms && post.platforms.length > 0) {
         return post.platforms.some(p => platforms.includes(p));
     }
 
-    // Fallback do legacy platform
     if (post.platform) {
         return platforms.includes(post.platform);
     }
@@ -86,7 +84,6 @@ function getPrimaryPlatform(post: Post): string {
 
 function filterPosts(posts: Post[], filters: FiltersType): Post[] {
     return posts.filter(post => {
-        // Search filter
         if (filters.search) {
             const searchLower = filters.search.toLowerCase();
             const matchesContent = post.content?.toLowerCase().includes(searchLower) || false;
@@ -96,27 +93,22 @@ function filterPosts(posts: Post[], filters: FiltersType): Post[] {
             if (!matchesContent && !matchesHashtags) return false;
         }
 
-        // Platform filter - obsługa platforms[] i legacy platform
         if (filters.platforms.length > 0 && !postHasPlatform(post, filters.platforms)) {
             return false;
         }
 
-        // Status filter
         if (filters.statuses.length > 0 && !filters.statuses.includes(post.status)) {
             return false;
         }
 
-        // Brand filter
         if (filters.brandId && String(post.brand_id) !== filters.brandId) {
             return false;
         }
 
-        // AI generated filter
         if (filters.aiGenerated !== undefined && post.ai_generated !== filters.aiGenerated) {
             return false;
         }
 
-        // Has image filter
         if (filters.hasImage !== undefined) {
             const hasImage = !!post.image_url;
             if (hasImage !== filters.hasImage) return false;
@@ -167,7 +159,6 @@ export function SavedPostsList({
                                    onBulkDelete,
                                    onBulkSchedule,
                                }: SavedPostsListProps) {
-    // State
     const [filters, setFilters] = useState<FiltersType>({
         search: '',
         platforms: [],
@@ -182,13 +173,11 @@ export function SavedPostsList({
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-    // Filtered and sorted posts
     const filteredPosts = useMemo(() => {
         const filtered = filterPosts(posts, filters);
         return sortPosts(filtered, filters.sortBy);
     }, [posts, filters]);
 
-    // Selection handlers
     const handleSelect = useCallback((id: string | number, selected: boolean) => {
         setSelectedIds(prev => {
             const next = new Set(prev);
@@ -213,14 +202,12 @@ export function SavedPostsList({
         setSelectedIds(new Set());
     }, []);
 
-    // Handler dla checkbox "zaznacz wszystko" - z prawidłowym typem
     const handleSelectAllCheckedChange = (checked: boolean | 'indeterminate') => {
         if (typeof checked === 'boolean') {
             handleSelectAll();
         }
     };
 
-    // Bulk delete handler
     const handleBulkDelete = useCallback(async () => {
         if (!onBulkDelete || selectedIds.size === 0) return;
 
@@ -234,7 +221,6 @@ export function SavedPostsList({
         }
     }, [onBulkDelete, selectedIds, clearSelection]);
 
-    // Bulk schedule handler
     const handleBulkSchedule = useCallback(() => {
         if (!onBulkSchedule || selectedIds.size === 0) return;
         onBulkSchedule(Array.from(selectedIds));
@@ -244,8 +230,7 @@ export function SavedPostsList({
     const hasSelection = selectedIds.size > 0;
 
     return (
-        <div className="space-y-6">
-            {/* Filters */}
+        <div className="space-y-4 sm:space-y-6">
             <SavedPostsFilters
                 filters={filters}
                 onFiltersChange={setFilters}
@@ -256,48 +241,49 @@ export function SavedPostsList({
                 filteredCount={filteredPosts.length}
             />
 
-            {/* Bulk actions bar */}
             <AnimatePresence>
                 {hasSelection && (
                     <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20"
+                        className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-2.5 xs:gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20"
                     >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2.5 sm:gap-3">
                             <Checkbox
                                 checked={isAllSelected}
                                 onCheckedChange={handleSelectAllCheckedChange}
                             />
-                            <span className="text-sm font-medium">
+                            <span className="text-xs sm:text-sm font-medium">
                                 Zaznaczono {selectedIds.size} {selectedIds.size === 1 ? 'post' : 'postów'}
                             </span>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 w-full xs:w-auto">
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={handleBulkSchedule}
-                                className="gap-2"
+                                className="gap-1.5 sm:gap-2 flex-1 xs:flex-initial text-xs sm:text-sm"
                             >
-                                <Calendar className="h-4 w-4" />
-                                Zaplanuj wszystkie
+                                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                <span className="hidden xs:inline">Zaplanuj</span>
+                                <span className="xs:hidden">Zaplanuj</span>
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setShowDeleteDialog(true)}
-                                className="gap-2 text-destructive hover:text-destructive"
+                                className="gap-1.5 sm:gap-2 text-destructive hover:text-destructive flex-1 xs:flex-initial text-xs sm:text-sm"
                             >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                 Usuń
                             </Button>
                             <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={clearSelection}
+                                className="text-xs sm:text-sm flex-shrink-0"
                             >
                                 Anuluj
                             </Button>
@@ -306,30 +292,28 @@ export function SavedPostsList({
                 )}
             </AnimatePresence>
 
-            {/* Loading state */}
             {isLoading && (
-                <div className="flex items-center justify-center py-12">
-                    <div className="flex flex-col items-center gap-4">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <p className="text-sm text-muted-foreground">Ładowanie materiałów...</p>
+                <div className="flex items-center justify-center py-8 sm:py-12">
+                    <div className="flex flex-col items-center gap-3 sm:gap-4">
+                        <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-primary" />
+                        <p className="text-xs sm:text-sm text-muted-foreground">Ładowanie materiałów...</p>
                     </div>
                 </div>
             )}
 
-            {/* Empty state */}
             {!isLoading && filteredPosts.length === 0 && (
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center py-16 text-center"
+                    className="flex flex-col items-center justify-center py-10 sm:py-16 text-center px-4"
                 >
-                    <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                        <FileText className="h-8 w-8 text-muted-foreground" />
+                    <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-muted flex items-center justify-center mb-3 sm:mb-4">
+                        <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
                     </div>
-                    <h3 className="text-lg font-medium mb-1">
+                    <h3 className="text-base sm:text-lg font-medium mb-1">
                         {posts.length === 0 ? 'Brak zapisanych materiałów' : 'Brak wyników'}
                     </h3>
-                    <p className="text-sm text-muted-foreground max-w-sm">
+                    <p className="text-xs sm:text-sm text-muted-foreground max-w-sm">
                         {posts.length === 0
                             ? 'Stwórz swój pierwszy post w Kreatorze AI, a pojawi się tutaj jako szkic.'
                             : 'Spróbuj zmienić filtry lub wyszukiwaną frazę.'}
@@ -337,14 +321,13 @@ export function SavedPostsList({
                 </motion.div>
             )}
 
-            {/* Posts grid/list */}
             {!isLoading && filteredPosts.length > 0 && (
                 <motion.div
                     layout
                     className={cn(
                         viewMode === 'grid'
-                            ? 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-                            : 'flex flex-col gap-3'
+                            ? 'grid gap-3 sm:gap-4 grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                            : 'flex flex-col gap-2.5 sm:gap-3'
                     )}
                 >
                     <AnimatePresence mode="popLayout">
@@ -365,7 +348,6 @@ export function SavedPostsList({
                 </motion.div>
             )}
 
-            {/* Delete confirmation dialog */}
             <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

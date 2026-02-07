@@ -26,7 +26,6 @@ interface PostPreviewProps {
     brandLogo?: string;
 }
 
-// Komponent obrazu - używa natywnego img dla zewnętrznych URL
 function PreviewImage({ src, alt, aspectRatio = 'video' }: { src: string; alt: string; aspectRatio?: 'video' | 'square' }) {
     const aspectClass = aspectRatio === 'square' ? 'aspect-square' : 'aspect-video';
 
@@ -43,13 +42,11 @@ function PreviewImage({ src, alt, aspectRatio = 'video' }: { src: string; alt: s
     );
 }
 
-// Facebook Preview
 function FacebookPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostPreviewProps, 'platforms'>) {
     return (
         <div className="bg-white dark:bg-[#242526] rounded-lg overflow-hidden shadow">
-            {/* Header */}
-            <div className="flex items-center gap-3 p-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold overflow-hidden">
+            <div className="flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3">
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-xs sm:text-sm overflow-hidden flex-shrink-0">
                     {brandLogo ? (
                         <Image
                             src={brandLogo}
@@ -63,39 +60,36 @@ function FacebookPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostP
                         brandName?.charAt(0) || 'P'
                     )}
                 </div>
-                <div className="flex-1">
-                    <p className="font-semibold text-sm text-[#050505] dark:text-[#E4E6EB]">
+                <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-xs sm:text-sm text-[#050505] dark:text-[#E4E6EB] truncate">
                         {brandName || 'Twoja Marka'}
                     </p>
-                    <p className="text-xs text-[#65676B] dark:text-[#B0B3B8]">Teraz · 🌐</p>
+                    <p className="text-[10px] xs:text-xs text-[#65676B] dark:text-[#B0B3B8]">Teraz · 🌐</p>
                 </div>
-                <MoreHorizontal className="h-5 w-5 text-[#65676B]" />
+                <MoreHorizontal className="h-4 w-4 sm:h-5 sm:w-5 text-[#65676B] flex-shrink-0" />
             </div>
 
-            {/* Content */}
-            <div className="px-3 pb-3">
-                <p className="text-sm text-[#050505] dark:text-[#E4E6EB] whitespace-pre-wrap">
+            <div className="px-2.5 sm:px-3 pb-2.5 sm:pb-3">
+                <p className="text-xs sm:text-sm text-[#050505] dark:text-[#E4E6EB] whitespace-pre-wrap">
                     {content || 'Podgląd Twojego posta pojawi się tutaj...'}
                 </p>
             </div>
 
-            {/* Image */}
             {imageUrl && <PreviewImage src={imageUrl} alt="Post image" aspectRatio="video" />}
 
-            {/* Actions */}
-            <div className="px-3 py-2 border-t border-[#CED0D4] dark:border-[#3E4042]">
+            <div className="px-2 sm:px-3 py-1.5 sm:py-2 border-t border-[#CED0D4] dark:border-[#3E4042]">
                 <div className="flex justify-around">
-                    <button className="flex items-center gap-2 px-4 py-2 rounded-md hover:bg-[#F0F2F5] dark:hover:bg-[#3A3B3C] transition-colors">
-                        <ThumbsUp className="h-5 w-5 text-[#65676B] dark:text-[#B0B3B8]" />
-                        <span className="text-sm font-medium text-[#65676B] dark:text-[#B0B3B8]">Lubię to</span>
+                    <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-md hover:bg-[#F0F2F5] dark:hover:bg-[#3A3B3C] transition-colors">
+                        <ThumbsUp className="h-4 w-4 sm:h-5 sm:w-5 text-[#65676B] dark:text-[#B0B3B8]" />
+                        <span className="text-[10px] xs:text-xs sm:text-sm font-medium text-[#65676B] dark:text-[#B0B3B8]">Lubię to</span>
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 rounded-md hover:bg-[#F0F2F5] dark:hover:bg-[#3A3B3C] transition-colors">
-                        <MessageCircle className="h-5 w-5 text-[#65676B] dark:text-[#B0B3B8]" />
-                        <span className="text-sm font-medium text-[#65676B] dark:text-[#B0B3B8]">Komentarz</span>
+                    <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-md hover:bg-[#F0F2F5] dark:hover:bg-[#3A3B3C] transition-colors">
+                        <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 text-[#65676B] dark:text-[#B0B3B8]" />
+                        <span className="hidden xs:inline text-xs sm:text-sm font-medium text-[#65676B] dark:text-[#B0B3B8]">Komentarz</span>
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 rounded-md hover:bg-[#F0F2F5] dark:hover:bg-[#3A3B3C] transition-colors">
-                        <Share2 className="h-5 w-5 text-[#65676B] dark:text-[#B0B3B8]" />
-                        <span className="text-sm font-medium text-[#65676B] dark:text-[#B0B3B8]">Udostępnij</span>
+                    <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-md hover:bg-[#F0F2F5] dark:hover:bg-[#3A3B3C] transition-colors">
+                        <Share2 className="h-4 w-4 sm:h-5 sm:w-5 text-[#65676B] dark:text-[#B0B3B8]" />
+                        <span className="hidden xs:inline text-xs sm:text-sm font-medium text-[#65676B] dark:text-[#B0B3B8]">Udostępnij</span>
                     </button>
                 </div>
             </div>
@@ -103,13 +97,11 @@ function FacebookPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostP
     );
 }
 
-// Instagram Preview
 function InstagramPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostPreviewProps, 'platforms'>) {
     return (
         <div className="bg-white dark:bg-black rounded-lg overflow-hidden border border-[#DBDBDB] dark:border-[#262626]">
-            {/* Header */}
-            <div className="flex items-center gap-3 p-3">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#8134AF] p-0.5">
+            <div className="flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3">
+                <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#8134AF] p-0.5">
                     <div className="h-full w-full rounded-full bg-white dark:bg-black flex items-center justify-center overflow-hidden">
                         {brandLogo ? (
                             <Image
@@ -121,15 +113,14 @@ function InstagramPreview({ content, imageUrl, brandName, brandLogo }: Omit<Post
                                 unoptimized
                             />
                         ) : (
-                            <span className="text-xs font-bold">{brandName?.charAt(0) || 'P'}</span>
+                            <span className="text-[10px] xs:text-xs font-bold">{brandName?.charAt(0) || 'P'}</span>
                         )}
                     </div>
                 </div>
-                <p className="font-semibold text-sm flex-1">{brandName?.toLowerCase().replace(/\s/g, '') || 'twoja_marka'}</p>
-                <MoreHorizontal className="h-5 w-5" />
+                <p className="font-semibold text-xs sm:text-sm flex-1 truncate">{brandName?.toLowerCase().replace(/\s/g, '') || 'twoja_marka'}</p>
+                <MoreHorizontal className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
             </div>
 
-            {/* Image */}
             <div className="relative aspect-square bg-muted">
                 {imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -141,25 +132,23 @@ function InstagramPreview({ content, imageUrl, brandName, brandLogo }: Omit<Post
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                        <Instagram className="h-12 w-12" />
+                        <Instagram className="h-8 w-8 sm:h-12 sm:w-12" />
                     </div>
                 )}
             </div>
 
-            {/* Actions */}
-            <div className="p-3">
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-4">
-                        <Heart className="h-6 w-6" />
-                        <MessageCircle className="h-6 w-6" />
-                        <Send className="h-6 w-6" />
+            <div className="p-2.5 sm:p-3">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                        <Heart className="h-5 w-5 sm:h-6 sm:w-6" />
+                        <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />
+                        <Send className="h-5 w-5 sm:h-6 sm:w-6" />
                     </div>
-                    <Bookmark className="h-6 w-6" />
+                    <Bookmark className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
 
-                {/* Content */}
                 <div>
-                    <p className="text-sm">
+                    <p className="text-xs sm:text-sm">
                         <span className="font-semibold mr-1">
                             {brandName?.toLowerCase().replace(/\s/g, '') || 'twoja_marka'}
                         </span>
@@ -171,13 +160,11 @@ function InstagramPreview({ content, imageUrl, brandName, brandLogo }: Omit<Post
     );
 }
 
-// LinkedIn Preview
 function LinkedInPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostPreviewProps, 'platforms'>) {
     return (
         <div className="bg-white dark:bg-[#1B1F23] rounded-lg overflow-hidden border border-[#E0E0E0] dark:border-[#38434F]">
-            {/* Header */}
-            <div className="flex items-start gap-3 p-4">
-                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold overflow-hidden">
+            <div className="flex items-start gap-2.5 sm:gap-3 p-3 sm:p-4">
+                <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-xs sm:text-sm overflow-hidden flex-shrink-0">
                     {brandLogo ? (
                         <Image
                             src={brandLogo}
@@ -191,51 +178,47 @@ function LinkedInPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostP
                         brandName?.charAt(0) || 'P'
                     )}
                 </div>
-                <div className="flex-1">
-                    <p className="font-semibold text-sm">{brandName || 'Twoja Marka'}</p>
-                    <p className="text-xs text-[#666666] dark:text-[#FFFFFFA6]">1,234 obserwujących</p>
-                    <p className="text-xs text-[#666666] dark:text-[#FFFFFFA6]">Teraz · 🌐</p>
+                <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-xs sm:text-sm truncate">{brandName || 'Twoja Marka'}</p>
+                    <p className="text-[10px] xs:text-xs text-[#666666] dark:text-[#FFFFFFA6]">1,234 obserwujących</p>
+                    <p className="text-[10px] xs:text-xs text-[#666666] dark:text-[#FFFFFFA6]">Teraz · 🌐</p>
                 </div>
-                <MoreHorizontal className="h-5 w-5 text-[#666666]" />
+                <MoreHorizontal className="h-4 w-4 sm:h-5 sm:w-5 text-[#666666] flex-shrink-0" />
             </div>
 
-            {/* Content */}
-            <div className="px-4 pb-3">
-                <p className="text-sm whitespace-pre-wrap">
+            <div className="px-3 sm:px-4 pb-2.5 sm:pb-3">
+                <p className="text-xs sm:text-sm whitespace-pre-wrap">
                     {content || 'Podgląd Twojego posta pojawi się tutaj...'}
                 </p>
             </div>
 
-            {/* Image */}
             {imageUrl && <PreviewImage src={imageUrl} alt="Post image" aspectRatio="video" />}
 
-            {/* Stats */}
-            <div className="px-4 py-2 flex items-center gap-1 text-xs text-[#666666] dark:text-[#FFFFFFA6]">
+            <div className="px-3 sm:px-4 py-1.5 sm:py-2 flex items-center gap-1 text-[10px] xs:text-xs text-[#666666] dark:text-[#FFFFFFA6]">
                 <span className="flex -space-x-1">
-                    <span className="h-4 w-4 rounded-full bg-[#0A66C2] flex items-center justify-center">
-                        <ThumbsUp className="h-2.5 w-2.5 text-white" />
+                    <span className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-[#0A66C2] flex items-center justify-center">
+                        <ThumbsUp className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-white" />
                     </span>
-                    <span className="h-4 w-4 rounded-full bg-[#E7A33E] flex items-center justify-center">
-                        <Heart className="h-2.5 w-2.5 text-white" />
+                    <span className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-[#E7A33E] flex items-center justify-center">
+                        <Heart className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-white" />
                     </span>
                 </span>
                 <span>24</span>
             </div>
 
-            {/* Actions */}
-            <div className="px-2 py-1 border-t border-[#E0E0E0] dark:border-[#38434F]">
+            <div className="px-1.5 sm:px-2 py-1 border-t border-[#E0E0E0] dark:border-[#38434F]">
                 <div className="flex justify-around">
-                    <button className="flex items-center gap-2 px-4 py-3 rounded hover:bg-[#F0F0F0] dark:hover:bg-[#38434F] transition-colors">
-                        <ThumbsUp className="h-5 w-5 text-[#666666] dark:text-[#FFFFFFA6]" />
-                        <span className="text-sm font-medium text-[#666666] dark:text-[#FFFFFFA6]">Lubię to</span>
+                    <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded hover:bg-[#F0F0F0] dark:hover:bg-[#38434F] transition-colors">
+                        <ThumbsUp className="h-4 w-4 sm:h-5 sm:w-5 text-[#666666] dark:text-[#FFFFFFA6]" />
+                        <span className="text-[10px] xs:text-xs sm:text-sm font-medium text-[#666666] dark:text-[#FFFFFFA6]">Lubię to</span>
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-3 rounded hover:bg-[#F0F0F0] dark:hover:bg-[#38434F] transition-colors">
-                        <MessageCircle className="h-5 w-5 text-[#666666] dark:text-[#FFFFFFA6]" />
-                        <span className="text-sm font-medium text-[#666666] dark:text-[#FFFFFFA6]">Komentarz</span>
+                    <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded hover:bg-[#F0F0F0] dark:hover:bg-[#38434F] transition-colors">
+                        <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 text-[#666666] dark:text-[#FFFFFFA6]" />
+                        <span className="hidden xs:inline text-xs sm:text-sm font-medium text-[#666666] dark:text-[#FFFFFFA6]">Komentarz</span>
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-3 rounded hover:bg-[#F0F0F0] dark:hover:bg-[#38434F] transition-colors">
-                        <Share2 className="h-5 w-5 text-[#666666] dark:text-[#FFFFFFA6]" />
-                        <span className="text-sm font-medium text-[#666666] dark:text-[#FFFFFFA6]">Udostępnij</span>
+                    <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded hover:bg-[#F0F0F0] dark:hover:bg-[#38434F] transition-colors">
+                        <Share2 className="h-4 w-4 sm:h-5 sm:w-5 text-[#666666] dark:text-[#FFFFFFA6]" />
+                        <span className="hidden xs:inline text-xs sm:text-sm font-medium text-[#666666] dark:text-[#FFFFFFA6]">Udostępnij</span>
                     </button>
                 </div>
             </div>
@@ -243,17 +226,16 @@ function LinkedInPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostP
     );
 }
 
-// Main Component
 export function PostPreview({ content, platforms, imageUrl, brandName, brandLogo }: PostPreviewProps) {
     const platformIcons: Record<Platform, React.ReactNode> = {
-        facebook: <Facebook className="h-4 w-4" />,
-        instagram: <Instagram className="h-4 w-4" />,
-        linkedin: <Linkedin className="h-4 w-4" />,
+        facebook: <Facebook className="h-3.5 w-3.5 sm:h-4 sm:w-4" />,
+        instagram: <Instagram className="h-3.5 w-3.5 sm:h-4 sm:w-4" />,
+        linkedin: <Linkedin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />,
     };
 
     return (
-        <div className="space-y-4">
-            <h3 className="text-sm font-medium">Podgląd</h3>
+        <div className="space-y-3 sm:space-y-4">
+            <h3 className="text-xs sm:text-sm font-medium">Podgląd</h3>
 
             <Tabs defaultValue={platforms[0]} className="w-full">
                 <TabsList className="w-full justify-start bg-muted/50">
@@ -262,25 +244,25 @@ export function PostPreview({ content, platforms, imageUrl, brandName, brandLogo
                             key={platform}
                             value={platform}
                             className={cn(
-                                'gap-2 capitalize',
+                                'gap-1.5 sm:gap-2 text-xs sm:text-sm capitalize',
                                 platform === 'facebook' && 'data-[state=active]:text-[#1877F2]',
                                 platform === 'instagram' && 'data-[state=active]:text-[#E4405F]',
                                 platform === 'linkedin' && 'data-[state=active]:text-[#0A66C2]'
                             )}
                         >
                             {platformIcons[platform]}
-                            {platform}
+                            <span className="hidden xs:inline">{platform}</span>
                         </TabsTrigger>
                     ))}
                 </TabsList>
 
-                <TabsContent value="facebook" className="mt-4">
+                <TabsContent value="facebook" className="mt-3 sm:mt-4">
                     <FacebookPreview content={content} imageUrl={imageUrl} brandName={brandName} brandLogo={brandLogo} />
                 </TabsContent>
-                <TabsContent value="instagram" className="mt-4">
+                <TabsContent value="instagram" className="mt-3 sm:mt-4">
                     <InstagramPreview content={content} imageUrl={imageUrl} brandName={brandName} brandLogo={brandLogo} />
                 </TabsContent>
-                <TabsContent value="linkedin" className="mt-4">
+                <TabsContent value="linkedin" className="mt-3 sm:mt-4">
                     <LinkedInPreview content={content} imageUrl={imageUrl} brandName={brandName} brandLogo={brandLogo} />
                 </TabsContent>
             </Tabs>

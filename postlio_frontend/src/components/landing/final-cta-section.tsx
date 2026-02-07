@@ -8,13 +8,11 @@ import { ArrowRight, Sparkles, Zap, Shield } from 'lucide-react';
 
 export function FinalCTASection() {
     return (
-        <section className="py-24 md:py-32 relative overflow-hidden">
-            {/* Background */}
+        <section className="py-16 xs:py-20 md:py-24 lg:py-32 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-violet-500/5 to-primary/5" />
 
-            {/* Animated orbs */}
             <motion.div
-                className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-primary/10 blur-3xl"
+                className="absolute top-1/4 left-1/4 w-40 sm:w-64 h-40 sm:h-64 rounded-full bg-primary/10 blur-3xl"
                 animate={{
                     scale: [1, 1.2, 1],
                     opacity: [0.3, 0.5, 0.3],
@@ -22,7 +20,7 @@ export function FinalCTASection() {
                 transition={{ duration: 8, repeat: Infinity }}
             />
             <motion.div
-                className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-violet-500/10 blur-3xl"
+                className="absolute bottom-1/4 right-1/4 w-48 sm:w-80 h-48 sm:h-80 rounded-full bg-violet-500/10 blur-3xl"
                 animate={{
                     scale: [1.2, 1, 1.2],
                     opacity: [0.5, 0.3, 0.5],
@@ -32,21 +30,19 @@ export function FinalCTASection() {
 
             <div className="container mx-auto px-4 relative">
                 <div className="max-w-4xl mx-auto text-center">
-                    {/* Icon */}
                     <motion.div
-                        className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-violet-500 mb-8 shadow-xl shadow-primary/25"
+                        className="inline-flex items-center justify-center w-14 h-14 xs:w-16 xs:h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-primary to-violet-500 mb-5 sm:mb-8 shadow-xl shadow-primary/25"
                         initial={{ opacity: 0, scale: 0.5 }}
                         whileInView={{ opacity: 1, scale: 1 }}
                         viewport={{ once: true }}
                         transition={{ type: 'spring', stiffness: 200 }}
                         whileHover={{ rotate: [0, -10, 10, 0], scale: 1.1 }}
                     >
-                        <Sparkles className="w-10 h-10 text-white" />
+                        <Sparkles className="w-7 h-7 xs:w-8 xs:h-8 sm:w-10 sm:h-10 text-white" />
                     </motion.div>
 
-                    {/* Heading */}
                     <motion.h2
-                        className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6"
+                        className="text-2xl xs:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6"
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
@@ -59,9 +55,8 @@ export function FinalCTASection() {
                         </span>
                     </motion.h2>
 
-                    {/* Description */}
                     <motion.p
-                        className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto"
+                        className="text-sm sm:text-base md:text-lg lg:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto px-2"
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
@@ -71,9 +66,8 @@ export function FinalCTASection() {
                         Zacznij za darmo w 30 sekund.
                     </motion.p>
 
-                    {/* Features */}
                     <motion.div
-                        className="flex flex-wrap justify-center gap-6 mb-10"
+                        className="flex flex-wrap justify-center gap-2.5 sm:gap-4 xs:gap-3 mb-8 sm:mb-10"
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
@@ -86,17 +80,16 @@ export function FinalCTASection() {
                         ].map((item, index) => (
                             <div
                                 key={index}
-                                className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 border border-border/50 text-sm"
+                                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full bg-background/80 border border-border/50 text-xs sm:text-sm"
                             >
-                                <item.icon className="w-4 h-4 text-primary" />
+                                <item.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                                 <span>{item.text}</span>
                             </div>
                         ))}
                     </motion.div>
 
-                    {/* CTA Buttons */}
                     <motion.div
-                        className="flex flex-col sm:flex-row items-center justify-center gap-4"
+                        className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
@@ -104,19 +97,19 @@ export function FinalCTASection() {
                     >
                         <Button
                             size="lg"
-                            className="h-14 px-8 text-base bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90 shadow-xl shadow-primary/25 group"
+                            className="h-12 sm:h-14 px-6 sm:px-8 text-sm sm:text-base bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90 shadow-xl shadow-primary/25 group w-full sm:w-auto"
                             asChild
                         >
-                            <Link href="/register" className="flex items-center gap-2">
+                            <Link href="/register" className="flex items-center justify-center gap-2">
                                 Zacznij za darmo
-                                <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+                                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 transition-transform group-hover:translate-x-1" />
                             </Link>
                         </Button>
 
                         <Button
                             size="lg"
                             variant="outline"
-                            className="h-14 px-8 text-base"
+                            className="h-12 sm:h-14 px-6 sm:px-8 text-sm sm:text-base w-full sm:w-auto"
                             asChild
                         >
                             <Link href="#pricing">Zobacz cennik</Link>

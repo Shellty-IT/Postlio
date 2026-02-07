@@ -1,4 +1,3 @@
-// src/app/(dashboard)/creator/page.tsx
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
@@ -26,10 +25,6 @@ import type { ManualPublishData } from '@/types/autopilot';
 import type { Tone, Category, TextProvider, ImageProvider } from '@/lib/api/ai';
 import { toast } from 'sonner';
 
-// ============================================================
-// WALIDACJA PLATFORM
-// ============================================================
-
 interface PlatformValidation {
     isValid: boolean;
     errors: string[];
@@ -44,7 +39,6 @@ function validatePlatformRequirements(
     const hasContent = content.trim().length > 0;
     const hasImage = !!imageUrl;
 
-    // Jeśli nie ma nic - błąd
     if (!hasContent && !hasImage) {
         errors.push('Dodaj treść lub zdjęcie');
         return { isValid: false, errors };
@@ -53,63 +47,46 @@ function validatePlatformRequirements(
     for (const platform of platforms) {
         switch (platform) {
             case 'instagram':
-                // Instagram wymaga zdjęcia (tekst opcjonalny)
                 if (!hasImage) {
                     errors.push('Instagram wymaga zdjęcia');
                 }
                 break;
-
             case 'facebook':
             case 'linkedin':
-                // Facebook i LinkedIn: tekst LUB zdjęcie (jedno wystarczy)
-                // Już sprawdziliśmy wyżej że coś jest
                 break;
         }
     }
 
-    // ✅ POPRAWKA: Array.from() zamiast spread na Set
     return {
         isValid: errors.length === 0,
         errors: Array.from(new Set(errors)),
     };
 }
 
-// ============================================================
-// KOMPONENT
-// ============================================================
-
 export default function CreatorPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    // ========================================
-    // Tryb edycji
-    // ========================================
     const isEditMode = searchParams.get('mode') === 'edit';
     const [editingPostId, setEditingPostId] = useState<string | null>(null);
 
-    // State
     const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(['facebook']);
     const [content, setContent] = useState('');
     const [imageUrl, setImageUrl] = useState<string | undefined>();
     const [hashtags, setHashtags] = useState<string[]>([]);
-    const [isChatOpen, setIsChatOpen] = useState(true);
+    const [isChatOpen, setIsChatOpen] = useState(false);
 
-    // Manual publish modal state
     const [isManualPublishOpen, setIsManualPublishOpen] = useState(false);
     const [manualPublishData, setManualPublishData] = useState<ManualPublishData | null>(null);
     const [manualPublishPostId, setManualPublishPostId] = useState<string | null>(null);
 
-    // AI Settings
     const [selectedTone] = useState<Tone>('professional');
     const [selectedCategory] = useState<Category | undefined>();
 
-    // Provider settings
     const [textProvider, setTextProvider] = useState<TextProvider>('gemini');
     const [imageProvider, setImageProvider] = useState<ImageProvider>('pollinations');
     const [imageModel, setImageModel] = useState<string>('flux');
 
-    // Hooks
     const { selectedBrand } = useBrandsStore();
     const {
         generateTextAsync,
@@ -121,12 +98,19 @@ export default function CreatorPage() {
     const createPostMutation = useCreatePost();
     const updatePostMutation = useUpdatePost();
 
-    // Aktualnie wybrana platforma (pierwsza z listy) - dla kompatybilności
     const primaryPlatform = selectedPlatforms[0];
 
-    // ========================================
-    // Wczytaj post do edycji z sessionStorage
-    // ========================================
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth >= 1024) {
+                setIsChatOpen(true);
+            }
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     useEffect(() => {
         if (!isEditMode) return;
 
@@ -140,32 +124,27 @@ export default function CreatorPage() {
 
             const post: Post = JSON.parse(savedPost);
 
-            // Ustaw dane w edytorze
             setEditingPostId(String(post.id));
             setContent(post.content || '');
             setImageUrl(post.image_url || undefined);
 
-            // Ustaw platformy (nowe pole lub legacy)
             if (post.platforms && post.platforms.length > 0) {
                 setSelectedPlatforms(post.platforms);
             } else if (post.platform) {
                 setSelectedPlatforms([post.platform as Platform]);
             }
 
-            // Wyciągnij hashtagi z treści lub użyj zapisanych
             if (post.hashtags && post.hashtags.length > 0) {
                 setHashtags(post.hashtags);
             } else {
                 const hashtagsFromContent = post.content?.match(/#\w+/g)?.map(h => h.slice(1)) || [];
                 if (hashtagsFromContent.length > 0) {
                     setHashtags(hashtagsFromContent);
-                    // Usuń hashtagi z treści żeby nie były zduplikowane
                     const contentWithoutHashtags = post.content?.replace(/\n*#\w+\s*/g, '').trim() || '';
                     setContent(contentWithoutHashtags);
                 }
             }
 
-            // Wyczyść sessionStorage
             sessionStorage.removeItem('editPost');
 
             toast.info('Wczytano post do edycji', {
@@ -178,18 +157,12 @@ export default function CreatorPage() {
         }
     }, [isEditMode, router]);
 
-    // ========================================
-    // Helper: Przygotuj pełną treść z hashtagami
-    // ========================================
     const getFullContent = useCallback(() => {
         return hashtags.length > 0
             ? `${content}\n\n${hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}`
             : content;
     }, [content, hashtags]);
 
-    // ========================================
-    // Helper: Wyczyść formularz
-    // ========================================
     const clearForm = useCallback(() => {
         setEditingPostId(null);
         setContent('');
@@ -199,18 +172,12 @@ export default function CreatorPage() {
         setManualPublishPostId(null);
     }, []);
 
-    // ========================================
-    // Anuluj edycję
-    // ========================================
     const handleCancelEdit = useCallback(() => {
         clearForm();
         router.replace('/creator');
         toast.info('Anulowano edycję');
     }, [router, clearForm]);
 
-    // ========================================
-    // Generowanie tekstu z wybranym providerem
-    // ========================================
     const handleGenerateText = useCallback(async (topic: string, provider?: TextProvider) => {
         try {
             const result = await generateTextAsync({
@@ -239,9 +206,6 @@ export default function CreatorPage() {
         }
     }, [generateTextAsync, selectedPlatforms, selectedTone, selectedCategory, textProvider]);
 
-    // ========================================
-    // Generowanie obrazu z wybranym providerem i modelem
-    // ========================================
     const handleGenerateImage = useCallback(async (
         prompt: string,
         provider?: ImageProvider,
@@ -261,7 +225,6 @@ export default function CreatorPage() {
             });
 
             if (result.success && result.data) {
-                // Preferuj image_data (base64) nad image_url
                 const generatedImageUrl = result.data.image_data || result.data.image_url;
 
                 if (generatedImageUrl) {
@@ -277,11 +240,7 @@ export default function CreatorPage() {
         }
     }, [generateImageAsync, imageProvider, imageModel]);
 
-    // ========================================
-    // Zapisz jako szkic LUB aktualizuj
-    // ========================================
     const handleSaveDraft = useCallback(async () => {
-        // Walidacja platform
         const validation = validatePlatformRequirements(selectedPlatforms, content, imageUrl);
 
         if (!validation.isValid) {
@@ -293,14 +252,13 @@ export default function CreatorPage() {
 
         const fullContent = getFullContent();
 
-        // TRYB EDYCJI: Aktualizuj istniejący post
         if (editingPostId) {
             await updatePostMutation.mutateAsync({
                 id: editingPostId,
                 data: {
                     content: fullContent,
                     platforms: selectedPlatforms,
-                    image_url: imageUrl, // ✅ POPRAWKA: undefined jest OK
+                    image_url: imageUrl,
                 },
             });
 
@@ -313,12 +271,11 @@ export default function CreatorPage() {
             return;
         }
 
-        // TRYB TWORZENIA: Utwórz nowy post
         await createPostMutation.mutateAsync({
             content: fullContent,
             platforms: selectedPlatforms,
             brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined,
-            image_url: imageUrl, // ✅ POPRAWKA: undefined jest OK
+            image_url: imageUrl,
             ai_generated: true,
             ai_model: textProvider,
         });
@@ -326,11 +283,7 @@ export default function CreatorPage() {
         toast.success('Zapisano jako szkic!');
     }, [content, selectedPlatforms, imageUrl, selectedBrand, createPostMutation, updatePostMutation, textProvider, editingPostId, router, getFullContent, clearForm]);
 
-    // ========================================
-    // Zaplanuj post
-    // ========================================
     const handleSchedule = useCallback(async (scheduledAt: string) => {
-        // Walidacja platform
         const validation = validatePlatformRequirements(selectedPlatforms, content, imageUrl);
 
         if (!validation.isValid) {
@@ -342,14 +295,13 @@ export default function CreatorPage() {
 
         const fullContent = getFullContent();
 
-        // TRYB EDYCJI: Aktualizuj i zaplanuj
         if (editingPostId) {
             await updatePostMutation.mutateAsync({
                 id: editingPostId,
                 data: {
                     content: fullContent,
                     platforms: selectedPlatforms,
-                    image_url: imageUrl, // ✅ POPRAWKA
+                    image_url: imageUrl,
                     scheduled_at: scheduledAt,
                     status: 'scheduled',
                 },
@@ -368,7 +320,7 @@ export default function CreatorPage() {
             content: fullContent,
             platforms: selectedPlatforms,
             brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined,
-            image_url: imageUrl, // ✅ POPRAWKA
+            image_url: imageUrl,
             scheduled_at: scheduledAt,
             ai_generated: true,
             ai_model: textProvider,
@@ -379,11 +331,7 @@ export default function CreatorPage() {
         });
     }, [content, selectedPlatforms, imageUrl, selectedBrand, createPostMutation, updatePostMutation, textProvider, editingPostId, router, getFullContent, clearForm]);
 
-    // ========================================
-    // Otwórz modal ręcznej publikacji
-    // ========================================
     const handlePublishManually = useCallback(async () => {
-        // Walidacja platform
         const validation = validatePlatformRequirements(selectedPlatforms, content, imageUrl);
 
         if (!validation.isValid) {
@@ -396,14 +344,13 @@ export default function CreatorPage() {
         const fullContent = getFullContent();
         let postIdForModal = editingPostId;
 
-        // Jeśli post nie istnieje, utwórz go jako draft
         if (!postIdForModal) {
             try {
                 const newPost = await createPostMutation.mutateAsync({
                     content: fullContent,
                     platforms: selectedPlatforms,
                     brand_id: selectedBrand?.id ? Number(selectedBrand.id) : undefined,
-                    image_url: imageUrl, // ✅ POPRAWKA
+                    image_url: imageUrl,
                     ai_generated: true,
                     ai_model: textProvider,
                 });
@@ -415,7 +362,6 @@ export default function CreatorPage() {
             }
         }
 
-        // Przygotuj dane dla modalu
         const data = createManualPublishData({
             id: parseInt(postIdForModal, 10),
             post_id: parseInt(postIdForModal, 10),
@@ -430,17 +376,10 @@ export default function CreatorPage() {
         setIsManualPublishOpen(true);
     }, [content, hashtags, imageUrl, selectedPlatforms, primaryPlatform, editingPostId, selectedBrand, createPostMutation, textProvider, getFullContent]);
 
-    // ========================================
-    // Handler dla pojedynczej platformy opublikowanej
-    // ========================================
     const handlePlatformPublished = useCallback((postId?: number, platform?: Platform) => {
-        // Modal sam zapisuje status do backendu
         console.log(`Platform ${platform} marked as published for post ${postId}`);
     }, []);
 
-    // ========================================
-    // Handler gdy wszystkie platformy opublikowane
-    // ========================================
     const handleAllPublished = useCallback(() => {
         clearForm();
         setIsManualPublishOpen(false);
@@ -455,46 +394,33 @@ export default function CreatorPage() {
         });
     }, [isEditMode, router, clearForm]);
 
-    // ========================================
-    // Zamknięcie modalu
-    // ========================================
     const handleModalClose = useCallback((open: boolean) => {
         setIsManualPublishOpen(open);
         if (!open) {
             setManualPublishData(null);
-            // Nie czyścimy formularza - user może chcieć kontynuować edycję
         }
     }, []);
 
-    // ========================================
-    // Aktualizacja contentu z chatu AI
-    // ========================================
     const handleContentFromChat = useCallback((newContent: string) => {
         setContent(newContent);
     }, []);
 
-    // ========================================
-    // Aktualizacja obrazu z chatu AI
-    // ========================================
     const handleImageFromChat = useCallback((newImageUrl: string) => {
         setImageUrl(newImageUrl);
     }, []);
 
-    // Sprawdź czy trwa zapisywanie/aktualizacja
     const isSaving = createPostMutation.isPending || updatePostMutation.isPending;
 
     return (
-        <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
-            {/* Header z wyborem platform i providerów */}
+        <div className="flex flex-col h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] overflow-hidden -mx-3 xs:-mx-4 sm:-mx-6 lg:-mx-8 -mb-4">
             <div className="flex-shrink-0 border-b border-border/40 bg-background/50 backdrop-blur-sm">
-                <div className="p-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="px-3 py-3 xs:px-4 xs:py-4 sm:p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                         <PlatformSelector
                             selected={selectedPlatforms}
                             onChange={setSelectedPlatforms}
                         />
 
-                        {/* Provider selector */}
                         <InlineProviderSelector
                             textProvider={textProvider}
                             imageProvider={imageProvider}
@@ -509,14 +435,11 @@ export default function CreatorPage() {
                 </div>
             </div>
 
-            {/* Główna zawartość */}
             <div className="flex-1 flex overflow-hidden">
-                {/* Lewa strona - Edytor */}
                 <div className="flex-1 flex flex-col overflow-hidden">
-                    <div className="flex-1 overflow-y-auto p-4 md:p-6">
-                        <div className="max-w-2xl mx-auto space-y-6">
+                    <div className="flex-1 overflow-y-auto px-3 py-4 xs:px-4 sm:p-6">
+                        <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
 
-                            {/* Info o trybie edycji */}
                             {editingPostId && (
                                 <motion.div
                                     initial={{ opacity: 0, y: -10 }}
@@ -524,15 +447,15 @@ export default function CreatorPage() {
                                 >
                                     <Alert className="border-violet-500/30 bg-violet-500/5">
                                         <Pencil className="h-4 w-4 text-violet-500" />
-                                        <AlertDescription className="flex items-center justify-between">
+                                        <AlertDescription className="flex flex-col xs:flex-row xs:items-center justify-between gap-2">
                                             <span className="text-sm">
-                                                <strong>Tryb edycji</strong> — Edytujesz post #{editingPostId}
+                                                <strong>Tryb edycji</strong> — Post #{editingPostId}
                                             </span>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={handleCancelEdit}
-                                                className="h-7 px-2 text-muted-foreground hover:text-foreground"
+                                                className="h-8 px-2 text-muted-foreground hover:text-foreground self-end xs:self-auto"
                                             >
                                                 <X className="h-4 w-4 mr-1" />
                                                 Anuluj
@@ -542,41 +465,35 @@ export default function CreatorPage() {
                                 </motion.div>
                             )}
 
-                            {/* Info o ręcznej publikacji */}
                             {!editingPostId && (
                                 <Alert className="border-amber-500/30 bg-amber-500/5">
-                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                                    <AlertDescription className="text-sm">
-                                        <strong>Kreator</strong> służy do tworzenia postów z pomocą AI.
-                                        Publikacja na <strong>konta osobiste</strong> (Facebook/Instagram)
-                                        wymaga ręcznego skopiowania treści.{' '}
-                                        <span className="text-muted-foreground">
-                                            Automatyczna publikacja jest dostępna tylko dla Facebook Pages i Instagram Business
-                                            w module Autopilot.
+                                    <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                                    <AlertDescription className="text-xs sm:text-sm">
+                                        <strong>Kreator</strong> służy do tworzenia postów z AI.
+                                        <span className="hidden sm:inline">
+                                            {' '}Publikacja na <strong>konta osobiste</strong> wymaga ręcznego skopiowania treści.
                                         </span>
                                     </AlertDescription>
                                 </Alert>
                             )}
 
-                            {/* Brand indicator */}
                             {selectedBrand && (
                                 <motion.div
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className="flex items-center gap-2 text-sm text-muted-foreground"
+                                    className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-muted-foreground"
                                 >
                                     <div
-                                        className="w-3 h-3 rounded-full"
+                                        className="w-3 h-3 rounded-full flex-shrink-0"
                                         style={{ backgroundColor: selectedBrand.primaryColor || '#3B82F6' }}
                                     />
                                     <span>Tworzysz jako</span>
                                     <span className="font-medium text-foreground">{selectedBrand.name}</span>
                                     <Sparkles className="w-3 h-3 text-violet-500" />
-                                    <span className="text-violet-500">Brand Voice aktywny</span>
+                                    <span className="text-violet-500 hidden xs:inline">Brand Voice aktywny</span>
                                 </motion.div>
                             )}
 
-                            {/* Edytor */}
                             <PostEditor
                                 content={content}
                                 onChange={setContent}
@@ -593,7 +510,6 @@ export default function CreatorPage() {
                                 defaultImageModel={imageModel}
                             />
 
-                            {/* Podgląd */}
                             <PostPreview
                                 content={content}
                                 imageUrl={imageUrl}
@@ -603,8 +519,7 @@ export default function CreatorPage() {
                         </div>
                     </div>
 
-                    {/* Action bar - ✅ DODANE selectedPlatforms */}
-                    <div className="flex-shrink-0 border-t border-border/40 bg-background/50 backdrop-blur-sm">
+                    <div className="flex-shrink-0 border-t border-border/40 bg-background/50 backdrop-blur-sm safe-area-bottom">
                         <ActionBar
                             onSaveDraft={handleSaveDraft}
                             onSchedule={handleSchedule}
@@ -619,7 +534,6 @@ export default function CreatorPage() {
                     </div>
                 </div>
 
-                {/* Prawa strona - AI Chat Panel */}
                 <AIChatPanel
                     isOpen={isChatOpen}
                     onToggle={() => setIsChatOpen(!isChatOpen)}
@@ -636,7 +550,6 @@ export default function CreatorPage() {
                 />
             </div>
 
-            {/* Manual Publish Modal z platforms[] i postId */}
             <ManualPublishModal
                 open={isManualPublishOpen}
                 onOpenChange={handleModalClose}

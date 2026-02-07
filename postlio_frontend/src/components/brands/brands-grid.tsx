@@ -16,9 +16,9 @@ export function BrandsGrid({ brands, viewMode }: BrandsGridProps) {
         <motion.div
             layout
             className={cn(
-                "gap-4",
+                "gap-3 xs:gap-4",
                 viewMode === 'grid'
-                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+                    ? "grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3"
                     : "flex flex-col"
             )}
         >

@@ -1,10 +1,4 @@
 // src/components/calendar/drafts-sidebar.tsx
-/**
- * Sidebar z listą szkiców/draftów do przeciągnięcia na kalendarz
- *
- * ✅ NAPRAWIONE: Obsługa platforms[] zamiast platform
- */
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -41,24 +35,17 @@ import { cn } from '@/lib/utils';
 import type { Post } from '@/types/post';
 import type { Platform } from '@/types';
 
-// ============================================================
-// TYPY
-// ============================================================
-
 interface DraftsSidebarProps {
     drafts: Post[];
     isLoading?: boolean;
     isCollapsed?: boolean;
     onToggleCollapse?: () => void;
+    isMobileSheet?: boolean;
 }
 
 interface DraggableDraftCardProps {
     draft: Post;
 }
-
-// ============================================================
-// KONFIGURACJA PLATFORM
-// ============================================================
 
 const PLATFORM_CONFIG: Record<Platform, {
     icon: typeof Facebook;
@@ -70,23 +57,12 @@ const PLATFORM_CONFIG: Record<Platform, {
     linkedin: { icon: Linkedin, color: '#0A66C2', label: 'LI' },
 };
 
-// ============================================================
-// HELPER
-// ============================================================
-
-/**
- * Sprawdź czy post zawiera daną platformę
- */
 function hasAnyPlatform(post: Post, platform: Platform): boolean {
     if (post.platforms && post.platforms.length > 0) {
         return post.platforms.includes(platform);
     }
     return post.platform === platform;
 }
-
-// ============================================================
-// DRAGGABLE DRAFT CARD
-// ============================================================
 
 function DraggableDraftCard({ draft }: DraggableDraftCardProps) {
     const {
@@ -97,22 +73,15 @@ function DraggableDraftCard({ draft }: DraggableDraftCardProps) {
         isDragging,
     } = useDraggable({
         id: `draft-${draft.id}`,
-        data: {
-            type: 'draft',
-            draft,
-        },
+        data: { type: 'draft', draft },
     });
 
-    const style = {
-        transform: CSS.Translate.toString(transform),
-    };
+    const style = { transform: CSS.Translate.toString(transform) };
 
-    // Wszystkie platformy posta (do wyświetlenia jako badges)
     const allPlatforms = draft.platforms && draft.platforms.length > 0
         ? draft.platforms
         : (draft.platform ? [draft.platform] : ['facebook']);
 
-    // Skrócona treść
     const truncatedContent = draft.content && draft.content.length > 60
         ? `${draft.content.slice(0, 60)}...`
         : (draft.content || '');
@@ -122,29 +91,27 @@ function DraggableDraftCard({ draft }: DraggableDraftCardProps) {
             ref={setNodeRef}
             style={style}
             className={cn(
-                'group relative rounded-lg border bg-card p-3 transition-all',
-                'hover:shadow-md hover:border-primary/30',
+                'group relative rounded-lg border bg-card p-3 transition-all touch-none',
+                'hover:shadow-md hover:border-primary/30 active:shadow-lg',
                 isDragging && 'opacity-50 shadow-lg ring-2 ring-primary z-50'
             )}
         >
-            {/* Drag handle */}
             <div
                 {...listeners}
                 {...attributes}
                 className={cn(
-                    'absolute left-1 top-1/2 -translate-y-1/2 p-1 rounded cursor-grab',
+                    'absolute left-1 top-1/2 -translate-y-1/2 p-1.5 rounded cursor-grab',
                     'text-muted-foreground hover:text-foreground hover:bg-muted',
-                    'opacity-0 group-hover:opacity-100 transition-opacity',
-                    isDragging && 'cursor-grabbing opacity-100'
+                    'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity',
+                    isDragging && 'cursor-grabbing'
                 )}
             >
                 <GripVertical className="h-4 w-4" />
             </div>
 
-            <div className="pl-5 space-y-2">
-                {/* Header: Platforms + AI badge */}
+            <div className="pl-6 space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-wrap">
                         {allPlatforms.map((platform) => {
                             const config = PLATFORM_CONFIG[platform as Platform];
                             if (!config) return null;
@@ -175,12 +142,10 @@ function DraggableDraftCard({ draft }: DraggableDraftCardProps) {
                     </div>
                 </div>
 
-                {/* Content preview */}
                 <p className="text-xs text-muted-foreground line-clamp-2">
                     {truncatedContent}
                 </p>
 
-                {/* Date */}
                 <div className="text-[10px] text-muted-foreground">
                     {format(new Date(draft.created_at), 'd MMM', { locale: pl })}
                 </div>
@@ -189,26 +154,20 @@ function DraggableDraftCard({ draft }: DraggableDraftCardProps) {
     );
 }
 
-// ============================================================
-// MAIN COMPONENT
-// ============================================================
-
 export function DraftsSidebar({
                                   drafts,
                                   isLoading = false,
                                   isCollapsed = false,
                                   onToggleCollapse,
+                                  isMobileSheet = false,
                               }: DraftsSidebarProps) {
     const [search, setSearch] = useState('');
     const [platformFilter, setPlatformFilter] = useState<Platform | null>(null);
 
-    // Filter drafts
     const filteredDrafts = useMemo(() => {
         return drafts.filter(draft => {
-            // Only show drafts (not scheduled or published)
             if (draft.status !== 'draft') return false;
 
-            // Search filter
             if (search) {
                 const searchLower = search.toLowerCase();
                 if (!draft.content?.toLowerCase().includes(searchLower)) {
@@ -216,7 +175,6 @@ export function DraftsSidebar({
                 }
             }
 
-            // Platform filter z obsługą platforms[]
             if (platformFilter && !hasAnyPlatform(draft, platformFilter)) {
                 return false;
             }
@@ -225,8 +183,7 @@ export function DraftsSidebar({
         });
     }, [drafts, search, platformFilter]);
 
-    // Collapsed state
-    if (isCollapsed) {
+    if (isCollapsed && !isMobileSheet) {
         return (
             <div className="w-12 border-l bg-card flex flex-col items-center py-4">
                 <TooltipProvider>
@@ -255,36 +212,36 @@ export function DraftsSidebar({
         );
     }
 
-    return (
-        <div className="w-72 border-l bg-card flex flex-col">
-            {/* Header */}
-            <div className="p-4 border-b">
-                <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-primary" />
-                        Szkice
-                        <Badge variant="secondary" className="text-xs">
-                            {filteredDrafts.length}
-                        </Badge>
-                    </h3>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={onToggleCollapse}
-                        className="h-8 w-8"
-                    >
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
-                </div>
+    const content = (
+        <>
+            <div className={cn("p-3 sm:p-4", !isMobileSheet && "border-b")}>
+                {!isMobileSheet && (
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-primary" />
+                            Szkice
+                            <Badge variant="secondary" className="text-xs">
+                                {filteredDrafts.length}
+                            </Badge>
+                        </h3>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={onToggleCollapse}
+                            className="h-8 w-8"
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                )}
 
-                {/* Search */}
                 <div className="relative">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Szukaj..."
-                        className="pl-8 h-8 text-sm"
+                        className="pl-8 h-9 text-sm"
                     />
                     {search && (
                         <Button
@@ -298,12 +255,11 @@ export function DraftsSidebar({
                     )}
                 </div>
 
-                {/* Platform filters */}
-                <div className="flex items-center gap-1 mt-2">
+                <div className="flex items-center gap-1 mt-2 overflow-x-auto no-scrollbar">
                     <Button
                         variant={platformFilter === null ? 'default' : 'ghost'}
                         size="sm"
-                        className="h-7 px-2 text-xs"
+                        className="h-8 px-2.5 text-xs flex-shrink-0"
                         onClick={() => setPlatformFilter(null)}
                     >
                         Wszystkie
@@ -317,7 +273,7 @@ export function DraftsSidebar({
                                     variant={platformFilter === platform ? 'default' : 'ghost'}
                                     size="icon"
                                     className={cn(
-                                        'h-7 w-7',
+                                        'h-8 w-8 flex-shrink-0',
                                         platformFilter === platform && 'text-white'
                                     )}
                                     style={platformFilter === platform ? { backgroundColor: config.color } : undefined}
@@ -331,7 +287,6 @@ export function DraftsSidebar({
                 </div>
             </div>
 
-            {/* Drafts list */}
             <ScrollArea className="flex-1">
                 <div className="p-3 space-y-2">
                     {isLoading ? (
@@ -371,12 +326,21 @@ export function DraftsSidebar({
                 </div>
             </ScrollArea>
 
-            {/* Help text */}
             <div className="p-3 border-t bg-muted/30">
                 <p className="text-xs text-muted-foreground text-center">
-                    💡 Przeciągnij szkic na dzień w kalendarzu, aby go zaplanować
+                    💡 Przeciągnij szkic na dzień w kalendarzu
                 </p>
             </div>
+        </>
+    );
+
+    if (isMobileSheet) {
+        return <div className="flex flex-col h-full">{content}</div>;
+    }
+
+    return (
+        <div className="w-72 border-l bg-card flex flex-col">
+            {content}
         </div>
     );
 }

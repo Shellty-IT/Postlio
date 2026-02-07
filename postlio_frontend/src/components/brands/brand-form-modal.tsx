@@ -64,10 +64,10 @@ const brandSchema = z.object({
 type FormData = z.infer<typeof brandSchema>;
 
 const STEPS = [
-    { id: 'basic', title: 'Podstawowe', icon: Palette },
-    { id: 'tone', title: 'Ton pisania', icon: MessageSquare },
-    { id: 'personality', title: 'Charakter', icon: PenTool },
-    { id: 'keywords', title: 'Słowa kluczowe', icon: Hash },
+    { id: 'basic', title: 'Podstawowe', shortTitle: 'Info', icon: Palette },
+    { id: 'tone', title: 'Ton pisania', shortTitle: 'Ton', icon: MessageSquare },
+    { id: 'personality', title: 'Charakter', shortTitle: 'Cechy', icon: PenTool },
+    { id: 'keywords', title: 'Słowa kluczowe', shortTitle: 'Słowa', icon: Hash },
 ];
 
 export function BrandFormModal() {
@@ -75,10 +75,17 @@ export function BrandFormModal() {
     const [currentStep, setCurrentStep] = useState(0);
     const [voiceDNA, setVoiceDNA] = useState<BrandVoiceDNA>(DEFAULT_VOICE_DNA);
     const [sampleTexts, setSampleTexts] = useState<string[]>(['']);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 640);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const editingBrand = editingBrandId ? getBrandById(editingBrandId) : null;
 
-    // API hooks
     const createBrand = useCreateBrand({
         onSuccess: () => {
             closeForm();
@@ -119,7 +126,6 @@ export function BrandFormModal() {
 
     const primaryColor = watch('primaryColor');
 
-    // Load editing brand data
     useEffect(() => {
         if (editingBrand) {
             reset({
@@ -220,22 +226,21 @@ export function BrandFormModal() {
 
     return (
         <Dialog open={isFormOpen} onOpenChange={closeForm}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <PenTool className="h-5 w-5 text-violet-500" />
+            <DialogContent className="max-w-3xl max-h-[90vh] xs:max-h-[85vh] overflow-hidden flex flex-col p-0">
+                <DialogHeader className="p-4 sm:p-6 pb-0">
+                    <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+                        <PenTool className="h-4 w-4 sm:h-5 sm:w-5 text-violet-500" />
                         {editingBrand ? 'Edytuj markę' : 'Utwórz nową markę'}
                     </DialogTitle>
                 </DialogHeader>
 
-                {/* Steps indicator */}
-                <div className="flex items-center justify-between px-2 py-4 border-b">
+                <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b overflow-x-auto">
                     {STEPS.map((step, index) => (
                         <button
                             key={step.id}
                             onClick={() => setCurrentStep(index)}
                             className={cn(
-                                "flex items-center gap-2 px-3 py-2 rounded-lg transition-all",
+                                "flex items-center gap-1 xs:gap-2 px-2 xs:px-3 py-1.5 xs:py-2 rounded-lg transition-all whitespace-nowrap flex-shrink-0",
                                 currentStep === index
                                     ? "bg-primary/10 text-primary"
                                     : currentStep > index
@@ -243,16 +248,17 @@ export function BrandFormModal() {
                                         : "text-muted-foreground"
                             )}
                         >
-                            <step.icon className="h-4 w-4" />
-                            <span className="text-sm font-medium hidden sm:inline">{step.title}</span>
+                            <step.icon className="h-3.5 w-3.5 xs:h-4 xs:w-4" />
+                            <span className="text-xs xs:text-sm font-medium">
+                                {isMobile ? step.shortTitle : step.title}
+                            </span>
                         </button>
                     ))}
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto">
-                    <div className="p-6 space-y-6">
+                    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                         <AnimatePresence mode="wait">
-                            {/* Step 1: Basic Info */}
                             {currentStep === 0 && (
                                 <motion.div
                                     key="basic"
@@ -261,42 +267,42 @@ export function BrandFormModal() {
                                     exit={{ opacity: 0, x: -20 }}
                                     className="space-y-4"
                                 >
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label>Nazwa marki *</Label>
-                                            <Input {...register('name')} placeholder="Np. Moja Firma" />
+                                            <Label className="text-xs xs:text-sm">Nazwa marki *</Label>
+                                            <Input {...register('name')} placeholder="Np. Moja Firma" className="h-10 xs:h-11" />
                                             {errors.name && (
-                                                <p className="text-sm text-destructive">{errors.name.message}</p>
+                                                <p className="text-xs text-destructive">{errors.name.message}</p>
                                             )}
                                         </div>
 
                                         <div className="space-y-2">
-                                            <Label>Kolor główny</Label>
+                                            <Label className="text-xs xs:text-sm">Kolor główny</Label>
                                             <div className="flex gap-2">
-                                                <Input {...register('primaryColor')} type="color" className="w-12 h-10 p-1" />
-                                                <Input {...register('primaryColor')} placeholder="#8B5CF6" className="flex-1" />
+                                                <Input {...register('primaryColor')} type="color" className="w-12 h-10 xs:h-11 p-1" />
+                                                <Input {...register('primaryColor')} placeholder="#8B5CF6" className="flex-1 h-10 xs:h-11" />
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label>Opis</Label>
+                                        <Label className="text-xs xs:text-sm">Opis</Label>
                                         <Textarea
                                             {...register('description')}
                                             placeholder="Krótki opis marki..."
-                                            rows={3}
+                                            rows={isMobile ? 2 : 3}
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label>Branża</Label>
+                                            <Label className="text-xs xs:text-sm">Branża</Label>
                                             <Controller
                                                 name="industry"
                                                 control={control}
                                                 render={({ field }) => (
                                                     <Select onValueChange={field.onChange} value={field.value}>
-                                                        <SelectTrigger>
+                                                        <SelectTrigger className="h-10 xs:h-11">
                                                             <SelectValue placeholder="Wybierz branżę..." />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -312,33 +318,32 @@ export function BrandFormModal() {
                                         </div>
 
                                         <div className="space-y-2">
-                                            <Label>Grupa docelowa</Label>
+                                            <Label className="text-xs xs:text-sm">Grupa docelowa</Label>
                                             <Input
                                                 {...register('targetAudience')}
                                                 placeholder="Np. Młodzi profesjonaliści 25-40"
+                                                className="h-10 xs:h-11"
                                             />
                                         </div>
                                     </div>
                                 </motion.div>
                             )}
 
-                            {/* Step 2: Tone of Writing */}
                             {currentStep === 1 && (
                                 <motion.div
                                     key="tone"
                                     initial={{ opacity: 0, x: 20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: -20 }}
-                                    className="space-y-6"
+                                    className="space-y-4 sm:space-y-6"
                                 >
-                                    {/* AI Analysis Section */}
-                                    <div className="p-4 rounded-lg border border-dashed border-violet-300 bg-violet-50/50 dark:bg-violet-950/20">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <Wand2 className="h-5 w-5 text-violet-500" />
-                                            <span className="font-medium">Automatyczna analiza AI</span>
+                                    <div className="p-3 xs:p-4 rounded-lg border border-dashed border-violet-300 bg-violet-50/50 dark:bg-violet-950/20">
+                                        <div className="flex items-center gap-2 mb-2 xs:mb-3">
+                                            <Wand2 className="h-4 w-4 xs:h-5 xs:w-5 text-violet-500" />
+                                            <span className="font-medium text-sm xs:text-base">Automatyczna analiza AI</span>
                                         </div>
-                                        <p className="text-sm text-muted-foreground mb-3">
-                                            Wklej przykładowe posty lub teksty marki, a AI przeanalizuje styl pisania.
+                                        <p className="text-xs xs:text-sm text-muted-foreground mb-2 xs:mb-3">
+                                            Wklej przykładowe posty, a AI przeanalizuje styl pisania.
                                         </p>
                                         <div className="space-y-2">
                                             {sampleTexts.map((text, index) => (
@@ -352,15 +357,17 @@ export function BrandFormModal() {
                                                     }}
                                                     placeholder={`Przykładowy tekst ${index + 1}...`}
                                                     rows={2}
+                                                    className="text-sm"
                                                 />
                                             ))}
                                         </div>
-                                        <div className="flex gap-2 mt-3">
+                                        <div className="flex flex-col xs:flex-row gap-2 mt-2 xs:mt-3">
                                             <Button
                                                 type="button"
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => setSampleTexts([...sampleTexts, ''])}
+                                                className="h-9 text-xs xs:text-sm"
                                             >
                                                 + Dodaj tekst
                                             </Button>
@@ -370,19 +377,20 @@ export function BrandFormModal() {
                                                 size="sm"
                                                 onClick={handleAnalyzeVoice}
                                                 disabled={analyzeVoice.isPending || sampleTexts.every(t => t.trim().length < 20)}
+                                                className="h-9 text-xs xs:text-sm"
                                             >
                                                 {analyzeVoice.isPending ? (
-                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                    <Loader2 className="h-3.5 w-3.5 xs:h-4 xs:w-4 mr-2 animate-spin" />
                                                 ) : (
-                                                    <Wand2 className="h-4 w-4 mr-2" />
+                                                    <Wand2 className="h-3.5 w-3.5 xs:h-4 xs:w-4 mr-2" />
                                                 )}
                                                 Analizuj z AI
                                             </Button>
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                        <div className="space-y-6">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+                                        <div className="space-y-4 sm:space-y-6">
                                             <ToneSlider
                                                 label="Formalność"
                                                 value={voiceDNA.toneFormality}
@@ -418,14 +426,17 @@ export function BrandFormModal() {
                                         </div>
 
                                         <div className="flex items-center justify-center">
-                                            <WritingStyleRadar voiceDNA={voiceDNA} primaryColor={primaryColor} size={220} />
+                                            <WritingStyleRadar
+                                                voiceDNA={voiceDNA}
+                                                primaryColor={primaryColor}
+                                                size={isMobile ? 180 : 220}
+                                            />
                                         </div>
                                     </div>
 
-                                    {/* Communication Style */}
-                                    <div className="space-y-3">
-                                        <Label>Styl komunikacji</Label>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                    <div className="space-y-2 xs:space-y-3">
+                                        <Label className="text-xs xs:text-sm">Styl komunikacji</Label>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                             {(Object.entries(COMMUNICATION_STYLES) as [CommunicationStyle, typeof COMMUNICATION_STYLES.informative][]).map(
                                                 ([key, style]) => (
                                                     <button
@@ -433,14 +444,14 @@ export function BrandFormModal() {
                                                         type="button"
                                                         onClick={() => setVoiceDNA((prev) => ({ ...prev, communicationStyle: key }))}
                                                         className={cn(
-                                                            "p-3 rounded-lg border text-left transition-all",
+                                                            "p-2 xs:p-3 rounded-lg border text-left transition-all",
                                                             voiceDNA.communicationStyle === key
                                                                 ? "border-primary bg-primary/5"
                                                                 : "hover:bg-muted"
                                                         )}
                                                     >
-                                                        <div className="font-medium text-sm">{style.label}</div>
-                                                        <div className="text-xs text-muted-foreground mt-1">
+                                                        <div className="font-medium text-xs xs:text-sm">{style.label}</div>
+                                                        <div className="text-[10px] xs:text-xs text-muted-foreground mt-0.5 xs:mt-1 line-clamp-2">
                                                             {style.description}
                                                         </div>
                                                     </button>
@@ -451,7 +462,6 @@ export function BrandFormModal() {
                                 </motion.div>
                             )}
 
-                            {/* Step 3: Personality (Character) */}
                             {currentStep === 2 && (
                                 <motion.div
                                     key="personality"
@@ -461,13 +471,13 @@ export function BrandFormModal() {
                                     className="space-y-4"
                                 >
                                     <div>
-                                        <Label>Charakter treści</Label>
-                                        <p className="text-sm text-muted-foreground mt-1">
+                                        <Label className="text-xs xs:text-sm">Charakter treści</Label>
+                                        <p className="text-[10px] xs:text-xs text-muted-foreground mt-1">
                                             Wybierz cechy, które najlepiej opisują charakter Twoich treści
                                         </p>
                                     </div>
 
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-4 gap-2">
                                         {(Object.entries(PERSONALITY_TRAITS) as [PersonalityTrait, typeof PERSONALITY_TRAITS.innovative][]).map(
                                             ([key, trait]) => (
                                                 <button
@@ -475,25 +485,25 @@ export function BrandFormModal() {
                                                     type="button"
                                                     onClick={() => togglePersonalityTrait(key)}
                                                     className={cn(
-                                                        "flex items-center gap-2 p-3 rounded-lg border transition-all",
+                                                        "flex items-center gap-1.5 xs:gap-2 p-2 xs:p-3 rounded-lg border transition-all min-h-[44px]",
                                                         voiceDNA.personalityTraits.includes(key)
                                                             ? "border-primary bg-primary/10"
                                                             : "hover:bg-muted"
                                                     )}
                                                 >
-                                                    <span className="text-lg">{trait.icon}</span>
-                                                    <span className="text-sm font-medium">{trait.label}</span>
+                                                    <span className="text-base xs:text-lg">{trait.icon}</span>
+                                                    <span className="text-xs xs:text-sm font-medium truncate">{trait.label}</span>
                                                 </button>
                                             )
                                         )}
                                     </div>
 
                                     {voiceDNA.personalityTraits.length > 0 && (
-                                        <div className="p-4 rounded-lg bg-muted/50">
-                                            <div className="text-sm font-medium mb-2">Wybrany charakter:</div>
-                                            <div className="flex flex-wrap gap-2">
+                                        <div className="p-3 xs:p-4 rounded-lg bg-muted/50">
+                                            <div className="text-xs xs:text-sm font-medium mb-2">Wybrany charakter:</div>
+                                            <div className="flex flex-wrap gap-1.5 xs:gap-2">
                                                 {voiceDNA.personalityTraits.map((trait) => (
-                                                    <Badge key={trait} variant="secondary">
+                                                    <Badge key={trait} variant="secondary" className="text-[10px] xs:text-xs">
                                                         {PERSONALITY_TRAITS[trait].icon} {PERSONALITY_TRAITS[trait].label}
                                                     </Badge>
                                                 ))}
@@ -503,21 +513,20 @@ export function BrandFormModal() {
                                 </motion.div>
                             )}
 
-                            {/* Step 4: Keywords */}
                             {currentStep === 3 && (
                                 <motion.div
                                     key="keywords"
                                     initial={{ opacity: 0, x: 20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: -20 }}
-                                    className="space-y-6"
+                                    className="space-y-4 sm:space-y-6"
                                 >
-                                    {/* Keywords */}
-                                    <div className="space-y-3">
-                                        <Label>Słowa kluczowe</Label>
+                                    <div className="space-y-2 xs:space-y-3">
+                                        <Label className="text-xs xs:text-sm">Słowa kluczowe</Label>
                                         <div className="flex gap-2">
                                             <Input
                                                 placeholder="Dodaj słowo kluczowe..."
+                                                className="h-10 xs:h-11 text-sm"
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') {
                                                         e.preventDefault();
@@ -529,6 +538,7 @@ export function BrandFormModal() {
                                             <Button
                                                 type="button"
                                                 variant="outline"
+                                                className="h-10 xs:h-11 px-3 xs:px-4"
                                                 onClick={(e) => {
                                                     const input = e.currentTarget.previousElementSibling as HTMLInputElement;
                                                     addKeyword(input.value);
@@ -538,26 +548,26 @@ export function BrandFormModal() {
                                                 Dodaj
                                             </Button>
                                         </div>
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="flex flex-wrap gap-1.5 xs:gap-2">
                                             {voiceDNA.keywords.map((keyword) => (
                                                 <Badge
                                                     key={keyword}
                                                     variant="secondary"
-                                                    className="cursor-pointer hover:bg-destructive/20"
+                                                    className="cursor-pointer hover:bg-destructive/20 text-[10px] xs:text-xs"
                                                     onClick={() => removeKeyword(keyword)}
                                                 >
-                                                    {keyword} <X className="h-3 w-3 ml-1" />
+                                                    {keyword} <X className="h-2.5 w-2.5 xs:h-3 xs:w-3 ml-1" />
                                                 </Badge>
                                             ))}
                                         </div>
                                     </div>
 
-                                    {/* Hashtags */}
-                                    <div className="space-y-3">
-                                        <Label>Hashtagi</Label>
+                                    <div className="space-y-2 xs:space-y-3">
+                                        <Label className="text-xs xs:text-sm">Hashtagi</Label>
                                         <div className="flex gap-2">
                                             <Input
                                                 placeholder="Dodaj hashtag..."
+                                                className="h-10 xs:h-11 text-sm"
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') {
                                                         e.preventDefault();
@@ -569,6 +579,7 @@ export function BrandFormModal() {
                                             <Button
                                                 type="button"
                                                 variant="outline"
+                                                className="h-10 xs:h-11 px-3 xs:px-4"
                                                 onClick={(e) => {
                                                     const input = e.currentTarget.previousElementSibling as HTMLInputElement;
                                                     addHashtag(input.value);
@@ -578,31 +589,30 @@ export function BrandFormModal() {
                                                 Dodaj
                                             </Button>
                                         </div>
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="flex flex-wrap gap-1.5 xs:gap-2">
                                             {voiceDNA.hashtags.map((hashtag) => (
                                                 <Badge
                                                     key={hashtag}
                                                     variant="outline"
-                                                    className="cursor-pointer hover:bg-destructive/20 text-primary"
+                                                    className="cursor-pointer hover:bg-destructive/20 text-primary text-[10px] xs:text-xs"
                                                     onClick={() => removeHashtag(hashtag)}
                                                 >
-                                                    {hashtag} <X className="h-3 w-3 ml-1" />
+                                                    {hashtag} <X className="h-2.5 w-2.5 xs:h-3 xs:w-3 ml-1" />
                                                 </Badge>
                                             ))}
                                         </div>
                                     </div>
 
-                                    {/* Emoji usage */}
-                                    <div className="space-y-3">
-                                        <Label>Używanie emoji</Label>
-                                        <div className="flex gap-2 flex-wrap">
+                                    <div className="space-y-2 xs:space-y-3">
+                                        <Label className="text-xs xs:text-sm">Używanie emoji</Label>
+                                        <div className="grid grid-cols-2 xs:flex xs:flex-wrap gap-2">
                                             {(['none', 'minimal', 'moderate', 'frequent'] as const).map((usage) => (
                                                 <button
                                                     key={usage}
                                                     type="button"
                                                     onClick={() => setVoiceDNA((prev) => ({ ...prev, emojiUsage: usage }))}
                                                     className={cn(
-                                                        "px-4 py-2 rounded-lg border transition-all",
+                                                        "px-3 xs:px-4 py-2 rounded-lg border transition-all text-xs xs:text-sm min-h-[44px]",
                                                         voiceDNA.emojiUsage === usage
                                                             ? "border-primary bg-primary/10"
                                                             : "hover:bg-muted"
@@ -610,8 +620,8 @@ export function BrandFormModal() {
                                                 >
                                                     {usage === 'none' && '🚫 Brak'}
                                                     {usage === 'minimal' && '😊 Minimalne'}
-                                                    {usage === 'moderate' && '😊🎉 Umiarkowane'}
-                                                    {usage === 'frequent' && '🎉🚀💪 Częste'}
+                                                    {usage === 'moderate' && '😊🎉 Umiark.'}
+                                                    {usage === 'frequent' && '🎉🚀 Częste'}
                                                 </button>
                                             ))}
                                         </div>
@@ -621,33 +631,33 @@ export function BrandFormModal() {
                         </AnimatePresence>
                     </div>
 
-                    {/* Footer */}
-                    <div className="flex items-center justify-between p-6 border-t bg-muted/30">
-                        <Button type="button" variant="ghost" onClick={closeForm}>
+                    <div className="flex flex-col xs:flex-row items-stretch xs:items-center justify-between gap-3 p-4 sm:p-6 border-t bg-muted/30">
+                        <Button type="button" variant="ghost" onClick={closeForm} className="h-10 xs:h-11 order-3 xs:order-1">
                             Anuluj
                         </Button>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 order-1 xs:order-2">
                             {currentStep > 0 && (
-                                <Button type="button" variant="outline" onClick={prevStep}>
-                                    <ChevronLeft className="h-4 w-4 mr-2" />
-                                    Wstecz
+                                <Button type="button" variant="outline" onClick={prevStep} className="h-10 xs:h-11 flex-1 xs:flex-none">
+                                    <ChevronLeft className="h-4 w-4 mr-1 xs:mr-2" />
+                                    <span className="hidden xs:inline">Wstecz</span>
                                 </Button>
                             )}
 
                             {currentStep < STEPS.length - 1 ? (
-                                <Button type="button" onClick={nextStep}>
-                                    Dalej
-                                    <ChevronRight className="h-4 w-4 ml-2" />
+                                <Button type="button" onClick={nextStep} className="h-10 xs:h-11 flex-1 xs:flex-none">
+                                    <span className="hidden xs:inline">Dalej</span>
+                                    <span className="xs:hidden">Następny</span>
+                                    <ChevronRight className="h-4 w-4 ml-1 xs:ml-2" />
                                 </Button>
                             ) : (
-                                <Button type="submit" disabled={isSubmitting}>
+                                <Button type="submit" disabled={isSubmitting} className="h-10 xs:h-11 flex-1 xs:flex-none">
                                     {isSubmitting ? (
                                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                     ) : (
                                         <Save className="h-4 w-4 mr-2" />
                                     )}
-                                    {editingBrand ? 'Zapisz zmiany' : 'Utwórz markę'}
+                                    {editingBrand ? 'Zapisz' : 'Utwórz'}
                                 </Button>
                             )}
                         </div>

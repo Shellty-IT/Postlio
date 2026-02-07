@@ -1,3 +1,4 @@
+// src/components/landing/scroll-to-top.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -30,8 +31,8 @@ export function ScrollToTop() {
                 <motion.button
                     onClick={scrollToTop}
                     className={cn(
-                        'fixed bottom-8 right-8 z-50',
-                        'w-12 h-12 rounded-2xl',
+                        'fixed bottom-20 sm:bottom-8 right-4 sm:right-8 z-40',
+                        'w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl',
                         'bg-gradient-to-br from-primary to-violet-500',
                         'text-white shadow-lg shadow-primary/25',
                         'flex items-center justify-center',
@@ -48,7 +49,7 @@ export function ScrollToTop() {
                         animate={{ y: [0, -3, 0] }}
                         transition={{ duration: 1.5, repeat: Infinity }}
                     >
-                        <ArrowUp className="w-5 h-5" />
+                        <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5" />
                     </motion.div>
                 </motion.button>
             )}

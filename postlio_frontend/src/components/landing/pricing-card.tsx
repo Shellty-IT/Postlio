@@ -1,3 +1,4 @@
+// src/components/landing/pricing-card.tsx
 'use client';
 
 import { motion } from 'framer-motion';
@@ -50,43 +51,38 @@ export function PricingCard({
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: index * 0.1 }}
         >
-            {/* Popular badge */}
             {popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
-                    <Badge className="px-4 py-1 bg-gradient-to-r from-primary to-violet-500 text-white border-0 shadow-lg">
+                    <Badge className="px-3 sm:px-4 py-1 text-xs sm:text-sm bg-gradient-to-r from-primary to-violet-500 text-white border-0 shadow-lg whitespace-nowrap">
                         <Sparkles className="w-3 h-3 mr-1" />
                         Najpopularniejszy
                     </Badge>
                 </div>
             )}
 
-            {/* Card */}
             <div
                 className={cn(
-                    'relative h-full p-8 rounded-3xl border transition-all duration-300',
+                    'relative h-full p-5 xs:p-6 sm:p-8 rounded-2xl sm:rounded-3xl border transition-all duration-300',
                     popular
-                        ? 'bg-gradient-to-b from-primary/5 to-violet-500/5 border-primary/30 shadow-xl shadow-primary/10 scale-105'
+                        ? 'bg-gradient-to-b from-primary/5 to-violet-500/5 border-primary/30 shadow-xl shadow-primary/10 lg:scale-105'
                         : 'bg-card border-border/50 hover:border-primary/20 hover:shadow-lg'
                 )}
             >
-                {/* Glow effect for popular */}
                 {popular && (
-                    <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-primary/10 to-transparent opacity-50" />
+                    <div className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-primary/10 to-transparent opacity-50" />
                 )}
 
                 <div className="relative z-10">
-                    {/* Header */}
-                    <div className="mb-6">
-                        <h3 className="text-xl font-semibold mb-2">{name}</h3>
-                        <p className="text-sm text-muted-foreground">{description}</p>
+                    <div className="mb-4 sm:mb-6">
+                        <h3 className="text-lg sm:text-xl font-semibold mb-1.5 sm:mb-2">{name}</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground">{description}</p>
                     </div>
 
-                    {/* Price */}
-                    <div className="mb-6">
-                        <div className="flex items-baseline gap-2">
+                    <div className="mb-4 sm:mb-6">
+                        <div className="flex items-baseline gap-1.5 sm:gap-2">
                             <motion.span
                                 key={price}
-                                className="text-5xl font-bold"
+                                className="text-3xl xs:text-4xl sm:text-5xl font-bold"
                                 initial={{ opacity: 0, y: -20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.3 }}
@@ -94,14 +90,14 @@ export function PricingCard({
                                 {price === 0 ? 'Free' : `${price} zł`}
                             </motion.span>
                             {price > 0 && (
-                                <span className="text-muted-foreground">
-                  /{isYearly ? 'rok' : 'mies.'}
-                </span>
+                                <span className="text-xs sm:text-sm text-muted-foreground">
+                                    /{isYearly ? 'rok' : 'mies.'}
+                                </span>
                             )}
                         </div>
                         {isYearly && price > 0 && (
                             <motion.p
-                                className="text-sm text-muted-foreground mt-1"
+                                className="text-xs sm:text-sm text-muted-foreground mt-1"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.2 }}
@@ -111,10 +107,9 @@ export function PricingCard({
                         )}
                     </div>
 
-                    {/* CTA Button */}
                     <Button
                         className={cn(
-                            'w-full h-12 mb-8',
+                            'w-full h-10 sm:h-12 mb-5 sm:mb-8 text-sm',
                             popular
                                 ? 'bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90 shadow-lg shadow-primary/25'
                                 : ''
@@ -125,16 +120,15 @@ export function PricingCard({
                         <Link href="/register">{cta}</Link>
                     </Button>
 
-                    {/* Features */}
-                    <div className="space-y-3">
-                        <p className="text-sm font-medium text-muted-foreground mb-4">
+                    <div className="space-y-2.5 sm:space-y-3">
+                        <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-3 sm:mb-4">
                             Zawiera:
                         </p>
                         {features.map((feature, featureIndex) => (
                             <motion.div
                                 key={featureIndex}
                                 className={cn(
-                                    'flex items-start gap-3',
+                                    'flex items-start gap-2.5 sm:gap-3',
                                     !feature.included && 'opacity-40'
                                 )}
                                 initial={{ opacity: 0, x: -10 }}
@@ -144,7 +138,7 @@ export function PricingCard({
                             >
                                 <div
                                     className={cn(
-                                        'w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
+                                        'w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
                                         feature.included
                                             ? feature.highlight
                                                 ? 'bg-gradient-to-br from-primary to-violet-500'
@@ -154,7 +148,7 @@ export function PricingCard({
                                 >
                                     <Check
                                         className={cn(
-                                            'w-3 h-3',
+                                            'w-2.5 h-2.5 sm:w-3 sm:h-3',
                                             feature.included
                                                 ? feature.highlight
                                                     ? 'text-white'
@@ -165,12 +159,12 @@ export function PricingCard({
                                 </div>
                                 <span
                                     className={cn(
-                                        'text-sm',
+                                        'text-xs sm:text-sm',
                                         feature.highlight && 'font-medium text-foreground'
                                     )}
                                 >
-                  {feature.text}
-                </span>
+                                    {feature.text}
+                                </span>
                             </motion.div>
                         ))}
                     </div>

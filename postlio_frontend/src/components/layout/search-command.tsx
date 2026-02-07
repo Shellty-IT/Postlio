@@ -1,6 +1,3 @@
-// src/components/layout/search-command.tsx
-
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -13,6 +10,7 @@ import {
     CommandItem,
     CommandList,
     CommandSeparator,
+    CommandShortcut,
 } from '@/components/ui/command';
 import {
     LayoutDashboard,
@@ -29,32 +27,26 @@ import {
     Clock,
     CheckCircle2,
     Edit3,
+    Sparkles,
+    ArrowRight,
 } from 'lucide-react';
 import { usePosts } from '@/hooks/usePosts';
 import { cn } from '@/lib/utils';
 import type { Platform } from '@/types';
-
-// ============================================================
-// TYPY
-// ============================================================
 
 interface SearchCommandProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }
 
-// ============================================================
-// KONFIGURACJA
-// ============================================================
-
 const navigationItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, description: 'Przegląd aktywności' },
-    { name: 'Kreator AI', href: '/creator', icon: PenTool, description: 'Twórz posty z AI' },
-    { name: 'Kalendarz', href: '/calendar', icon: Calendar, description: 'Zaplanowane publikacje' },
-    { name: 'Materiały', href: '/saved-posts', icon: FileText, description: 'Zapisane posty' },
-    { name: 'Marki', href: '/brands', icon: Building2, description: 'Styl pisania' },
-    { name: 'Autopilot', href: '/autopilot', icon: Zap, description: 'Automatyczne publikacje' },
-    { name: 'Ustawienia', href: '/settings', icon: Settings, description: 'Konfiguracja konta' },
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, description: 'Przegląd aktywności', color: 'text-blue-500' },
+    { name: 'Kreator AI', href: '/creator', icon: PenTool, description: 'Twórz posty z AI', color: 'text-violet-500' },
+    { name: 'Kalendarz', href: '/calendar', icon: Calendar, description: 'Zaplanowane publikacje', color: 'text-emerald-500' },
+    { name: 'Materiały', href: '/saved-posts', icon: FileText, description: 'Zapisane posty', color: 'text-amber-500' },
+    { name: 'Marki', href: '/brands', icon: Building2, description: 'Styl pisania', color: 'text-pink-500' },
+    { name: 'Autopilot', href: '/autopilot', icon: Zap, description: 'Automatyczne publikacje', color: 'text-orange-500' },
+    { name: 'Ustawienia', href: '/settings', icon: Settings, description: 'Konfiguracja konta', color: 'text-slate-500' },
 ];
 
 const platformIcons: Record<Platform, typeof Facebook> = {
@@ -63,42 +55,39 @@ const platformIcons: Record<Platform, typeof Facebook> = {
     linkedin: Linkedin,
 };
 
-const platformColors: Record<Platform, string> = {
-    facebook: 'text-[#1877F2]',
-    instagram: 'text-[#E4405F]',
-    linkedin: 'text-[#0A66C2]',
+const platformColors: Record<Platform, { text: string; bg: string }> = {
+    facebook: { text: 'text-[#1877F2]', bg: 'bg-[#1877F2]/10' },
+    instagram: { text: 'text-[#E4405F]', bg: 'bg-[#E4405F]/10' },
+    linkedin: { text: 'text-[#0A66C2]', bg: 'bg-[#0A66C2]/10' },
 };
 
-// ============================================================
-// KOMPONENT
-// ============================================================
+const statusConfig = {
+    scheduled: { icon: Clock, label: 'Zaplanowany', color: 'text-amber-500', bg: 'bg-amber-500/10' },
+    published: { icon: CheckCircle2, label: 'Opublikowany', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    draft: { icon: Edit3, label: 'Szkic', color: 'text-slate-500', bg: 'bg-slate-500/10' },
+};
 
 export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
     const router = useRouter();
     const [search, setSearch] = useState('');
 
-    // Pobierz posty do wyszukiwania
     const { data: postsData } = usePosts({ limit: 50 });
     const posts = postsData?.posts || [];
 
-    // Filtruj posty po wyszukiwaniu
     const filteredPosts = posts.filter((post) =>
         post.content?.toLowerCase().includes(search.toLowerCase())
     ).slice(0, 5);
 
-    // Obsługa nawigacji
     const handleSelect = useCallback((href: string) => {
         onOpenChange(false);
         router.push(href);
     }, [router, onOpenChange]);
 
-    // Obsługa edycji posta
     const handleEditPost = useCallback((postId: number | string) => {
         onOpenChange(false);
         router.push(`/creator?edit=${postId}`);
     }, [router, onOpenChange]);
 
-    // Keyboard shortcut
     useEffect(() => {
         const down = (e: KeyboardEvent) => {
             if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
@@ -111,6 +100,10 @@ export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
         return () => document.removeEventListener('keydown', down);
     }, [open, onOpenChange]);
 
+    useEffect(() => {
+        if (!open) setSearch('');
+    }, [open]);
+
     return (
         <CommandDialog open={open} onOpenChange={onOpenChange}>
             <CommandInput
@@ -118,85 +111,86 @@ export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
                 value={search}
                 onValueChange={setSearch}
             />
-            <CommandList>
+            <CommandList className="max-h-[60vh] sm:max-h-[400px]">
                 <CommandEmpty>
-                    <div className="flex flex-col items-center py-6 text-muted-foreground">
-                        <Search className="h-10 w-10 mb-2 opacity-20" />
-                        <p>Nie znaleziono wyników</p>
-                        <p className="text-sm">Spróbuj innej frazy</p>
+                    <div className="flex flex-col items-center py-6 sm:py-8 text-muted-foreground">
+                        <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+                            <Search className="h-5 w-5 sm:h-6 sm:w-6 opacity-50" />
+                        </div>
+                        <p className="font-medium text-sm sm:text-base">Nie znaleziono wyników</p>
+                        <p className="text-xs sm:text-sm opacity-70">Spróbuj innej frazy</p>
                     </div>
                 </CommandEmpty>
 
-                {/* Nawigacja */}
                 <CommandGroup heading="Nawigacja">
                     {navigationItems.map((item) => (
                         <CommandItem
                             key={item.href}
                             value={item.name}
                             onSelect={() => handleSelect(item.href)}
-                            className="flex items-center gap-3 py-3"
+                            className="py-3 sm:py-2"
                         >
-                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-                                <item.icon className="h-4 w-4" />
+                            <div className={cn(
+                                "flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg sm:rounded-xl",
+                                "bg-muted/80 dark:bg-muted/50",
+                                "transition-colors group-hover:bg-muted flex-shrink-0"
+                            )}>
+                                <item.icon className={cn("h-4 w-4 sm:h-5 sm:w-5", item.color)} />
                             </div>
-                            <div>
-                                <p className="font-medium">{item.name}</p>
-                                <p className="text-xs text-muted-foreground">{item.description}</p>
+                            <div className="flex-1 min-w-0">
+                                <p className="font-medium text-foreground text-sm sm:text-base">{item.name}</p>
+                                <p className="text-xs text-muted-foreground hidden xs:block">{item.description}</p>
                             </div>
+                            <ArrowRight className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
                         </CommandItem>
                     ))}
                 </CommandGroup>
 
-                {/* Posty */}
                 {filteredPosts.length > 0 && (
                     <>
                         <CommandSeparator />
                         <CommandGroup heading="Posty">
                             {filteredPosts.map((post) => {
-                                const platform = post.platforms?.[0] || post.platform || 'facebook';
-                                const PlatformIcon = platformIcons[platform as Platform];
-                                const isScheduled = post.status === 'scheduled';
-                                const isPublished = post.status === 'published';
+                                const platform = (post.platforms?.[0] || post.platform || 'facebook') as Platform;
+                                const PlatformIcon = platformIcons[platform];
+                                const platformStyle = platformColors[platform];
+
+                                const status = post.status === 'scheduled' ? 'scheduled'
+                                    : post.status === 'published' ? 'published'
+                                        : 'draft';
+                                const statusInfo = statusConfig[status];
+                                const StatusIcon = statusInfo.icon;
 
                                 return (
                                     <CommandItem
                                         key={post.id}
                                         value={post.content || ''}
                                         onSelect={() => handleEditPost(post.id)}
-                                        className="flex items-center gap-3 py-3"
+                                        className="py-3 sm:py-2"
                                     >
                                         <div className={cn(
-                                            'flex h-9 w-9 items-center justify-center rounded-lg',
-                                            'bg-muted',
-                                            platformColors[platform as Platform]
+                                            'flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg sm:rounded-xl flex-shrink-0',
+                                            platformStyle.bg
                                         )}>
-                                            <PlatformIcon className="h-4 w-4" />
+                                            <PlatformIcon className={cn("h-4 w-4 sm:h-5 sm:w-5", platformStyle.text)} />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-medium truncate text-sm">
-                                                {post.content?.slice(0, 50)}...
+                                            <p className="font-medium truncate text-foreground text-sm">
+                                                {post.content?.slice(0, 40) || 'Bez treści'}
+                                                {post.content && post.content.length > 40 && '...'}
                                             </p>
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                {isScheduled && (
-                                                    <span className="flex items-center gap-1 text-amber-500">
-                                                        <Clock className="h-3 w-3" />
-                                                        Zaplanowany
-                                                    </span>
-                                                )}
-                                                {isPublished && (
-                                                    <span className="flex items-center gap-1 text-green-500">
-                                                        <CheckCircle2 className="h-3 w-3" />
-                                                        Opublikowany
-                                                    </span>
-                                                )}
-                                                {!isScheduled && !isPublished && (
-                                                    <span className="flex items-center gap-1">
-                                                        <Edit3 className="h-3 w-3" />
-                                                        Szkic
-                                                    </span>
-                                                )}
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <span className={cn(
+                                                    "inline-flex items-center gap-1 text-[10px] sm:text-xs px-1.5 py-0.5 rounded",
+                                                    statusInfo.bg,
+                                                    statusInfo.color
+                                                )}>
+                                                    <StatusIcon className="h-3 w-3" />
+                                                    <span className="hidden xs:inline">{statusInfo.label}</span>
+                                                </span>
                                             </div>
                                         </div>
+                                        <ArrowRight className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
                                     </CommandItem>
                                 );
                             })}
@@ -204,20 +198,20 @@ export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
                     </>
                 )}
 
-                {/* Szybkie akcje */}
                 <CommandSeparator />
                 <CommandGroup heading="Szybkie akcje">
                     <CommandItem
                         onSelect={() => handleSelect('/creator')}
-                        className="flex items-center gap-3 py-3"
+                        className="py-3 sm:py-2"
                     >
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-violet-500 text-white">
-                            <PenTool className="h-4 w-4" />
+                        <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg sm:rounded-xl bg-gradient-to-br from-primary to-violet-500 shadow-lg shadow-primary/25 flex-shrink-0">
+                            <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                         </div>
-                        <div>
-                            <p className="font-medium">Nowy post</p>
-                            <p className="text-xs text-muted-foreground">Utwórz post z pomocą AI</p>
+                        <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground text-sm sm:text-base">Nowy post z AI</p>
+                            <p className="text-xs text-muted-foreground hidden xs:block">Utwórz post z pomocą AI</p>
                         </div>
+                        <CommandShortcut className="hidden sm:inline-flex">⌘N</CommandShortcut>
                     </CommandItem>
                 </CommandGroup>
             </CommandList>
