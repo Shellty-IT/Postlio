@@ -5,12 +5,14 @@ Pollinations AI Image Provider - Nowe API (gen.pollinations.ai)
 Dokumentacja: https://pollinations.ai/docs
 Modele: flux, nanobanana
 
-✅ DODANE: Tłumaczenie promptów przez Gemini przed wysłaniem
+✅ Tłumaczenie promptów przez Gemini przed wysłaniem
+✅ Poprawiona obsługa błędów (zawsze zwraca string)
 """
 
 from typing import Optional, Dict, Any
 import httpx
 import base64
+import json
 from urllib.parse import quote
 from app.config import settings
 from app.services.ai.image.base import BaseImageProvider
@@ -122,6 +124,54 @@ Text to translate:
         # Jeśli znaleziono przynajmniej 2 polskie słowa
         return polish_count >= 2
 
+    def _parse_error_message(self, response) -> str:
+        """
+        Parsuje błąd z odpowiedzi API.
+        Zawsze zwraca string, nawet jeśli API zwraca zagnieżdżony JSON.
+        """
+        error_msg = f"HTTP {response.status_code}"
+
+        try:
+            error_data = response.json()
+
+            if isinstance(error_data, dict):
+                message = error_data.get("message", "")
+
+                # Pollinations zwraca zagnieżdżony JSON w 'message'
+                if isinstance(message, str) and message.startswith("{"):
+                    try:
+                        nested = json.loads(message)
+                        if "message" in nested:
+                            error_msg = str(nested["message"])
+                        elif "error" in nested:
+                            error_msg = str(nested["error"])
+                        else:
+                            error_msg = message[:200]
+                    except json.JSONDecodeError:
+                        error_msg = message[:200] if message else error_msg
+                elif message:
+                    error_msg = str(message)[:200]
+                elif "error" in error_data:
+                    err = error_data["error"]
+                    error_msg = str(err) if isinstance(err, str) else str(err)[:200]
+
+        except Exception:
+            pass
+
+        # Sprawdź content moderation
+        lower_msg = error_msg.lower()
+        if any(phrase in lower_msg for phrase in [
+            "cannot fulfill",
+            "inappropriate",
+            "content policy",
+            "safety",
+            "harmful",
+            "explicit"
+        ]):
+            return "Prompt został odrzucony przez filtr bezpieczeństwa AI. Spróbuj innego opisu."
+
+        return error_msg
+
     async def generate_image(
             self,
             prompt: str,
@@ -231,12 +281,8 @@ Text to translate:
                             "enhance_used": enhance,
                         }
                     else:
-                        try:
-                            error_data = response.json()
-                            error_msg = error_data.get("error", "Invalid response")
-                        except:
-                            error_msg = f"Invalid response: {content_type}"
-
+                        # Odpowiedź 200 ale nie obraz - prawdopodobnie błąd w JSON
+                        error_msg = self._parse_error_message(response)
                         print(f"❌ Pollinations: Not an image - {error_msg}")
                         return {
                             "success": False,
@@ -248,7 +294,7 @@ Text to translate:
                     print(f"❌ Pollinations: Unauthorized - check API key")
                     return {
                         "success": False,
-                        "error": "Invalid API key. Check POLLINATIONS_API_KEY.",
+                        "error": "Nieprawidłowy klucz API. Sprawdź POLLINATIONS_API_KEY.",
                         "provider": self.name,
                     }
 
@@ -256,7 +302,7 @@ Text to translate:
                     print(f"❌ Pollinations: Payment required - out of pollen")
                     return {
                         "success": False,
-                        "error": "Out of pollen credits. Top up at enter.pollinations.ai",
+                        "error": "Brak kredytów Pollinations. Doładuj konto na enter.pollinations.ai",
                         "provider": self.name,
                     }
 
@@ -264,27 +310,32 @@ Text to translate:
                     print(f"❌ Pollinations: Rate limited")
                     return {
                         "success": False,
-                        "error": "Rate limit exceeded. Try again in a moment.",
+                        "error": "Zbyt wiele zapytań. Spróbuj ponownie za chwilę.",
                         "provider": self.name,
                         "retry_suggested": True,
                     }
 
-                elif response.status_code == 502 or response.status_code == 503:
+                elif response.status_code in (400, 422):
+                    # Bad Request - często content moderation
+                    error_msg = self._parse_error_message(response)
+                    print(f"⚠️ Pollinations: Bad request - {error_msg}")
+                    return {
+                        "success": False,
+                        "error": error_msg,
+                        "provider": self.name,
+                    }
+
+                elif response.status_code in (502, 503):
                     print(f"❌ Pollinations: Server error {response.status_code}")
                     return {
                         "success": False,
-                        "error": "Pollinations server is busy. Try again in a moment.",
+                        "error": "Serwer Pollinations jest przeciążony. Spróbuj ponownie za chwilę.",
                         "provider": self.name,
                         "retry_suggested": True,
                     }
 
                 else:
-                    try:
-                        error_data = response.json()
-                        error_msg = error_data.get("error", f"HTTP {response.status_code}")
-                    except:
-                        error_msg = f"HTTP {response.status_code}"
-
+                    error_msg = self._parse_error_message(response)
                     print(f"❌ Pollinations: Error - {error_msg}")
                     return {
                         "success": False,
@@ -296,7 +347,7 @@ Text to translate:
             print(f"❌ Pollinations: Timeout after {timeout}s")
             return {
                 "success": False,
-                "error": f"Request timeout ({timeout}s). Try 'nanobanana' model for faster results.",
+                "error": f"Przekroczono limit czasu ({timeout}s). Spróbuj modelu 'nanobanana' dla szybszych wyników.",
                 "provider": self.name,
                 "retry_suggested": True,
             }
@@ -305,7 +356,7 @@ Text to translate:
             print(f"❌ Pollinations: Connection error - {e}")
             return {
                 "success": False,
-                "error": "Cannot connect to Pollinations. Check your internet connection.",
+                "error": "Nie można połączyć się z Pollinations. Sprawdź połączenie internetowe.",
                 "provider": self.name,
             }
 
@@ -313,7 +364,7 @@ Text to translate:
             print(f"❌ Pollinations: Unexpected error - {e}")
             return {
                 "success": False,
-                "error": f"Unexpected error: {str(e)}",
+                "error": f"Nieoczekiwany błąd: {str(e)}",
                 "provider": self.name,
             }
 
