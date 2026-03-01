@@ -1,7 +1,9 @@
-﻿from fastapi import APIRouter, Depends, HTTPException
+﻿# postlio_backend/app/api/v1/ai.py
+
+from fastapi import APIRouter, Depends, HTTPException
 from app.api.deps import get_current_user
 from app.models.user import User
-from app.services.ai import text_ai_manager, image_ai_manager
+from app.services.ai import text_ai_manager, image_ai_manager, video_ai_manager
 from app.schemas.ai import (
     GenerateTextRequest,
     GenerateTextResponse,
@@ -14,6 +16,9 @@ from app.schemas.ai import (
     GenerateImageRequest,
     GenerateImageResponse,
     GeneratedImageContent,
+    GenerateVideoRequest,
+    GenerateVideoResponse,
+    GeneratedVideoContent,
     ProvidersListResponse,
     ProviderInfo,
 )
@@ -27,14 +32,14 @@ router = APIRouter()
 async def list_providers(
         current_user: User = Depends(get_current_user),
 ):
-    """List all available AI providers."""
-
     text_providers = text_ai_manager.list_providers()
     image_providers = image_ai_manager.list_providers()
+    video_providers = video_ai_manager.list_providers()
 
     return ProvidersListResponse(
         text_providers=[ProviderInfo(**p) for p in text_providers],
         image_providers=[ProviderInfo(**p) for p in image_providers],
+        video_providers=[ProviderInfo(**p) for p in video_providers],
     )
 
 
@@ -45,8 +50,6 @@ async def generate_text(
         request: GenerateTextRequest,
         current_user: User = Depends(get_current_user),
 ):
-    """Generate post text with AI."""
-
     provider = text_ai_manager.get_provider(
         request.provider.value if request.provider else None
     )
@@ -84,8 +87,6 @@ async def generate_variations(
         request: GenerateVariationsRequest,
         current_user: User = Depends(get_current_user),
 ):
-    """Generate variations of existing content."""
-
     provider = text_ai_manager.get_provider(
         request.provider.value if request.provider else None
     )
@@ -112,8 +113,6 @@ async def improve_text(
         request: ImproveTextRequest,
         current_user: User = Depends(get_current_user),
 ):
-    """Improve existing text."""
-
     provider = text_ai_manager.get_provider(
         request.provider.value if request.provider else None
     )
@@ -140,8 +139,6 @@ async def ai_chat(
         request: AIChatRequest,
         current_user: User = Depends(get_current_user),
 ):
-    """Chat with AI for content creation."""
-
     provider = text_ai_manager.get_provider(
         request.provider.value if request.provider else None
     )
@@ -172,8 +169,6 @@ async def generate_image(
         request: GenerateImageRequest,
         current_user: User = Depends(get_current_user),
 ):
-    """Generate image with AI."""
-
     provider = image_ai_manager.get_provider(
         request.provider.value if request.provider else None
     )
@@ -205,12 +200,55 @@ async def generate_image(
         ),
     )
 
-@router.get("/models/available")
-async def list_available_models(
+
+# === VIDEO GENERATION ===
+
+@router.post("/generate/video", response_model=GenerateVideoResponse)
+async def generate_video(
+        request: GenerateVideoRequest,
         current_user: User = Depends(get_current_user),
 ):
-    """List all models available for configured API keys."""
+    result = await video_ai_manager.generate_video(
+        prompt=request.prompt,
+        provider=request.provider.value if request.provider else None,
+        model=request.model,
+        width=request.width,
+        height=request.height,
+        duration=request.duration,
+        reference_image=request.reference_image,
+    )
 
+    if not result.get("success"):
+        return GenerateVideoResponse(
+            success=False,
+            error=result.get("error", "Video generation failed"),
+        )
+
+    return GenerateVideoResponse(
+        success=True,
+        data=GeneratedVideoContent(
+            video_data=result.get("video_data"),
+            mime_type=result.get("mime_type"),
+            prompt=result.get("prompt", request.prompt),
+            prompt_translated=result.get("prompt_translated"),
+            provider=result.get("provider", "unknown"),
+            model=result.get("model"),
+            model_display_name=result.get("model_display_name"),
+            width=result.get("width"),
+            height=result.get("height"),
+            duration=result.get("duration"),
+            size_bytes=result.get("size_bytes"),
+            has_reference_image=result.get("has_reference_image", False),
+        ),
+    )
+
+
+# === MODELS ===
+
+@router.get("/models/available")
+async def get_available_models(
+        current_user: User = Depends(get_current_user),
+):
     gemini_provider = text_ai_manager.get_provider("gemini")
 
     available_models = await gemini_provider.list_available_models()
@@ -220,15 +258,3 @@ async def list_available_models(
         "default_model": gemini_provider.default_model,
         "configured_models": gemini_provider.models,
     }
-
-
-@router.get("/models/list")
-async def list_available_models(
-        current_user: User = Depends(get_current_user)
-):
-    """Lista dostępnych modeli Gemini."""
-    from app.services.ai.image.gemini_image import GeminiImageProvider
-
-    provider = GeminiImageProvider()
-    result = await provider.list_available_models()
-    return result

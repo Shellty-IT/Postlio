@@ -19,7 +19,7 @@ class ImageAIManager:
         Inicjalizuj dostępnych providerów obrazów.
 
         Aktualnie aktywni:
-        - Pollinations: Nowe API z modelami flux i nanobanana
+        - Pollinations: Nowe API z modelami flux i gptimage (GPT Image 1 Mini)
         - HuggingFace: Stable Diffusion XL
         """
         self._providers = {
@@ -57,7 +57,7 @@ class ImageAIManager:
                 "name": name,
                 "display_name": self._get_display_name(name),
                 "available": provider.is_available,
-                "models": provider.models,  # ✅ POPRAWKA: Lista stringów, nie słowników
+                "models": provider.models,
                 "is_default": name == settings.DEFAULT_IMAGE_PROVIDER,
                 "description": self._get_description(name),
             }
@@ -75,7 +75,7 @@ class ImageAIManager:
     def _get_description(self, name: str) -> str:
         """Zwraca opis providera."""
         descriptions = {
-            "pollinations": "Szybkie generowanie z automatycznym ulepszaniem promptu. Obsługuje polskie prompty.",
+            "pollinations": "Flux (wysoka jakość) i GPT Image 1 Mini. Obsługuje polskie prompty z auto-tłumaczeniem.",
             "huggingface": "Stable Diffusion XL. Wysoka jakość, dłuższy czas generowania.",
         }
         return descriptions.get(name, "")
@@ -129,5 +129,4 @@ class ImageAIManager:
         return status
 
 
-# Singleton instance
 image_ai_manager = ImageAIManager()

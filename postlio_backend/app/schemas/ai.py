@@ -14,9 +14,11 @@ class TextProviderEnum(str, Enum):
 
 class ImageProviderEnum(str, Enum):
     POLLINATIONS = "pollinations"
-    GEMINI = "gemini"  # NOWY - Gemini Image (Nano Banana)
     HUGGINGFACE = "huggingface"
-    CLIPDROP = "clipdrop"  # Płatny
+
+
+class VideoProviderEnum(str, Enum):
+    POLLINATIONS = "pollinations"
 
 
 class CategoryEnum(str, Enum):
@@ -111,6 +113,18 @@ class GenerateImageRequest(BaseModel):
     height: int = Field(default=1024, ge=256, le=2048)
 
 
+# === VIDEO REQUEST SCHEMAS ===
+
+class GenerateVideoRequest(BaseModel):
+    prompt: str = Field(..., min_length=3, max_length=1000)
+    provider: Optional[VideoProviderEnum] = None
+    model: Optional[str] = None
+    width: int = Field(default=848, ge=320, le=1920)
+    height: int = Field(default=480, ge=240, le=1080)
+    duration: int = Field(default=5, ge=2, le=10)
+    reference_image: Optional[str] = None
+
+
 # === RESPONSE SCHEMAS ===
 
 class GeneratedTextContent(BaseModel):
@@ -141,10 +155,10 @@ class AIChatResponse(BaseModel):
 
 class GeneratedImageContent(BaseModel):
     image_url: Optional[str] = None
-    image_data: Optional[str] = None  # base64
+    image_data: Optional[str] = None
     prompt: str
-    prompt_translated: Optional[str] = None  # NOWE - dla auto-tłumaczenia
-    prompt_enhanced: Optional[str] = None  # NOWE
+    prompt_translated: Optional[str] = None
+    prompt_enhanced: Optional[str] = None
     provider: str
     model: Optional[str] = None
     width: Optional[int] = None
@@ -157,17 +171,44 @@ class GenerateImageResponse(BaseModel):
     error: Optional[str] = None
 
 
+class GeneratedVideoContent(BaseModel):
+    video_data: Optional[str] = None
+    mime_type: Optional[str] = None
+    prompt: str
+    prompt_translated: Optional[str] = None
+    provider: str
+    model: Optional[str] = None
+    model_display_name: Optional[str] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    duration: Optional[int] = None
+    size_bytes: Optional[int] = None
+    has_reference_image: bool = False
+
+
+class GenerateVideoResponse(BaseModel):
+    success: bool
+    data: Optional[GeneratedVideoContent] = None
+    error: Optional[str] = None
+
+
+class VideoModelInfo(BaseModel):
+    id: str
+    name: str
+
+
 class ProviderInfo(BaseModel):
     name: str
-    display_name: Optional[str] = None  # NOWE
+    display_name: Optional[str] = None
     available: bool
-    is_free: Optional[bool] = True  # NOWE
+    is_free: Optional[bool] = True
     models: List[str]
+    models_detailed: Optional[List[VideoModelInfo]] = None
     is_default: bool
-    description: Optional[str] = None  # NOWE
+    description: Optional[str] = None
 
 
 class ProvidersListResponse(BaseModel):
     text_providers: List[ProviderInfo]
     image_providers: List[ProviderInfo]
-
+    video_providers: Optional[List[ProviderInfo]] = None

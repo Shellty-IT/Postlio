@@ -7,7 +7,7 @@ from enum import Enum
 
 class ImageProvider(str, Enum):
     """Available image generation providers."""
-    POLLINATIONS = "pollinations"  # Flux, Nanobanana
+    POLLINATIONS = "pollinations"  # Flux, GPT Image 1 Mini
     HUGGINGFACE = "huggingface"    # Stable Diffusion XL
 
 

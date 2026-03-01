@@ -1,13 +1,4 @@
 ﻿# postlio_backend/app/services/ai/image/pollinations.py
-"""
-Pollinations AI Image Provider - Nowe API (gen.pollinations.ai)
-
-Dokumentacja: https://pollinations.ai/docs
-Modele: flux, nanobanana
-
-✅ Tłumaczenie promptów przez Gemini przed wysłaniem
-✅ Poprawiona obsługa błędów (zawsze zwraca string)
-"""
 
 from typing import Optional, Dict, Any
 import httpx
@@ -19,18 +10,10 @@ from app.services.ai.image.base import BaseImageProvider
 
 
 class PollinationsProvider(BaseImageProvider):
-    """
-    Pollinations AI - nowe API z autoryzacją.
 
-    Dostępne modele:
-    - flux: Wysoka jakość, wolniejszy (~10-20s)
-    - nanobanana: Szybki, lżejszy (~5-10s)
-
-    Prompty są automatycznie tłumaczone na angielski przez Gemini.
-    """
 
     name = "pollinations"
-    models = ["flux", "nanobanana"]
+    models = ["flux", "gptimage"]
     is_free = False
 
     def __init__(self):
@@ -41,14 +24,11 @@ class PollinationsProvider(BaseImageProvider):
 
     @property
     def is_available(self) -> bool:
-        """Sprawdza czy API key jest skonfigurowany."""
+
         return self.api_key is not None and len(self.api_key) > 0
 
     async def _translate_to_english(self, text: str) -> str:
-        """
-        Tłumaczy prompt na angielski używając Gemini.
-        Zwraca oryginalny tekst jeśli tłumaczenie się nie powiedzie.
-        """
+
         try:
             from app.services.ai.text.gemini import GeminiProvider
 
@@ -59,7 +39,6 @@ class PollinationsProvider(BaseImageProvider):
                 print(f"⚠️ Pollinations: Gemini unavailable, using original prompt")
                 return text
 
-            # Prompt do tłumaczenia - prosty i skuteczny
             translation_prompt = f"""Translate this image description to English. 
 Make it a good prompt for AI image generation - descriptive, detailed, artistic.
 Return ONLY the English translation, nothing else.
@@ -71,7 +50,6 @@ Text to translate:
 
             if result.get("success") and result.get("text"):
                 translated = result["text"].strip().strip('"\'')
-                # Usuń ewentualne prefiksy typu "Translation:" itp.
                 for prefix in ["Translation:", "English:", "Translated:", "Here is", "Here's"]:
                     if translated.lower().startswith(prefix.lower()):
                         translated = translated[len(prefix):].strip()
@@ -93,11 +71,9 @@ Text to translate:
 
     def _looks_like_polish(self, text: str) -> bool:
         """Heurystyka: sprawdza czy tekst wygląda na polski."""
-        # Polskie znaki
         if self._has_polish_characters(text):
             return True
 
-        # Częste polskie słowa
         polish_words = {
             'i', 'w', 'z', 'na', 'do', 'o', 'się', 'jest', 'to', 'że',
             'nie', 'jak', 'po', 'co', 'tak', 'za', 'od', 'ale', 'czy',
@@ -117,11 +93,9 @@ Text to translate:
         words = text.lower().split()
         polish_count = sum(1 for w in words if w in polish_words)
 
-        # Jeśli więcej niż 20% słów to polskie słowa, uznaj za polski
         if len(words) > 0 and polish_count / len(words) > 0.2:
             return True
 
-        # Jeśli znaleziono przynajmniej 2 polskie słowa
         return polish_count >= 2
 
     def _parse_error_message(self, response) -> str:
@@ -137,7 +111,6 @@ Text to translate:
             if isinstance(error_data, dict):
                 message = error_data.get("message", "")
 
-                # Pollinations zwraca zagnieżdżony JSON w 'message'
                 if isinstance(message, str) and message.startswith("{"):
                     try:
                         nested = json.loads(message)
@@ -158,7 +131,6 @@ Text to translate:
         except Exception:
             pass
 
-        # Sprawdź content moderation
         lower_msg = error_msg.lower()
         if any(phrase in lower_msg for phrase in [
             "cannot fulfill",
@@ -197,25 +169,20 @@ Text to translate:
         original_prompt = prompt
         translated_prompt = prompt
 
-        # ✅ TŁUMACZENIE: Jeśli prompt wygląda na polski, przetłumacz przez Gemini
         if self._looks_like_polish(prompt):
             print(f"🔄 Pollinations: Detected Polish prompt, translating via Gemini...")
             translated_prompt = await self._translate_to_english(prompt)
         else:
             print(f"🔄 Pollinations: Prompt appears to be English, using as-is")
 
-        # Dodaj styl do promptu jeśli podany
         final_prompt = translated_prompt
         if style:
             final_prompt = f"{translated_prompt}, {style} style"
 
-        # Enkoduj prompt dla URL
         encoded_prompt = quote(final_prompt)
 
-        # Wybierz model (z walidacją)
         model_name = model if model in self.models else self.default_model
 
-        # Zbuduj URL z parametrami
         image_url = (
             f"{self.base_url}/{encoded_prompt}"
             f"?model={model_name}"
@@ -230,8 +197,7 @@ Text to translate:
         print(f"🖼️ Pollinations: Final: {final_prompt[:80]}...")
 
         try:
-            # Timeout zależny od modelu
-            timeout = 90.0 if model_name == "flux" else 45.0
+            timeout = 90.0 if model_name == "flux" else 60.0
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.get(
@@ -250,12 +216,9 @@ Text to translate:
 
                     print(f"🖼️ Pollinations: Content-Type: {content_type}, Size: {content_length} bytes")
 
-                    # Sprawdź czy to rzeczywiście obraz
                     if "image" in content_type and content_length > 1000:
-                        # Konwertuj do base64 dla frontendu
                         image_base64 = base64.b64encode(response.content).decode("utf-8")
 
-                        # Określ format obrazu
                         if "png" in content_type:
                             mime_type = "image/png"
                         elif "webp" in content_type:
@@ -281,7 +244,6 @@ Text to translate:
                             "enhance_used": enhance,
                         }
                     else:
-                        # Odpowiedź 200 ale nie obraz - prawdopodobnie błąd w JSON
                         error_msg = self._parse_error_message(response)
                         print(f"❌ Pollinations: Not an image - {error_msg}")
                         return {
@@ -316,7 +278,6 @@ Text to translate:
                     }
 
                 elif response.status_code in (400, 422):
-                    # Bad Request - często content moderation
                     error_msg = self._parse_error_message(response)
                     print(f"⚠️ Pollinations: Bad request - {error_msg}")
                     return {
@@ -347,7 +308,7 @@ Text to translate:
             print(f"❌ Pollinations: Timeout after {timeout}s")
             return {
                 "success": False,
-                "error": f"Przekroczono limit czasu ({timeout}s). Spróbuj modelu 'nanobanana' dla szybszych wyników.",
+                "error": f"Przekroczono limit czasu ({timeout}s). Spróbuj innego modelu lub krótszego promptu.",
                 "provider": self.name,
                 "retry_suggested": True,
             }

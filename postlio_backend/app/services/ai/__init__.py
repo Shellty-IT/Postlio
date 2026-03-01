@@ -1,5 +1,8 @@
+# postlio_backend/app/services/ai/__init__.py
+
 from app.services.ai.text import text_ai_manager, TextProvider
 from app.services.ai.image import image_ai_manager, ImageProvider, ImageStyle
+from app.services.ai.video import video_ai_manager, VideoProvider
 
 __all__ = [
     "text_ai_manager",
@@ -7,4 +10,6 @@ __all__ = [
     "image_ai_manager",
     "ImageProvider",
     "ImageStyle",
+    "video_ai_manager",
+    "VideoProvider",
 ]
