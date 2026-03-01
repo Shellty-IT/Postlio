@@ -1,3 +1,5 @@
+// src/app/(dashboard)/creator/page.tsx
+
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
@@ -33,22 +35,23 @@ interface PlatformValidation {
 function validatePlatformRequirements(
     platforms: Platform[],
     content: string,
-    imageUrl: string | undefined
+    imageUrl: string | undefined,
+    videoUrl: string | undefined
 ): PlatformValidation {
     const errors: string[] = [];
     const hasContent = content.trim().length > 0;
-    const hasImage = !!imageUrl;
+    const hasMedia = !!imageUrl || !!videoUrl;
 
-    if (!hasContent && !hasImage) {
-        errors.push('Dodaj treść lub zdjęcie');
+    if (!hasContent && !hasMedia) {
+        errors.push('Dodaj treść, zdjęcie lub film');
         return { isValid: false, errors };
     }
 
     for (const platform of platforms) {
         switch (platform) {
             case 'instagram':
-                if (!hasImage) {
-                    errors.push('Instagram wymaga zdjęcia');
+                if (!hasMedia) {
+                    errors.push('Instagram wymaga zdjęcia lub filmu');
                 }
                 break;
             case 'facebook':
@@ -73,6 +76,7 @@ export default function CreatorPage() {
     const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(['facebook']);
     const [content, setContent] = useState('');
     const [imageUrl, setImageUrl] = useState<string | undefined>();
+    const [videoUrl, setVideoUrl] = useState<string | undefined>();
     const [hashtags, setHashtags] = useState<string[]>([]);
     const [isChatOpen, setIsChatOpen] = useState(false);
 
@@ -167,6 +171,7 @@ export default function CreatorPage() {
         setEditingPostId(null);
         setContent('');
         setImageUrl(undefined);
+        setVideoUrl(undefined);
         setHashtags([]);
         setSelectedPlatforms(['facebook']);
         setManualPublishPostId(null);
@@ -229,6 +234,7 @@ export default function CreatorPage() {
 
                 if (generatedImageUrl) {
                     setImageUrl(generatedImageUrl);
+                    setVideoUrl(undefined);
                     return generatedImageUrl;
                 }
             }
@@ -241,7 +247,7 @@ export default function CreatorPage() {
     }, [generateImageAsync, imageProvider, imageModel]);
 
     const handleSaveDraft = useCallback(async () => {
-        const validation = validatePlatformRequirements(selectedPlatforms, content, imageUrl);
+        const validation = validatePlatformRequirements(selectedPlatforms, content, imageUrl, videoUrl);
 
         if (!validation.isValid) {
             validation.errors.forEach(error => {
@@ -281,10 +287,10 @@ export default function CreatorPage() {
         });
 
         toast.success('Zapisano jako szkic!');
-    }, [content, selectedPlatforms, imageUrl, selectedBrand, createPostMutation, updatePostMutation, textProvider, editingPostId, router, getFullContent, clearForm]);
+    }, [content, selectedPlatforms, imageUrl, videoUrl, selectedBrand, createPostMutation, updatePostMutation, textProvider, editingPostId, router, getFullContent, clearForm]);
 
     const handleSchedule = useCallback(async (scheduledAt: string) => {
-        const validation = validatePlatformRequirements(selectedPlatforms, content, imageUrl);
+        const validation = validatePlatformRequirements(selectedPlatforms, content, imageUrl, videoUrl);
 
         if (!validation.isValid) {
             validation.errors.forEach(error => {
@@ -329,10 +335,10 @@ export default function CreatorPage() {
         toast.success('Post zaplanowany!', {
             description: 'Możesz go zobaczyć w kalendarzu.',
         });
-    }, [content, selectedPlatforms, imageUrl, selectedBrand, createPostMutation, updatePostMutation, textProvider, editingPostId, router, getFullContent, clearForm]);
+    }, [content, selectedPlatforms, imageUrl, videoUrl, selectedBrand, createPostMutation, updatePostMutation, textProvider, editingPostId, router, getFullContent, clearForm]);
 
     const handlePublishManually = useCallback(async () => {
-        const validation = validatePlatformRequirements(selectedPlatforms, content, imageUrl);
+        const validation = validatePlatformRequirements(selectedPlatforms, content, imageUrl, videoUrl);
 
         if (!validation.isValid) {
             validation.errors.forEach(error => {
@@ -374,7 +380,7 @@ export default function CreatorPage() {
         setManualPublishData(data);
         setManualPublishPostId(postIdForModal);
         setIsManualPublishOpen(true);
-    }, [content, hashtags, imageUrl, selectedPlatforms, primaryPlatform, editingPostId, selectedBrand, createPostMutation, textProvider, getFullContent]);
+    }, [content, hashtags, imageUrl, videoUrl, selectedPlatforms, primaryPlatform, editingPostId, selectedBrand, createPostMutation, textProvider, getFullContent]);
 
     const handlePlatformPublished = useCallback((postId?: number, platform?: Platform) => {
         console.log(`Platform ${platform} marked as published for post ${postId}`);
@@ -407,8 +413,10 @@ export default function CreatorPage() {
 
     const handleImageFromChat = useCallback((newImageUrl: string) => {
         setImageUrl(newImageUrl);
+        setVideoUrl(undefined);
     }, []);
 
+    const hasMedia = !!imageUrl || !!videoUrl;
     const isSaving = createPostMutation.isPending || updatePostMutation.isPending;
 
     return (
@@ -448,9 +456,9 @@ export default function CreatorPage() {
                                     <Alert className="border-violet-500/30 bg-violet-500/5">
                                         <Pencil className="h-4 w-4 text-violet-500" />
                                         <AlertDescription className="flex flex-col xs:flex-row xs:items-center justify-between gap-2">
-                                            <span className="text-sm">
-                                                <strong>Tryb edycji</strong> — Post #{editingPostId}
-                                            </span>
+                      <span className="text-sm">
+                        <strong>Tryb edycji</strong> — Post #{editingPostId}
+                      </span>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
@@ -471,8 +479,8 @@ export default function CreatorPage() {
                                     <AlertDescription className="text-xs sm:text-sm">
                                         <strong>Kreator</strong> służy do tworzenia postów z AI.
                                         <span className="hidden sm:inline">
-                                            {' '}Publikacja na <strong>konta osobiste</strong> wymaga ręcznego skopiowania treści.
-                                        </span>
+                      {' '}Publikacja na <strong>konta osobiste</strong> wymaga ręcznego skopiowania treści.
+                    </span>
                                     </AlertDescription>
                                 </Alert>
                             )}
@@ -499,6 +507,8 @@ export default function CreatorPage() {
                                 onChange={setContent}
                                 imageUrl={imageUrl}
                                 onImageChange={setImageUrl}
+                                videoUrl={videoUrl}
+                                onVideoChange={setVideoUrl}
                                 hashtags={hashtags}
                                 onHashtagsChange={setHashtags}
                                 platforms={selectedPlatforms}
@@ -513,6 +523,7 @@ export default function CreatorPage() {
                             <PostPreview
                                 content={content}
                                 imageUrl={imageUrl}
+                                videoUrl={videoUrl}
                                 platforms={selectedPlatforms}
                                 brandName={selectedBrand?.name}
                             />
@@ -526,7 +537,7 @@ export default function CreatorPage() {
                             onPublishManually={handlePublishManually}
                             isSaving={isSaving}
                             hasContent={!!content.trim()}
-                            hasImage={!!imageUrl}
+                            hasImage={hasMedia}
                             selectedPlatform={primaryPlatform}
                             selectedPlatforms={selectedPlatforms}
                             isEditMode={!!editingPostId}

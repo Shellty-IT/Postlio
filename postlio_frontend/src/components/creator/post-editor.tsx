@@ -1,4 +1,5 @@
 // src/components/creator/post-editor.tsx
+
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -14,6 +15,8 @@ import {
     Upload,
     Crop,
     AlertTriangle,
+    Film,
+    Download,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -37,6 +40,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AIProviderSelector } from './ai-provider-selector';
 import { ImageCropModal } from './image-crop-modal';
+import { generateVideo as generateVideoApi } from '@/lib/api/ai';
 import { cn } from '@/lib/utils';
 import type { Platform } from '@/types';
 import type { TextProvider, ImageProvider } from '@/lib/api/ai';
@@ -46,6 +50,8 @@ interface PostEditorProps {
     onChange: (content: string) => void;
     imageUrl?: string;
     onImageChange: (url: string | undefined) => void;
+    videoUrl?: string;
+    onVideoChange: (url: string | undefined) => void;
     hashtags: string[];
     onHashtagsChange: (hashtags: string[]) => void;
     platforms: Platform[];
@@ -96,8 +102,8 @@ function CharCounter({ current, max, className }: CharCounterProps) {
                 isOverLimit ? 'text-red-500' :
                     isNearLimit ? 'text-amber-500' : 'text-muted-foreground'
             )}>
-                {current}/{max}
-            </span>
+        {current}/{max}
+      </span>
         </div>
     );
 }
@@ -107,6 +113,8 @@ export function PostEditor({
                                onChange,
                                imageUrl,
                                onImageChange,
+                               videoUrl,
+                               onVideoChange,
                                hashtags,
                                onHashtagsChange,
                                platforms,
@@ -123,6 +131,7 @@ export function PostEditor({
     const [newHashtag, setNewHashtag] = useState('');
     const [isGenerateTextOpen, setIsGenerateTextOpen] = useState(false);
     const [isGenerateImageOpen, setIsGenerateImageOpen] = useState(false);
+    const [isGenerateVideoOpen, setIsGenerateVideoOpen] = useState(false);
     const [isCropModalOpen, setIsCropModalOpen] = useState(false);
     const [textPrompt, setTextPrompt] = useState('');
     const [imagePrompt, setImagePrompt] = useState('');
@@ -131,6 +140,10 @@ export function PostEditor({
     const [selectedTextProvider, setSelectedTextProvider] = useState<TextProvider>(defaultTextProvider);
     const [selectedImageProvider, setSelectedImageProvider] = useState<ImageProvider>(defaultImageProvider);
     const [selectedImageModel, setSelectedImageModel] = useState<string>(defaultImageModel);
+
+    const [videoPrompt, setVideoPrompt] = useState('');
+    const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+    const [videoError, setVideoError] = useState<string | undefined>();
 
     useEffect(() => {
         setSelectedTextProvider(defaultTextProvider);
@@ -185,6 +198,13 @@ export function PostEditor({
         });
     }, []);
 
+    const handleVideoStyleClick = useCallback((style: string) => {
+        setVideoPrompt(prev => {
+            if (!prev.trim()) return style.toLowerCase();
+            return `${prev.trim()}, ${style.toLowerCase()}`;
+        });
+    }, []);
+
     const handleGenerateText = useCallback(async () => {
         if (!textPrompt.trim() || !onGenerateText) return;
 
@@ -194,7 +214,6 @@ export function PostEditor({
             setIsGenerateTextOpen(false);
             setTextPrompt('');
         } catch {
-            // Error handled by parent
         } finally {
             setIsGeneratingLocal(false);
         }
@@ -205,27 +224,56 @@ export function PostEditor({
 
         setIsGeneratingLocal(true);
         try {
-            console.log(`🖼️ Generating image with provider=${selectedImageProvider}, model=${selectedImageModel}`);
-            await onGenerateImage(imagePrompt, selectedImageProvider, selectedImageModel);
+            const result = await onGenerateImage(imagePrompt, selectedImageProvider, selectedImageModel);
+            if (result) {
+                onVideoChange(undefined);
+            }
             setIsGenerateImageOpen(false);
             setImagePrompt('');
         } catch {
-            // Error handled by parent
         } finally {
             setIsGeneratingLocal(false);
         }
-    }, [imagePrompt, onGenerateImage, selectedImageProvider, selectedImageModel]);
+    }, [imagePrompt, onGenerateImage, selectedImageProvider, selectedImageModel, onVideoChange]);
+
+    const handleGenerateVideo = useCallback(async () => {
+        if (!videoPrompt.trim()) return;
+
+        setIsGeneratingVideo(true);
+        setVideoError(undefined);
+
+        try {
+            const result = await generateVideoApi({
+                prompt: videoPrompt,
+                model: 'seedance',
+            });
+
+            if (result.success && result.data?.video_data) {
+                onVideoChange(result.data.video_data);
+                onImageChange(undefined);
+                setIsGenerateVideoOpen(false);
+                setVideoPrompt('');
+            } else {
+                setVideoError(result.error || 'Nie udało się wygenerować filmu');
+            }
+        } catch {
+            setVideoError('Błąd podczas generowania filmu. Spróbuj ponownie.');
+        } finally {
+            setIsGeneratingVideo(false);
+        }
+    }, [videoPrompt, onVideoChange, onImageChange]);
 
     const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             const url = URL.createObjectURL(file);
             onImageChange(url);
+            onVideoChange(undefined);
         }
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
-    }, [onImageChange]);
+    }, [onImageChange, onVideoChange]);
 
     const handleImageProviderChange = (provider: string, model?: string) => {
         setSelectedImageProvider(provider as ImageProvider);
@@ -253,6 +301,25 @@ export function PostEditor({
             setImagePrompt(value);
         }
     }, []);
+
+    const handleVideoPromptChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const value = e.target.value;
+        if (value.length <= PROMPT_LIMIT) {
+            setVideoPrompt(value);
+        }
+    }, []);
+
+    const handleDownloadVideo = useCallback(() => {
+        if (!videoUrl) return;
+        const link = document.createElement('a');
+        link.href = videoUrl;
+        link.download = `postlio-video-${Date.now()}.mp4`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }, [videoUrl]);
+
+    const hasMedia = !!imageUrl || !!videoUrl;
 
     return (
         <div className="space-y-3 sm:space-y-4">
@@ -317,12 +384,12 @@ export function PostEditor({
                             </TooltipProvider>
                         )}
                         <span className={cn(isOverLimit && 'animate-pulse')}>
-                            {charCount.toLocaleString()}
-                        </span>
+              {charCount.toLocaleString()}
+            </span>
                         <span className="text-muted-foreground">/</span>
                         <span className="text-muted-foreground">
-                            {SOFT_LIMIT}
-                        </span>
+              {SOFT_LIMIT}
+            </span>
                     </div>
                 </div>
             </div>
@@ -353,14 +420,37 @@ export function PostEditor({
                                 size="sm"
                                 onClick={() => setIsGenerateImageOpen(true)}
                                 disabled={isGenerating}
-                                className="gap-1.5 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3"
+                                className={cn(
+                                    "gap-1.5 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3",
+                                    videoUrl && "opacity-50"
+                                )}
                             >
                                 <Wand2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
                                 <span className="hidden xs:inline">Generuj obraz</span>
                                 <span className="xs:hidden">Obraz</span>
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Wygeneruj obraz z AI</TooltipContent>
+                        <TooltipContent>{videoUrl ? 'Zastąpi aktualny film' : 'Wygeneruj obraz z AI'}</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsGenerateVideoOpen(true)}
+                                disabled={isGenerating || isGeneratingVideo}
+                                className={cn(
+                                    "gap-1.5 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3",
+                                    imageUrl && !videoUrl && "opacity-50"
+                                )}
+                            >
+                                <Film className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
+                                <span className="hidden xs:inline">Generuj film</span>
+                                <span className="xs:hidden">Film</span>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{imageUrl && !videoUrl ? 'Zastąpi aktualne zdjęcie' : 'Wygeneruj film z AI'}</TooltipContent>
                     </Tooltip>
 
                     <Tooltip>
@@ -445,9 +535,10 @@ export function PostEditor({
                 </div>
             )}
 
-            <AnimatePresence>
-                {imageUrl && (
+            <AnimatePresence mode="wait">
+                {imageUrl && !videoUrl && (
                     <motion.div
+                        key="image"
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
@@ -486,6 +577,55 @@ export function PostEditor({
                             >
                                 <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </Button>
+                        </div>
+                    </motion.div>
+                )}
+
+                {videoUrl && !imageUrl && (
+                    <motion.div
+                        key="video"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="relative rounded-lg overflow-hidden border border-border bg-black"
+                    >
+                        <video
+                            src={videoUrl}
+                            controls
+                            playsInline
+                            className="w-full max-h-48 xs:max-h-64 sm:max-h-80 rounded-lg"
+                        />
+                        <div className="absolute top-2 right-2 flex gap-1.5 sm:gap-2">
+                            <Button
+                                variant="secondary"
+                                size="icon"
+                                className="h-7 w-7 sm:h-8 sm:w-8 bg-background/80 backdrop-blur-sm"
+                                onClick={handleDownloadVideo}
+                            >
+                                <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                size="icon"
+                                className="h-7 w-7 sm:h-8 sm:w-8 bg-background/80 backdrop-blur-sm"
+                                onClick={() => setIsGenerateVideoOpen(true)}
+                            >
+                                <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                size="icon"
+                                className="h-7 w-7 sm:h-8 sm:w-8 bg-background/80 backdrop-blur-sm"
+                                onClick={() => onVideoChange(undefined)}
+                            >
+                                <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </Button>
+                        </div>
+                        <div className="absolute bottom-2 left-2">
+                            <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm text-[10px] sm:text-xs gap-1">
+                                <Film className="w-3 h-3" />
+                                Wygenerowany film
+                            </Badge>
                         </div>
                     </motion.div>
                 )}
@@ -587,7 +727,9 @@ export function PostEditor({
                             Generuj obraz z AI
                         </DialogTitle>
                         <DialogDescription className="text-xs sm:text-sm">
-                            Opisz obraz, który chcesz wygenerować.
+                            {videoUrl
+                                ? 'Wygenerowanie obrazu zastąpi aktualny film.'
+                                : 'Opisz obraz, który chcesz wygenerować.'}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -664,6 +806,117 @@ export function PostEditor({
                                 <>
                                     <Wand2 className="w-4 h-4" />
                                     Generuj
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isGenerateVideoOpen} onOpenChange={(open) => {
+                setIsGenerateVideoOpen(open);
+                if (!open) setVideoError(undefined);
+            }}>
+                <DialogContent className="w-[calc(100%-2rem)] sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+                            <Film className="w-4 h-4 sm:w-5 sm:h-5 text-violet-500" />
+                            Generuj film z AI
+                        </DialogTitle>
+                        <DialogDescription className="text-xs sm:text-sm">
+                            {imageUrl && !videoUrl
+                                ? 'Wygenerowanie filmu zastąpi aktualne zdjęcie.'
+                                : 'Opisz film, który chcesz stworzyć.'}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2 sm:py-4">
+                        <AIProviderSelector
+                            type="video"
+                            value="pollinations"
+                            selectedModel="seedance"
+                            onChange={() => {}}
+                        />
+
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="video-prompt" className="text-sm">Opis filmu</Label>
+                                <CharCounter current={videoPrompt.length} max={PROMPT_LIMIT} />
+                            </div>
+                            <Textarea
+                                id="video-prompt"
+                                value={videoPrompt}
+                                onChange={handleVideoPromptChange}
+                                placeholder="np. Płynna animacja wschodu słońca nad morzem z delikatnym ruchem fal..."
+                                className="min-h-[80px] sm:min-h-[100px] text-sm"
+                                maxLength={PROMPT_LIMIT}
+                            />
+                            <div className="space-y-0.5">
+                                <p className="text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400">
+                                    ✨ Prompt zostanie automatycznie ulepszony i przetłumaczony
+                                </p>
+                                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                                    ⏱️ Generowanie trwa ok. 30s - 2 min
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">
+                                Style
+                            </Label>
+                            <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                                {[
+                                    'Kinematograficzny',
+                                    'Dynamiczny',
+                                    'Spokojny',
+                                    'Naturalny',
+                                ].map((style) => (
+                                    <Button
+                                        key={style}
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-[10px] sm:text-xs h-7 sm:h-8"
+                                        onClick={() => handleVideoStyleClick(style)}
+                                    >
+                                        {style}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {videoError && (
+                            <div className="text-sm text-red-500 bg-red-50 dark:bg-red-950/50 rounded-lg p-3 flex items-start gap-2">
+                                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                <span>{videoError}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsGenerateVideoOpen(false)}
+                            disabled={isGeneratingVideo}
+                            className="flex-1 sm:flex-none"
+                        >
+                            Anuluj
+                        </Button>
+                        <Button
+                            onClick={handleGenerateVideo}
+                            disabled={!videoPrompt.trim() || isGeneratingVideo}
+                            className="flex-1 sm:flex-none gap-2 bg-gradient-to-r from-primary to-violet-500"
+                        >
+                            {isGeneratingVideo ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span className="hidden xs:inline">Generowanie...</span>
+                                    <span className="xs:hidden">Generuję...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Film className="w-4 h-4" />
+                                    Generuj film
                                 </>
                             )}
                         </Button>

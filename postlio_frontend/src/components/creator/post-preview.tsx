@@ -1,4 +1,5 @@
 // src/components/creator/post-preview.tsx
+
 'use client';
 
 import Image from 'next/image';
@@ -15,6 +16,8 @@ import {
     Bookmark,
     ThumbsUp,
     MoreHorizontal,
+    Film,
+    Play,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -22,27 +25,53 @@ interface PostPreviewProps {
     content: string;
     platforms: Platform[];
     imageUrl?: string;
+    videoUrl?: string;
     brandName?: string;
     brandLogo?: string;
 }
 
-function PreviewImage({ src, alt, aspectRatio = 'video' }: { src: string; alt: string; aspectRatio?: 'video' | 'square' }) {
+function PreviewMedia({ imageUrl, videoUrl, aspectRatio = 'video' }: { imageUrl?: string; videoUrl?: string; aspectRatio?: 'video' | 'square' }) {
     const aspectClass = aspectRatio === 'square' ? 'aspect-square' : 'aspect-video';
 
-    return (
-        <div className={`relative ${aspectClass} bg-muted overflow-hidden`}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-                src={src}
-                alt={alt}
-                className="absolute inset-0 w-full h-full object-cover"
-                loading="lazy"
-            />
-        </div>
-    );
+    if (videoUrl) {
+        return (
+            <div className={`relative ${aspectClass} bg-black overflow-hidden`}>
+                <video
+                    src={videoUrl}
+                    controls
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-contain"
+                />
+                <div className="absolute top-2 left-2 pointer-events-none">
+                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[10px]">
+                        <Film className="w-2.5 h-2.5" />
+                        Wideo
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (imageUrl) {
+        return (
+            <div className={`relative ${aspectClass} bg-muted overflow-hidden`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                    src={imageUrl}
+                    alt="Post image"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                />
+            </div>
+        );
+    }
+
+    return null;
 }
 
-function FacebookPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostPreviewProps, 'platforms'>) {
+function FacebookPreview({ content, imageUrl, videoUrl, brandName, brandLogo }: Omit<PostPreviewProps, 'platforms'>) {
+    const hasMedia = !!imageUrl || !!videoUrl;
+
     return (
         <div className="bg-white dark:bg-[#242526] rounded-lg overflow-hidden shadow">
             <div className="flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3">
@@ -75,7 +104,7 @@ function FacebookPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostP
                 </p>
             </div>
 
-            {imageUrl && <PreviewImage src={imageUrl} alt="Post image" aspectRatio="video" />}
+            {hasMedia && <PreviewMedia imageUrl={imageUrl} videoUrl={videoUrl} aspectRatio="video" />}
 
             <div className="px-2 sm:px-3 py-1.5 sm:py-2 border-t border-[#CED0D4] dark:border-[#3E4042]">
                 <div className="flex justify-around">
@@ -97,7 +126,9 @@ function FacebookPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostP
     );
 }
 
-function InstagramPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostPreviewProps, 'platforms'>) {
+function InstagramPreview({ content, imageUrl, videoUrl, brandName, brandLogo }: Omit<PostPreviewProps, 'platforms'>) {
+    const hasMedia = !!imageUrl || !!videoUrl;
+
     return (
         <div className="bg-white dark:bg-black rounded-lg overflow-hidden border border-[#DBDBDB] dark:border-[#262626]">
             <div className="flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3">
@@ -122,7 +153,22 @@ function InstagramPreview({ content, imageUrl, brandName, brandLogo }: Omit<Post
             </div>
 
             <div className="relative aspect-square bg-muted">
-                {imageUrl ? (
+                {videoUrl ? (
+                    <>
+                        <video
+                            src={videoUrl}
+                            controls
+                            playsInline
+                            className="absolute inset-0 w-full h-full object-contain bg-black"
+                        />
+                        <div className="absolute top-2 right-2 pointer-events-none">
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[10px]">
+                                <Play className="w-2.5 h-2.5" />
+                                Reels
+                            </div>
+                        </div>
+                    </>
+                ) : imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                         src={imageUrl}
@@ -149,9 +195,9 @@ function InstagramPreview({ content, imageUrl, brandName, brandLogo }: Omit<Post
 
                 <div>
                     <p className="text-xs sm:text-sm">
-                        <span className="font-semibold mr-1">
-                            {brandName?.toLowerCase().replace(/\s/g, '') || 'twoja_marka'}
-                        </span>
+            <span className="font-semibold mr-1">
+              {brandName?.toLowerCase().replace(/\s/g, '') || 'twoja_marka'}
+            </span>
                         {content || 'Podgląd Twojego posta pojawi się tutaj...'}
                     </p>
                 </div>
@@ -160,7 +206,9 @@ function InstagramPreview({ content, imageUrl, brandName, brandLogo }: Omit<Post
     );
 }
 
-function LinkedInPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostPreviewProps, 'platforms'>) {
+function LinkedInPreview({ content, imageUrl, videoUrl, brandName, brandLogo }: Omit<PostPreviewProps, 'platforms'>) {
+    const hasMedia = !!imageUrl || !!videoUrl;
+
     return (
         <div className="bg-white dark:bg-[#1B1F23] rounded-lg overflow-hidden border border-[#E0E0E0] dark:border-[#38434F]">
             <div className="flex items-start gap-2.5 sm:gap-3 p-3 sm:p-4">
@@ -192,17 +240,17 @@ function LinkedInPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostP
                 </p>
             </div>
 
-            {imageUrl && <PreviewImage src={imageUrl} alt="Post image" aspectRatio="video" />}
+            {hasMedia && <PreviewMedia imageUrl={imageUrl} videoUrl={videoUrl} aspectRatio="video" />}
 
             <div className="px-3 sm:px-4 py-1.5 sm:py-2 flex items-center gap-1 text-[10px] xs:text-xs text-[#666666] dark:text-[#FFFFFFA6]">
-                <span className="flex -space-x-1">
-                    <span className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-[#0A66C2] flex items-center justify-center">
-                        <ThumbsUp className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-white" />
-                    </span>
-                    <span className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-[#E7A33E] flex items-center justify-center">
-                        <Heart className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-white" />
-                    </span>
-                </span>
+        <span className="flex -space-x-1">
+          <span className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-[#0A66C2] flex items-center justify-center">
+            <ThumbsUp className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-white" />
+          </span>
+          <span className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-[#E7A33E] flex items-center justify-center">
+            <Heart className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-white" />
+          </span>
+        </span>
                 <span>24</span>
             </div>
 
@@ -226,7 +274,7 @@ function LinkedInPreview({ content, imageUrl, brandName, brandLogo }: Omit<PostP
     );
 }
 
-export function PostPreview({ content, platforms, imageUrl, brandName, brandLogo }: PostPreviewProps) {
+export function PostPreview({ content, platforms, imageUrl, videoUrl, brandName, brandLogo }: PostPreviewProps) {
     const platformIcons: Record<Platform, React.ReactNode> = {
         facebook: <Facebook className="h-3.5 w-3.5 sm:h-4 sm:w-4" />,
         instagram: <Instagram className="h-3.5 w-3.5 sm:h-4 sm:w-4" />,
@@ -257,13 +305,13 @@ export function PostPreview({ content, platforms, imageUrl, brandName, brandLogo
                 </TabsList>
 
                 <TabsContent value="facebook" className="mt-3 sm:mt-4">
-                    <FacebookPreview content={content} imageUrl={imageUrl} brandName={brandName} brandLogo={brandLogo} />
+                    <FacebookPreview content={content} imageUrl={imageUrl} videoUrl={videoUrl} brandName={brandName} brandLogo={brandLogo} />
                 </TabsContent>
                 <TabsContent value="instagram" className="mt-3 sm:mt-4">
-                    <InstagramPreview content={content} imageUrl={imageUrl} brandName={brandName} brandLogo={brandLogo} />
+                    <InstagramPreview content={content} imageUrl={imageUrl} videoUrl={videoUrl} brandName={brandName} brandLogo={brandLogo} />
                 </TabsContent>
                 <TabsContent value="linkedin" className="mt-3 sm:mt-4">
-                    <LinkedInPreview content={content} imageUrl={imageUrl} brandName={brandName} brandLogo={brandLogo} />
+                    <LinkedInPreview content={content} imageUrl={imageUrl} videoUrl={videoUrl} brandName={brandName} brandLogo={brandLogo} />
                 </TabsContent>
             </Tabs>
         </div>

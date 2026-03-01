@@ -1,7 +1,4 @@
 // src/components/creator/ai-provider-selector.tsx
-/**
- * Selektor providerów AI - Flux i Nanobanana jako osobne opcje
- */
 
 'use client';
 
@@ -17,6 +14,7 @@ import {
     ChevronDown,
     Info,
     Rocket,
+    Film,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -35,10 +33,6 @@ import { cn } from '@/lib/utils';
 import { useAIProviders } from '@/hooks';
 import type { TextProvider, ImageProvider } from '@/lib/api/ai';
 
-// ============================================================
-// TYPY
-// ============================================================
-
 interface ProviderOption {
     id: string;
     name: string;
@@ -46,23 +40,18 @@ interface ProviderOption {
     icon: React.ElementType;
     color: string;
     features: string[];
-    // Dla image providerów z modelem
-    backendProvider?: string;  // np. "pollinations"
-    backendModel?: string;     // np. "flux"
+    backendProvider?: string;
+    backendModel?: string;
 }
 
 interface AIProviderSelectorProps {
-    type: 'text' | 'image';
+    type: 'text' | 'image' | 'video';
     value?: string;
     onChange: (provider: string, model?: string) => void;
     selectedModel?: string;
     compact?: boolean;
     className?: string;
 }
-
-// ============================================================
-// KONFIGURACJA PROVIDERÓW TEKSTU
-// ============================================================
 
 const TEXT_PROVIDERS: ProviderOption[] = [
     {
@@ -83,10 +72,6 @@ const TEXT_PROVIDERS: ProviderOption[] = [
     },
 ];
 
-// ============================================================
-// ✅ NOWE: KONFIGURACJA PROVIDERÓW OBRAZÓW - KAŻDY MODEL OSOBNO
-// ============================================================
-
 const IMAGE_PROVIDERS: ProviderOption[] = [
     {
         id: 'flux',
@@ -99,14 +84,14 @@ const IMAGE_PROVIDERS: ProviderOption[] = [
         backendModel: 'flux',
     },
     {
-        id: 'nanobanana',  // ID dla UI
-        name: 'Nanobanana',
-        description: 'Szybki i lekki model.',
+        id: 'gptimage',
+        name: 'GPT Image 1 Mini',
+        description: 'Szybki model od OpenAI. Dobra jakość i kreatywność.',
         icon: Zap,
-        color: 'from-amber-500 to-orange-500',
-        features: ['Szybki', 'Kreatywny styl', '~10s'],
+        color: 'from-emerald-500 to-teal-500',
+        features: ['OpenAI', 'Kreatywny', '~10s'],
         backendProvider: 'pollinations',
-        backendModel: 'nanobanana',
+        backendModel: 'gptimage',
     },
     {
         id: 'huggingface',
@@ -120,9 +105,18 @@ const IMAGE_PROVIDERS: ProviderOption[] = [
     },
 ];
 
-// ============================================================
-// KOMPONENT KARTY PROVIDERA
-// ============================================================
+const VIDEO_PROVIDERS: ProviderOption[] = [
+    {
+        id: 'seedance',
+        name: 'Seedance Lite',
+        description: 'Generowanie filmów z opisu tekstowego. Płynny ruch i dobra jakość.',
+        icon: Film,
+        color: 'from-pink-500 to-rose-500',
+        features: ['Z promptu', 'Płynny ruch', '~30s - 2 min'],
+        backendProvider: 'pollinations',
+        backendModel: 'seedance',
+    },
+];
 
 interface ProviderCardProps {
     provider: ProviderOption;
@@ -155,7 +149,6 @@ function ProviderCard({
                 !isAvailable && "opacity-50 cursor-not-allowed"
             )}
         >
-            {/* Selected indicator */}
             {isSelected && (
                 <motion.div
                     initial={{ scale: 0 }}
@@ -166,7 +159,6 @@ function ProviderCard({
                 </motion.div>
             )}
 
-            {/* Default badge */}
             {isDefault && (
                 <div className="absolute top-2 right-2 flex items-center gap-1 text-xs text-amber-500">
                     <Rocket className="w-3 h-3" />
@@ -175,7 +167,6 @@ function ProviderCard({
             )}
 
             <div className="flex items-start gap-3">
-                {/* Icon */}
                 <div className={cn(
                     "w-10 h-10 rounded-lg bg-gradient-to-br flex items-center justify-center flex-shrink-0",
                     provider.color
@@ -183,28 +174,25 @@ function ProviderCard({
                     <Icon className="w-5 h-5 text-white" />
                 </div>
 
-                {/* Content */}
                 <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-sm truncate">{provider.name}</h4>
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                         {provider.description}
                     </p>
 
-                    {/* Features */}
                     <div className="flex flex-wrap gap-1 mt-2">
                         {provider.features.map((feature) => (
                             <span
                                 key={feature}
                                 className="px-1.5 py-0.5 text-[10px] rounded-md bg-muted text-muted-foreground"
                             >
-                                {feature}
-                            </span>
+                {feature}
+              </span>
                         ))}
                     </div>
                 </div>
             </div>
 
-            {/* Unavailable overlay */}
             {!isAvailable && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-xl">
                     <span className="text-xs text-muted-foreground">Niedostępny</span>
@@ -213,10 +201,6 @@ function ProviderCard({
         </motion.button>
     );
 }
-
-// ============================================================
-// GŁÓWNY KOMPONENT
-// ============================================================
 
 export function AIProviderSelector({
                                        type,
@@ -229,17 +213,21 @@ export function AIProviderSelector({
     const [isOpen, setIsOpen] = useState(false);
     const { data: providersData, isLoading } = useAIProviders();
 
-    const providers = type === 'text' ? TEXT_PROVIDERS : IMAGE_PROVIDERS;
+    const providers = type === 'text'
+        ? TEXT_PROVIDERS
+        : type === 'image'
+            ? IMAGE_PROVIDERS
+            : VIDEO_PROVIDERS;
 
-    // Dla obrazów: znajdź po ID (flux/nanobanana/huggingface)
-    // Dla tekstu: znajdź po ID (gemini/groq)
     const getSelectedId = () => {
         if (type === 'text') {
             return value || 'gemini';
         }
-        // Dla obrazów: sprawdź kombinację provider + model
-        if (value === 'pollinations' && selectedModel === 'nanobanana') {
-            return 'nanobanana';
+        if (type === 'video') {
+            return 'seedance';
+        }
+        if (value === 'pollinations' && selectedModel === 'gptimage') {
+            return 'gptimage';
         }
         if (value === 'pollinations' && selectedModel === 'flux') {
             return 'flux';
@@ -247,7 +235,7 @@ export function AIProviderSelector({
         if (value === 'huggingface') {
             return 'huggingface';
         }
-        return 'flux'; // domyślny
+        return 'flux';
     };
 
     const selectedId = getSelectedId();
@@ -257,7 +245,6 @@ export function AIProviderSelector({
         if (type === 'text') {
             onChange(provider.id);
         } else {
-            // Dla obrazów: przekaż backendProvider i backendModel
             onChange(
                 provider.backendProvider || provider.id,
                 provider.backendModel
@@ -266,13 +253,17 @@ export function AIProviderSelector({
         setIsOpen(false);
     };
 
-    // Sprawdź dostępność providera na backendzie
     const isProviderAvailable = (provider: ProviderOption): boolean => {
         if (!providersData) return true;
 
-        const apiProviders = type === 'text'
-            ? providersData.text_providers
-            : providersData.image_providers;
+        let apiProviders;
+        if (type === 'text') {
+            apiProviders = providersData.text_providers;
+        } else if (type === 'image') {
+            apiProviders = providersData.image_providers;
+        } else {
+            apiProviders = providersData.video_providers;
+        }
 
         const backendName = provider.backendProvider || provider.id;
         const backendProvider = apiProviders?.find(
@@ -282,9 +273,27 @@ export function AIProviderSelector({
         return backendProvider?.available ?? true;
     };
 
-    const Icon = selectedProvider.icon;
+    const getDefaultId = () => {
+        if (type === 'text') return 'gemini';
+        if (type === 'image') return 'flux';
+        return 'seedance';
+    };
 
-    // Wersja kompaktowa - tylko przycisk
+    const getTypeLabel = () => {
+        if (type === 'text') return 'tekstu';
+        if (type === 'image') return 'obrazu';
+        return 'wideo';
+    };
+
+    const getTypeIcon = () => {
+        if (type === 'text') return Sparkles;
+        if (type === 'image') return ImageIcon;
+        return Film;
+    };
+
+    const Icon = selectedProvider.icon;
+    const TypeIcon = getTypeIcon();
+
     if (compact) {
         return (
             <TooltipProvider>
@@ -305,28 +314,22 @@ export function AIProviderSelector({
                                         <Icon className="w-2.5 h-2.5 text-white" />
                                     </div>
                                     <span className="text-xs max-w-[100px] truncate">
-                                        {selectedProvider.name}
-                                    </span>
+                    {selectedProvider.name}
+                  </span>
                                     <ChevronDown className="w-3 h-3 text-muted-foreground" />
                                 </Button>
                             </PopoverTrigger>
                         </TooltipTrigger>
                         <TooltipContent>
-                            <p>Zmień {type === 'text' ? 'model tekstu' : 'model obrazu'}</p>
+                            <p>Zmień model {getTypeLabel()}</p>
                         </TooltipContent>
                     </Tooltip>
 
                     <PopoverContent className="w-80 p-2" align="start">
                         <div className="space-y-1">
                             <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground">
-                                {type === 'text' ? (
-                                    <Sparkles className="w-3.5 h-3.5" />
-                                ) : (
-                                    <ImageIcon className="w-3.5 h-3.5" />
-                                )}
-                                <span>
-                                    {type === 'text' ? 'Model AI tekstu' : 'Model AI obrazu'}
-                                </span>
+                                <TypeIcon className="w-3.5 h-3.5" />
+                                <span>Model AI {getTypeLabel()}</span>
                             </div>
 
                             <div className="space-y-1.5">
@@ -335,7 +338,7 @@ export function AIProviderSelector({
                                         key={provider.id}
                                         provider={provider}
                                         isSelected={selectedId === provider.id}
-                                        isDefault={provider.id === 'flux' || provider.id === 'gemini'}
+                                        isDefault={provider.id === getDefaultId()}
                                         isAvailable={isProviderAvailable(provider)}
                                         onSelect={() => handleSelect(provider)}
                                     />
@@ -348,23 +351,12 @@ export function AIProviderSelector({
         );
     }
 
-    // Wersja pełna - karty
     return (
         <div className={cn("space-y-3", className)}>
-            {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm font-medium">
-                    {type === 'text' ? (
-                        <>
-                            <Sparkles className="w-4 h-4 text-violet-500" />
-                            <span>Model AI dla tekstu</span>
-                        </>
-                    ) : (
-                        <>
-                            <ImageIcon className="w-4 h-4 text-violet-500" />
-                            <span>Model AI dla obrazów</span>
-                        </>
-                    )}
+                    <TypeIcon className="w-4 h-4 text-violet-500" />
+                    <span>Model AI dla {getTypeLabel()}</span>
                 </div>
 
                 <TooltipProvider>
@@ -376,28 +368,28 @@ export function AIProviderSelector({
                             <p>
                                 {type === 'text'
                                     ? 'Wybierz model AI do generowania tekstu.'
-                                    : 'Prompty są automatycznie tłumaczone na język angielski, aby zapewnić wyższą jakość generowanych obrazów.'}
+                                    : type === 'image'
+                                        ? 'Prompty są automatycznie tłumaczone na angielski dla wyższej jakości.'
+                                        : 'Generowanie wideo trwa ok. 30s - 2 min. Prompt jest automatycznie ulepszany.'}
                             </p>
                         </TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
             </div>
 
-            {/* Provider cards */}
             <div className="grid gap-2">
                 {providers.map((provider) => (
                     <ProviderCard
                         key={provider.id}
                         provider={provider}
                         isSelected={selectedId === provider.id}
-                        isDefault={provider.id === 'flux' || provider.id === 'gemini'}
+                        isDefault={provider.id === getDefaultId()}
                         isAvailable={isProviderAvailable(provider)}
                         onSelect={() => handleSelect(provider)}
                     />
                 ))}
             </div>
 
-            {/* Loading state */}
             {isLoading && (
                 <p className="text-xs text-muted-foreground text-center">
                     Sprawdzanie dostępności...
@@ -406,10 +398,6 @@ export function AIProviderSelector({
         </div>
     );
 }
-
-// ============================================================
-// WERSJA INLINE - do użycia w jednej linii
-// ============================================================
 
 interface InlineProviderSelectorProps {
     textProvider?: TextProvider;

@@ -1,7 +1,4 @@
 // src/lib/api/index.ts
-/**
- * API Layer - Eksport zbiorczy
- */
 
 // ============================================================
 // CLIENT & UTILITIES
@@ -78,12 +75,16 @@ export type {
 export type {
     ProviderInfo,
     ProvidersResponse,
+    VideoModelInfo,
     TextGenerationRequest,
     TextGenerationResponse,
     GeneratedTextContent,
     ImageGenerationRequest,
     ImageGenerationResponse,
     GeneratedImageContent,
+    VideoGenerationRequest,
+    VideoGenerationResponse,
+    GeneratedVideoContent,
     ChatMessage,
     ChatRequest,
     ChatResponse,
@@ -93,6 +94,7 @@ export type {
     VariationsResponse,
     TextProvider,
     ImageProvider,
+    VideoProvider,
     Platform,
     Category,
     Tone,

@@ -1,19 +1,14 @@
 // src/lib/api/ai.ts
-/**
- * AI API Layer
- *
- * Komunikacja z endpointami AI.
- * Obsługuje wielu providerów text i image.
- */
 
 import { apiClient } from './client';
 
 // ============================================================
-// ENUMS (dopasowane do backendu)
+// ENUMS
 // ============================================================
 
 export type TextProvider = 'gemini' | 'groq';
 export type ImageProvider = 'pollinations' | 'huggingface';
+export type VideoProvider = 'pollinations';
 
 export type Platform = 'facebook' | 'instagram' | 'linkedin';
 
@@ -49,12 +44,18 @@ export type ImageStyle =
 // PROVIDER INFO
 // ============================================================
 
+export interface VideoModelInfo {
+    id: string;
+    name: string;
+}
+
 export interface ProviderInfo {
     name: string;
     display_name?: string;
     available: boolean;
     is_free?: boolean;
     models: string[];
+    models_detailed?: VideoModelInfo[];
     is_default: boolean;
     description?: string;
 }
@@ -62,6 +63,7 @@ export interface ProviderInfo {
 export interface ProvidersResponse {
     text_providers: ProviderInfo[];
     image_providers: ProviderInfo[];
+    video_providers?: ProviderInfo[];
 }
 
 // ============================================================
@@ -186,19 +188,48 @@ export interface ImageGenerationResponse {
 }
 
 // ============================================================
+// VIDEO GENERATION
+// ============================================================
+
+export interface VideoGenerationRequest {
+    prompt: string;
+    provider?: VideoProvider;
+    model?: string;
+    width?: number;
+    height?: number;
+    duration?: number;
+    reference_image?: string;
+}
+
+export interface GeneratedVideoContent {
+    video_data?: string;
+    mime_type?: string;
+    prompt: string;
+    prompt_translated?: string;
+    provider: string;
+    model?: string;
+    model_display_name?: string;
+    width?: number;
+    height?: number;
+    duration?: number;
+    size_bytes?: number;
+    has_reference_image: boolean;
+}
+
+export interface VideoGenerationResponse {
+    success: boolean;
+    data?: GeneratedVideoContent;
+    error?: string;
+}
+
+// ============================================================
 // API FUNCTIONS
 // ============================================================
 
-/**
- * Pobierz listę dostępnych providerów AI
- */
 export async function getProviders(): Promise<ProvidersResponse> {
     return apiClient.get<ProvidersResponse>('/ai/providers');
 }
 
-/**
- * Generuj tekst posta
- */
 export async function generateText(
     request: TextGenerationRequest
 ): Promise<TextGenerationResponse> {
@@ -216,9 +247,6 @@ export async function generateText(
     });
 }
 
-/**
- * Generuj obraz
- */
 export async function generateImage(
     request: ImageGenerationRequest
 ): Promise<ImageGenerationResponse> {
@@ -234,9 +262,22 @@ export async function generateImage(
     });
 }
 
-/**
- * Ulepsz istniejący tekst
- */
+export async function generateVideo(
+    request: VideoGenerationRequest
+): Promise<VideoGenerationResponse> {
+    return apiClient.post<VideoGenerationResponse>('/ai/generate/video', {
+        prompt: request.prompt,
+        provider: request.provider,
+        model: request.model,
+        width: request.width || 848,
+        height: request.height || 480,
+        duration: request.duration || 5,
+        reference_image: request.reference_image,
+    }, {
+        timeout: 240000,
+    });
+}
+
 export async function improveText(
     request: ImproveRequest
 ): Promise<ImproveResponse> {
@@ -249,9 +290,6 @@ export async function improveText(
     });
 }
 
-/**
- * Generuj wariacje tekstu
- */
 export async function generateVariations(
     request: VariationsRequest
 ): Promise<VariationsResponse> {
@@ -264,9 +302,6 @@ export async function generateVariations(
     });
 }
 
-/**
- * Chat z AI (tryb Kreator)
- */
 export async function chat(request: ChatRequest): Promise<ChatResponse> {
     return apiClient.post<ChatResponse>('/ai/chat', {
         messages: request.messages,
@@ -278,13 +313,14 @@ export async function chat(request: ChatRequest): Promise<ChatResponse> {
 }
 
 // ============================================================
-// EXPORT ZBIORCZY
+// EXPORT
 // ============================================================
 
 export const aiApi = {
     getProviders,
     generateText,
     generateImage,
+    generateVideo,
     improveText,
     generateVariations,
     chat,
