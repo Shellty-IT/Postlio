@@ -1,0 +1,14 @@
+# Pliki testowe - sprawdzane osobno przez Jest
+src/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Testy E2E - sprawdzane przez Playwright
+e2e/
+
+# Pliki konfiguracyjne testów
+jest.config.mjs
+jest.setup.js
+playwright.config.ts
