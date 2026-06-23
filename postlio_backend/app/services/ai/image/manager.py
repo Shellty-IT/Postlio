@@ -1,10 +1,13 @@
-﻿# postlio_backend/app/services/ai/image/manager.py
+# postlio_backend/app/services/ai/image/manager.py
 
+import logging
 from typing import Dict, List, Optional, Any
 from app.config import settings
 from app.services.ai.image.base import BaseImageProvider, ImageProvider
 from app.services.ai.image.pollinations import PollinationsProvider
 from app.services.ai.image.huggingface import HuggingFaceProvider
+
+logger = logging.getLogger(__name__)
 
 
 class ImageAIManager:
@@ -32,19 +35,19 @@ class ImageAIManager:
         name = provider_name or settings.DEFAULT_IMAGE_PROVIDER
 
         if name not in self._providers:
-            print(f"⚠️ Unknown provider: {name}, falling back to pollinations")
+            logger.warning("Unknown image provider '%s', falling back to pollinations", name)
             return self._providers[ImageProvider.POLLINATIONS.value]
 
         provider = self._providers[name]
 
         if not provider.is_available:
-            print(f"⚠️ Provider '{name}' not available, trying fallback...")
+            logger.warning("Image provider '%s' not available, trying fallback", name)
             for fallback_name, fallback_provider in self._providers.items():
                 if fallback_provider.is_available:
-                    print(f"✅ Using fallback: {fallback_name}")
+                    logger.info("Using image fallback provider: %s", fallback_name)
                     return fallback_provider
 
-            print(f"❌ No providers available!")
+            logger.error("No image providers available")
             return provider
 
         return provider
@@ -99,7 +102,7 @@ class ImageAIManager:
         """Generuje obraz używając wybranego providera."""
         provider_instance = self.get_provider(provider)
 
-        print(f"🖼️ ImageAIManager: Using {provider_instance.name}, model={model}")
+        logger.info("Image generation: provider=%s model=%s", provider_instance.name, model)
 
         result = await provider_instance.generate_image(
             prompt=prompt,

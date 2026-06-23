@@ -250,7 +250,6 @@ export const useSettingsStore = create<SettingsStore>()(
                 set({ isSaving: true });
                 // TODO: Implement actual account deletion via API
                 await new Promise((resolve) => setTimeout(resolve, 2000));
-                console.log('Account deletion requested');
                 set({ isSaving: false });
             },
 

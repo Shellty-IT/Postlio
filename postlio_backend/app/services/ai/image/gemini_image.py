@@ -1,10 +1,13 @@
-﻿# postlio_backend/app/services/ai/image/gemini_image.py
+# postlio_backend/app/services/ai/image/gemini_image.py
 
+import logging
 from typing import Optional, Dict, Any
 import httpx
 import json
 from app.config import settings
 from app.services.ai.image.base import BaseImageProvider
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiImageProvider(BaseImageProvider):
@@ -63,16 +66,9 @@ class GeminiImageProvider(BaseImageProvider):
         enhanced_prompt = self._enhance_prompt(prompt, style)
         model_name = self._resolve_model(model)
 
-        # Buduj URL
         url = f"{self.base_url}/{model_name}:generateContent"
 
-        print(f"\n{'=' * 60}")
-        print(f"🔄 GEMINI IMAGE DEBUG")
-        print(f"{'=' * 60}")
-        print(f"URL: {url}")
-        print(f"Model: {model_name}")
-        print(f"Prompt: {enhanced_prompt[:100]}...")
-        print(f"API Key (first 10 chars): {self.api_key[:10]}...")
+        logger.debug("Gemini image request: model=%s prompt=%.100s", model_name, enhanced_prompt)
 
         request_body = {
             "contents": [{
@@ -85,7 +81,7 @@ class GeminiImageProvider(BaseImageProvider):
             },
         }
 
-        print(f"Request body: {json.dumps(request_body, indent=2)}")
+        logger.debug("Gemini request body: %s", json.dumps(request_body))
 
         try:
             async with httpx.AsyncClient(timeout=120.0) as client:
@@ -96,24 +92,19 @@ class GeminiImageProvider(BaseImageProvider):
                     json=request_body,
                 )
 
-                print(f"\n📥 RESPONSE")
-                print(f"Status: {response.status_code}")
-                print(f"Headers: {dict(response.headers)}")
+                logger.debug("Gemini response: status=%s", response.status_code)
 
-                # Pokaż pełną odpowiedź
                 try:
                     response_text = response.text
-                    print(f"Body (first 2000 chars):\n{response_text[:2000]}")
+                    logger.debug("Gemini response body (first 2000 chars): %.2000s", response_text)
 
                     if response_text:
                         data = json.loads(response_text)
                     else:
                         data = {}
                 except Exception as e:
-                    print(f"Failed to parse response: {e}")
+                    logger.warning("Gemini: failed to parse response: %s", e)
                     data = {}
-
-                print(f"{'=' * 60}\n")
 
                 if response.status_code == 200:
                     candidates = data.get("candidates", [])
@@ -121,7 +112,7 @@ class GeminiImageProvider(BaseImageProvider):
                         parts = candidates[0].get("content", {}).get("parts", [])
 
                         for i, part in enumerate(parts):
-                            print(f"Part {i}: {list(part.keys())}")
+                            logger.debug("Gemini response part %d: keys=%s", i, list(part.keys()))
 
                             if "inlineData" in part:
                                 inline_data = part["inlineData"]
@@ -129,7 +120,7 @@ class GeminiImageProvider(BaseImageProvider):
                                 image_base64 = inline_data.get("data", "")
 
                                 if image_base64:
-                                    print(f"✅ SUCCESS! Got image, length: {len(image_base64)}")
+                                    logger.info("Gemini image generated successfully, length=%d", len(image_base64))
                                     return {
                                         "success": True,
                                         "image_base64": image_base64,
@@ -145,7 +136,7 @@ class GeminiImageProvider(BaseImageProvider):
                             if "fileData" in part:
                                 file_uri = part["fileData"].get("fileUri", "")
                                 if file_uri:
-                                    print(f"✅ SUCCESS! Got file URI")
+                                    logger.info("Gemini image generated via file URI")
                                     return {
                                         "success": True,
                                         "image_url": file_uri,
@@ -157,11 +148,9 @@ class GeminiImageProvider(BaseImageProvider):
                                         "height": height,
                                     }
 
-                            # Sprawdź czy to tylko tekst
                             if "text" in part:
-                                print(f"Part {i} contains text: {part['text'][:200]}...")
+                                logger.debug("Gemini part %d contains text: %.200s", i, part["text"])
 
-                    # Sprawdź promptFeedback
                     prompt_feedback = data.get("promptFeedback", {})
                     block_reason = prompt_feedback.get("blockReason")
                     if block_reason:
@@ -171,7 +160,6 @@ class GeminiImageProvider(BaseImageProvider):
                             "provider": self.name,
                         }
 
-                    # Brak obrazu
                     return {
                         "success": False,
                         "error": "Model did not generate an image. The model may not support image generation.",
@@ -179,10 +167,9 @@ class GeminiImageProvider(BaseImageProvider):
                     }
 
                 elif response.status_code == 429:
-                    # Sprawdź szczegóły rate limit
                     error_info = data.get("error", {})
                     error_message = error_info.get("message", "Rate limit exceeded")
-                    print(f"❌ RATE LIMIT: {error_message}")
+                    logger.warning("Gemini rate limit: %s", error_message)
                     return {
                         "success": False,
                         "error": f"Rate limit exceeded: {error_message}",
@@ -192,7 +179,7 @@ class GeminiImageProvider(BaseImageProvider):
                 else:
                     error_info = data.get("error", {})
                     error_message = error_info.get("message", f"HTTP {response.status_code}")
-                    print(f"❌ ERROR: {error_message}")
+                    logger.error("Gemini error: %s", error_message)
                     return {
                         "success": False,
                         "error": error_message,
@@ -200,10 +187,8 @@ class GeminiImageProvider(BaseImageProvider):
                     }
 
         except httpx.TimeoutException:
-            print(f"❌ TIMEOUT")
+            logger.error("Gemini image request timed out")
             return {"success": False, "error": "Request timeout", "provider": self.name}
         except Exception as e:
-            print(f"❌ EXCEPTION: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.exception("Gemini image unexpected error: %s", e)
             return {"success": False, "error": str(e), "provider": self.name}

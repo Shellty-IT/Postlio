@@ -24,3 +24,7 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Dev scripts
+check_tables.py
+pyproject.toml.py

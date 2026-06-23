@@ -1,9 +1,12 @@
-﻿from typing import Optional, List, Dict, Any
+﻿import logging
+from typing import Optional, List, Dict, Any
 import asyncio
 import google.generativeai as genai
 from google.generativeai.types import GenerationConfig
 from app.config import settings
 from app.services.ai.text.base import BaseTextProvider
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiProvider(BaseTextProvider):
@@ -28,9 +31,9 @@ class GeminiProvider(BaseTextProvider):
             try:
                 genai.configure(api_key=settings.GOOGLE_API_KEY)
                 self._client = True
-                print(f"✅ Gemini initialized - default model: {self.default_model}")
+                logger.info("Gemini initialized, default model: %s", self.default_model)
             except Exception as e:
-                print(f"❌ Gemini initialization error: {e}")
+                logger.error("Gemini initialization error: %s", e)
                 self._client = None
 
     @property
@@ -68,12 +71,12 @@ class GeminiProvider(BaseTextProvider):
         for model_name in models_to_try:
             for attempt in range(max_retries):
                 try:
-                    print(f"🔄 Trying {model_name} (attempt {attempt + 1})...")
+                    logger.debug("Gemini: trying model=%s attempt=%d", model_name, attempt + 1)
                     model_instance = self._get_model(model_name)
                     response = await model_instance.generate_content_async(prompt)
 
                     if response.parts:
-                        print(f"✅ Success with {model_name}")
+                        logger.debug("Gemini: success with model=%s", model_name)
                         return {
                             "success": True,
                             "text": response.text,
@@ -86,12 +89,12 @@ class GeminiProvider(BaseTextProvider):
                 except Exception as e:
                     error_msg = str(e)
                     last_error = error_msg
-                    print(f"❌ {model_name} failed: {error_msg[:80]}")
+                    logger.warning("Gemini: model=%s failed: %.80s", model_name, error_msg)
 
                     # Jeśli 429 (quota), poczekaj i spróbuj ponownie
                     if "429" in error_msg or "quota" in error_msg.lower():
                         wait_time = (attempt + 1) * 2  # 2s, 4s, 6s
-                        print(f"⏳ Quota exceeded, waiting {wait_time}s...")
+                        logger.debug("Gemini: quota exceeded, waiting %ss", wait_time)
                         await asyncio.sleep(wait_time)
                         continue
 
@@ -303,5 +306,5 @@ Post do poprawy:
                     available.append(model.name.replace("models/", ""))
             return available
         except Exception as e:
-            print(f"❌ Error listing models: {e}")
+            logger.warning("Gemini: error listing models: %s", e)
             return self.models

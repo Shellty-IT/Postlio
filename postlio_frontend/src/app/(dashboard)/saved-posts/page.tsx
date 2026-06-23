@@ -113,8 +113,7 @@ export default function SavedPostsPage() {
         }
     }, []);
 
-    const handlePlatformPublished = useCallback((postId?: number, platform?: Platform) => {
-        console.log(`Platform ${platform} marked as published for post ${postId}`);
+    const handlePlatformPublished = useCallback((_postId?: number, _platform?: Platform) => {
     }, []);
 
     const handleAllPublished = useCallback(() => {

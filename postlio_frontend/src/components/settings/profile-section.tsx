@@ -42,7 +42,6 @@ export function ProfileSection() {
     };
 
     const handleAvatarChange = () => {
-        console.log('Avatar change clicked');
     };
 
     const handleRemoveAvatar = () => {

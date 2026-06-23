@@ -1,5 +1,6 @@
-﻿# postlio_backend/app/services/ai/image/pollinations.py
+# postlio_backend/app/services/ai/image/pollinations.py
 
+import logging
 from typing import Optional, Dict, Any
 import httpx
 import base64
@@ -7,6 +8,8 @@ import json
 from urllib.parse import quote
 from app.config import settings
 from app.services.ai.image.base import BaseImageProvider
+
+logger = logging.getLogger(__name__)
 
 
 class PollinationsProvider(BaseImageProvider):
@@ -36,10 +39,10 @@ class PollinationsProvider(BaseImageProvider):
                 self._text_provider = GeminiProvider()
 
             if not self._text_provider.is_available:
-                print(f"⚠️ Pollinations: Gemini unavailable, using original prompt")
+                logger.warning("Pollinations: Gemini unavailable, using original prompt")
                 return text
 
-            translation_prompt = f"""Translate this image description to English. 
+            translation_prompt = f"""Translate this image description to English.
 Make it a good prompt for AI image generation - descriptive, detailed, artistic.
 Return ONLY the English translation, nothing else.
 
@@ -54,14 +57,14 @@ Text to translate:
                     if translated.lower().startswith(prefix.lower()):
                         translated = translated[len(prefix):].strip()
 
-                print(f"✅ Pollinations: Translated '{text[:50]}...' → '{translated[:50]}...'")
+                logger.debug("Pollinations: translated '%.50s...' → '%.50s...'", text, translated)
                 return translated
 
-            print(f"⚠️ Pollinations: Translation returned no text, using original")
+            logger.warning("Pollinations: translation returned no text, using original")
             return text
 
         except Exception as e:
-            print(f"⚠️ Pollinations: Translation failed: {e}, using original")
+            logger.warning("Pollinations: translation failed: %s, using original", e)
             return text
 
     def _has_polish_characters(self, text: str) -> bool:
@@ -170,10 +173,10 @@ Text to translate:
         translated_prompt = prompt
 
         if self._looks_like_polish(prompt):
-            print(f"🔄 Pollinations: Detected Polish prompt, translating via Gemini...")
+            logger.debug("Pollinations: detected Polish prompt, translating")
             translated_prompt = await self._translate_to_english(prompt)
         else:
-            print(f"🔄 Pollinations: Prompt appears to be English, using as-is")
+            logger.debug("Pollinations: prompt appears to be English, using as-is")
 
         final_prompt = translated_prompt
         if style:
@@ -192,9 +195,8 @@ Text to translate:
             f"&nologo=true"
         )
 
-        print(f"🖼️ Pollinations: Generating with model={model_name}")
-        print(f"🖼️ Pollinations: Original: {original_prompt[:80]}...")
-        print(f"🖼️ Pollinations: Final: {final_prompt[:80]}...")
+        logger.info("Pollinations: generating image model=%s", model_name)
+        logger.debug("Pollinations: original=%.80s... final=%.80s...", original_prompt, final_prompt)
 
         try:
             timeout = 90.0 if model_name == "flux" else 60.0
@@ -208,13 +210,13 @@ Text to translate:
                     follow_redirects=True,
                 )
 
-                print(f"🖼️ Pollinations: Response status: {response.status_code}")
+                logger.debug("Pollinations: response status=%s", response.status_code)
 
                 if response.status_code == 200:
                     content_type = response.headers.get("content-type", "")
                     content_length = len(response.content)
 
-                    print(f"🖼️ Pollinations: Content-Type: {content_type}, Size: {content_length} bytes")
+                    logger.debug("Pollinations: content-type=%s size=%d bytes", content_type, content_length)
 
                     if "image" in content_type and content_length > 1000:
                         image_base64 = base64.b64encode(response.content).decode("utf-8")
@@ -226,7 +228,7 @@ Text to translate:
                         else:
                             mime_type = "image/jpeg"
 
-                        print(f"✅ Pollinations: Success! Image size: {content_length} bytes")
+                        logger.info("Pollinations: image generated successfully, size=%d bytes", content_length)
 
                         return {
                             "success": True,
@@ -245,7 +247,7 @@ Text to translate:
                         }
                     else:
                         error_msg = self._parse_error_message(response)
-                        print(f"❌ Pollinations: Not an image - {error_msg}")
+                        logger.error("Pollinations: not an image response: %s", error_msg)
                         return {
                             "success": False,
                             "error": error_msg,
@@ -253,7 +255,7 @@ Text to translate:
                         }
 
                 elif response.status_code == 401:
-                    print(f"❌ Pollinations: Unauthorized - check API key")
+                    logger.error("Pollinations: unauthorized - check API key")
                     return {
                         "success": False,
                         "error": "Nieprawidłowy klucz API. Sprawdź POLLINATIONS_API_KEY.",
@@ -261,7 +263,7 @@ Text to translate:
                     }
 
                 elif response.status_code == 402:
-                    print(f"❌ Pollinations: Payment required - out of pollen")
+                    logger.error("Pollinations: payment required - out of pollen")
                     return {
                         "success": False,
                         "error": "Brak kredytów Pollinations. Doładuj konto na enter.pollinations.ai",
@@ -269,7 +271,7 @@ Text to translate:
                     }
 
                 elif response.status_code == 429:
-                    print(f"❌ Pollinations: Rate limited")
+                    logger.warning("Pollinations: rate limited")
                     return {
                         "success": False,
                         "error": "Zbyt wiele zapytań. Spróbuj ponownie za chwilę.",
@@ -279,7 +281,7 @@ Text to translate:
 
                 elif response.status_code in (400, 422):
                     error_msg = self._parse_error_message(response)
-                    print(f"⚠️ Pollinations: Bad request - {error_msg}")
+                    logger.warning("Pollinations: bad request: %s", error_msg)
                     return {
                         "success": False,
                         "error": error_msg,
@@ -287,7 +289,7 @@ Text to translate:
                     }
 
                 elif response.status_code in (502, 503):
-                    print(f"❌ Pollinations: Server error {response.status_code}")
+                    logger.error("Pollinations: server error %s", response.status_code)
                     return {
                         "success": False,
                         "error": "Serwer Pollinations jest przeciążony. Spróbuj ponownie za chwilę.",
@@ -297,7 +299,7 @@ Text to translate:
 
                 else:
                     error_msg = self._parse_error_message(response)
-                    print(f"❌ Pollinations: Error - {error_msg}")
+                    logger.error("Pollinations: unexpected status %s: %s", response.status_code, error_msg)
                     return {
                         "success": False,
                         "error": error_msg,
@@ -305,7 +307,7 @@ Text to translate:
                     }
 
         except httpx.TimeoutException:
-            print(f"❌ Pollinations: Timeout after {timeout}s")
+            logger.error("Pollinations: timeout after %ss", timeout)
             return {
                 "success": False,
                 "error": f"Przekroczono limit czasu ({timeout}s). Spróbuj innego modelu lub krótszego promptu.",
@@ -314,7 +316,7 @@ Text to translate:
             }
 
         except httpx.ConnectError as e:
-            print(f"❌ Pollinations: Connection error - {e}")
+            logger.error("Pollinations: connection error: %s", e)
             return {
                 "success": False,
                 "error": "Nie można połączyć się z Pollinations. Sprawdź połączenie internetowe.",
@@ -322,7 +324,7 @@ Text to translate:
             }
 
         except Exception as e:
-            print(f"❌ Pollinations: Unexpected error - {e}")
+            logger.exception("Pollinations: unexpected error: %s", e)
             return {
                 "success": False,
                 "error": f"Nieoczekiwany błąd: {str(e)}",

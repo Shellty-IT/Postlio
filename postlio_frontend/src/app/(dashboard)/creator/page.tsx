@@ -382,8 +382,7 @@ export default function CreatorPage() {
         setIsManualPublishOpen(true);
     }, [content, hashtags, imageUrl, videoUrl, selectedPlatforms, primaryPlatform, editingPostId, selectedBrand, createPostMutation, textProvider, getFullContent]);
 
-    const handlePlatformPublished = useCallback((postId?: number, platform?: Platform) => {
-        console.log(`Platform ${platform} marked as published for post ${postId}`);
+    const handlePlatformPublished = useCallback((_postId?: number, _platform?: Platform) => {
     }, []);
 
     const handleAllPublished = useCallback(() => {

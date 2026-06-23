@@ -1,10 +1,13 @@
-﻿# postlio_backend/app/services/ai/image/huggingface.py
+# postlio_backend/app/services/ai/image/huggingface.py
 
+import logging
 from typing import Optional, Dict, Any
 import httpx
 import base64
 from app.config import settings
 from app.services.ai.image.base import BaseImageProvider
+
+logger = logging.getLogger(__name__)
 
 
 class HuggingFaceProvider(BaseImageProvider):
@@ -69,7 +72,7 @@ class HuggingFaceProvider(BaseImageProvider):
                 self._text_provider = GeminiProvider()
 
             if not self._text_provider.is_available:
-                print(f"⚠️ HuggingFace: Gemini unavailable for translation, using original")
+                logger.warning("HuggingFace: Gemini unavailable for translation, using original")
                 return text
 
             translation_prompt = (
@@ -78,21 +81,20 @@ class HuggingFaceProvider(BaseImageProvider):
                 f"Return ONLY the translation, nothing else:\n\n{text}"
             )
 
-            # NAPRAWIONE: używamy _generate_with_retry zamiast generate_text
             result = await self._text_provider._generate_with_retry(
                 prompt=translation_prompt,
             )
 
             if result.get("success") and result.get("text"):
                 translated = result["text"].strip().strip('"\'')
-                print(f"✅ HuggingFace: Translated '{text}' → '{translated}'")
+                logger.debug("HuggingFace: translated prompt: %.50s... → %.50s...", text, translated)
                 return translated
 
-            print(f"⚠️ HuggingFace: Translation returned no text")
+            logger.warning("HuggingFace: translation returned no text")
             return text
 
         except Exception as e:
-            print(f"⚠️ HuggingFace: Translation failed: {e}")
+            logger.warning("HuggingFace: translation failed: %s", e)
             return text
 
     async def generate_image(
@@ -113,25 +115,21 @@ class HuggingFaceProvider(BaseImageProvider):
 
         original_prompt = prompt
 
-        # 1. Sprawdź czy prompt jest po polsku i przetłumacz
         if self._is_mostly_polish(prompt):
-            print(f"🔄 HuggingFace: Detected Polish prompt, translating...")
+            logger.debug("HuggingFace: detected Polish prompt, translating")
             prompt = await self._translate_to_english(prompt)
 
-        # 2. Wzbogać prompt o styl
         enhanced_prompt = self._enhance_prompt(prompt, style)
 
-        # Użyj podanego modelu lub domyślnego (ale tylko z dostępnych!)
         model_name = model if model in self.models else self.default_model
 
-        # Lista modeli do wypróbowania (fallback)
         models_to_try = [model_name] + [m for m in self.models if m != model_name]
 
         last_error = None
 
         for current_model in models_to_try:
             try:
-                print(f"🔄 HuggingFace: Trying {current_model}...")
+                logger.debug("HuggingFace: trying model=%s", current_model)
 
                 async with httpx.AsyncClient(timeout=180.0) as client:
                     response = await client.post(
@@ -155,7 +153,7 @@ class HuggingFaceProvider(BaseImageProvider):
 
                         if "image" in content_type:
                             image_base64 = base64.b64encode(response.content).decode("utf-8")
-                            print(f"✅ HuggingFace: Success with {current_model}")
+                            logger.info("HuggingFace: generated successfully with model=%s", current_model)
 
                             return {
                                 "success": True,
@@ -173,13 +171,12 @@ class HuggingFaceProvider(BaseImageProvider):
                             try:
                                 error_data = response.json()
                                 last_error = error_data.get("error", "Unknown error")
-                            except:
+                            except Exception:
                                 last_error = "Invalid response format"
-                            print(f"❌ HuggingFace: {current_model} - {last_error}")
+                            logger.error("HuggingFace: %s returned non-image response: %s", current_model, last_error)
 
                     elif response.status_code == 410:
-                        # Model deprecated - skip to next
-                        print(f"⚠️ HuggingFace: {current_model} is deprecated, trying next...")
+                        logger.warning("HuggingFace: model %s is deprecated, trying next", current_model)
                         continue
 
                     elif response.status_code == 503:
@@ -187,33 +184,33 @@ class HuggingFaceProvider(BaseImageProvider):
                             error_data = response.json()
                             estimated_time = error_data.get("estimated_time", 30)
                             last_error = f"Model loading (~{estimated_time}s). Try again in a moment."
-                            print(f"⏳ HuggingFace: {current_model} is loading...")
-                        except:
+                            logger.debug("HuggingFace: %s is loading (~%ss)", current_model, estimated_time)
+                        except Exception:
                             last_error = "Model is loading"
                         continue
 
                     elif response.status_code == 429:
                         last_error = "Rate limit exceeded. Try again later."
-                        print(f"⚠️ HuggingFace: Rate limited")
+                        logger.warning("HuggingFace: rate limited on model=%s", current_model)
                         continue
 
                     else:
                         try:
                             error_data = response.json()
                             last_error = error_data.get("error", f"HTTP {response.status_code}")
-                        except:
+                        except Exception:
                             last_error = f"HTTP {response.status_code}"
-                        print(f"❌ HuggingFace: {current_model} - {last_error}")
+                        logger.error("HuggingFace: %s error: %s", current_model, last_error)
                         continue
 
             except httpx.TimeoutException:
                 last_error = "Request timeout. Model may be loading, try again."
-                print(f"⏳ HuggingFace: Timeout for {current_model}")
+                logger.debug("HuggingFace: timeout for model=%s", current_model)
                 continue
 
             except Exception as e:
                 last_error = str(e)
-                print(f"❌ HuggingFace: {current_model} - {e}")
+                logger.error("HuggingFace: unexpected error for model=%s: %s", current_model, e)
                 continue
 
         return {

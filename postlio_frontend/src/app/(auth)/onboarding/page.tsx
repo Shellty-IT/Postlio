@@ -20,9 +20,6 @@ export default function OnboardingPage() {
         onboardingStep,
     } = useAuthStore();
 
-    // Debug
-    console.log('[Onboarding Page]', { isInitialized, isAuthenticated, user: user?.email, onboardingStep });
-
     // Przekieruj niezalogowanych
     useEffect(() => {
         if (isInitialized && !isAuthenticated) {
