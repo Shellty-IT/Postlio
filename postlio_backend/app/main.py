@@ -8,6 +8,7 @@ import asyncio
 from app.config import settings
 from app.database import init_db, close_db
 from app.api.v1 import auth, posts, brands, ai, autopilot, social
+from app.api.exceptions import register_exception_handlers
 from app.services.scheduler_service import start_scheduler, stop_scheduler
 
 # Konfiguracja logowania
@@ -63,11 +64,13 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="🚀 Postlio API - Social Media Management with AI",
+    description="Postlio API - Social Media Management with AI",
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+register_exception_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
@@ -124,14 +127,5 @@ async def full_health_check():
 
 # ==================== Routers ====================
 
-# Auth & Core
-app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["Authentication"])
-app.include_router(posts.router, prefix=f"{settings.API_V1_PREFIX}/posts", tags=["Posts"])
-app.include_router(brands.router, prefix=f"{settings.API_V1_PREFIX}/brands", tags=["Brand Voice"])
-app.include_router(ai.router, prefix=f"{settings.API_V1_PREFIX}/ai", tags=["AI Generation"])
-
-# Social Media
-app.include_router(social.router, prefix=settings.API_V1_PREFIX, tags=["Social Media"])
-
-# Autopilot
-app.include_router(autopilot.router, prefix=settings.API_V1_PREFIX, tags=["Autopilot"])
+for _router in (auth.router, posts.router, brands.router, ai.router, social.router, autopilot.router):
+    app.include_router(_router, prefix=settings.API_V1_PREFIX)

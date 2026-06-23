@@ -15,8 +15,8 @@ from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.database import get_db
-from app.api.deps import get_current_user
+from app.api.deps import get_db, get_current_user
+from app.api.exceptions import NotFoundError
 from app.models.user import User
 from app.models.social_account import SocialAccount
 from app.services.social import social_manager, SocialPlatform
@@ -487,10 +487,7 @@ async def _get_user_account(
     account = result.scalar_one_or_none()
 
     if not account:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Account not found"
-        )
+        raise NotFoundError("Account")
 
     return account
 

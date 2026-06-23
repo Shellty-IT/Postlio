@@ -13,6 +13,7 @@ from sqlalchemy import select, and_
 from pydantic import BaseModel
 
 from app.api.deps import get_db, get_current_user
+from app.api.exceptions import NotFoundError
 from app.models.user import User
 from app.models.post import Post, PostStatus, Platform
 from app.schemas.post import (
@@ -24,7 +25,7 @@ from app.schemas.post import (
     CalendarEventResponse,
 )
 
-router = APIRouter()
+router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
 # ============ SCHEMAS DLA NOWYCH ENDPOINTÓW ============
@@ -266,7 +267,7 @@ async def get_post(
     post = result.scalar_one_or_none()
 
     if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
+        raise NotFoundError("Post")
 
     return PostResponse.model_validate(post)
 
@@ -288,7 +289,7 @@ async def update_post(
     post = result.scalar_one_or_none()
 
     if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
+        raise NotFoundError("Post")
 
     update_data = post_data.model_dump(exclude_unset=True)
 
@@ -334,7 +335,7 @@ async def update_platform_status(
     post = result.scalar_one_or_none()
 
     if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
+        raise NotFoundError("Post")
 
     # Sprawdź czy platforma jest w liście platform posta
     if post.platforms and status_update.platform not in post.platforms:
@@ -383,7 +384,7 @@ async def schedule_post(
     post = result.scalar_one_or_none()
 
     if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
+        raise NotFoundError("Post")
 
     if schedule_data.scheduled_at <= datetime.utcnow():
         raise HTTPException(
@@ -423,7 +424,7 @@ async def unschedule_post(
     post = result.scalar_one_or_none()
 
     if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
+        raise NotFoundError("Post")
 
     post.scheduled_at = None
     post.status = PostStatus.DRAFT.value
@@ -457,7 +458,7 @@ async def delete_post(
     post = result.scalar_one_or_none()
 
     if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
+        raise NotFoundError("Post")
 
     await db.delete(post)
     await db.commit()

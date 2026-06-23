@@ -9,8 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.database import get_db
-from app.api.deps import get_current_user
+from app.api.deps import get_db, get_current_user
+from app.api.exceptions import NotFoundError
 from app.models.user import User
 from app.models.autopilot import AutopilotConfig, AutopilotQueueItem
 from app.schemas.autopilot import (
@@ -150,7 +150,7 @@ async def get_config(
     config = await service.get_config(config_id, current_user.id)
 
     if not config:
-        raise HTTPException(status_code=404, detail="Config not found")
+        raise NotFoundError("Config")
 
     stats = await service.get_queue_stats(config.id, current_user.id)
     health = service.calculate_health_score(config, stats)
@@ -170,7 +170,7 @@ async def get_config_by_brand(
     config = await service.get_config_by_brand(brand_id, current_user.id)
 
     if not config:
-        raise HTTPException(status_code=404, detail="Config not found for this brand")
+        raise NotFoundError("Config for this brand")
 
     stats = await service.get_queue_stats(config.id, current_user.id)
     health = service.calculate_health_score(config, stats)
@@ -208,7 +208,7 @@ async def update_config(
     config = await service.update_config(config_id, current_user.id, data)
 
     if not config:
-        raise HTTPException(status_code=404, detail="Config not found")
+        raise NotFoundError("Config")
 
     await db.commit()
     stats = await service.get_queue_stats(config.id, current_user.id)
@@ -229,7 +229,7 @@ async def delete_config(
     deleted = await service.delete_config(config_id, current_user.id)
 
     if not deleted:
-        raise HTTPException(status_code=404, detail="Config not found")
+        raise NotFoundError("Config")
 
     await db.commit()
 
@@ -245,7 +245,7 @@ async def activate_config(
     config = await service.toggle_active(config_id, current_user.id, True)
 
     if not config:
-        raise HTTPException(status_code=404, detail="Config not found")
+        raise NotFoundError("Config")
 
     await db.commit()
     stats = await service.get_queue_stats(config.id, current_user.id)
@@ -266,7 +266,7 @@ async def deactivate_config(
     config = await service.toggle_active(config_id, current_user.id, False)
 
     if not config:
-        raise HTTPException(status_code=404, detail="Config not found")
+        raise NotFoundError("Config")
 
     await db.commit()
     stats = await service.get_queue_stats(config.id, current_user.id)
@@ -286,7 +286,7 @@ async def pause_config(
     config = await service.toggle_pause(config_id, current_user.id, True)
 
     if not config:
-        raise HTTPException(status_code=404, detail="Config not found")
+        raise NotFoundError("Config")
 
     await db.commit()
     stats = await service.get_queue_stats(config.id, current_user.id)
@@ -306,7 +306,7 @@ async def resume_config(
     config = await service.toggle_pause(config_id, current_user.id, False)
 
     if not config:
-        raise HTTPException(status_code=404, detail="Config not found")
+        raise NotFoundError("Config")
 
     await db.commit()
     stats = await service.get_queue_stats(config.id, current_user.id)
@@ -333,7 +333,7 @@ async def get_config_social_status(
     config = await service.get_config(config_id, current_user.id)
 
     if not config:
-        raise HTTPException(status_code=404, detail="Config not found")
+        raise NotFoundError("Config")
 
     publish_service = get_publish_service(db)
     status = await publish_service.validate_social_accounts_for_config(config)
@@ -362,7 +362,7 @@ async def generate_posts(
     config = await service.get_config(config_id, current_user.id)
 
     if not config:
-        raise HTTPException(status_code=404, detail="Config not found")
+        raise NotFoundError("Config")
 
     try:
         items, errors = await service.generate_posts(
@@ -405,7 +405,7 @@ async def get_queue(
 
     config = await service.get_config(config_id, current_user.id)
     if not config:
-        raise HTTPException(status_code=404, detail="Config not found")
+        raise NotFoundError("Config")
 
     items = await service.get_queue_items(config_id, current_user.id, status, limit, offset)
     return [queue_item_to_response(item) for item in items]
@@ -422,7 +422,7 @@ async def get_queue_stats(
 
     config = await service.get_config(config_id, current_user.id)
     if not config:
-        raise HTTPException(status_code=404, detail="Config not found")
+        raise NotFoundError("Config")
 
     return await service.get_queue_stats(config_id, current_user.id)
 
@@ -438,7 +438,7 @@ async def get_queue_item(
     item = await service.get_queue_item(item_id, current_user.id)
 
     if not item:
-        raise HTTPException(status_code=404, detail="Queue item not found")
+        raise NotFoundError("Queue item")
 
     return queue_item_to_response(item)
 
@@ -455,7 +455,7 @@ async def update_queue_item(
     item = await service.update_queue_item(item_id, current_user.id, data)
 
     if not item:
-        raise HTTPException(status_code=404, detail="Queue item not found")
+        raise NotFoundError("Queue item")
 
     await db.commit()
     return queue_item_to_response(item)
@@ -478,7 +478,7 @@ async def approve_queue_item(
     item = await service.approve_item(item_id, current_user.id, publish_immediately=publish_now)
 
     if not item:
-        raise HTTPException(status_code=404, detail="Queue item not found")
+        raise NotFoundError("Queue item")
 
     await db.commit()
     return queue_item_to_response(item)
@@ -496,7 +496,7 @@ async def reject_queue_item(
     item = await service.reject_item(item_id, current_user.id, notes)
 
     if not item:
-        raise HTTPException(status_code=404, detail="Queue item not found")
+        raise NotFoundError("Queue item")
 
     await db.commit()
     return queue_item_to_response(item)
@@ -513,7 +513,7 @@ async def delete_queue_item(
     deleted = await service.delete_queue_item(item_id, current_user.id)
 
     if not deleted:
-        raise HTTPException(status_code=404, detail="Queue item not found")
+        raise NotFoundError("Queue item")
 
     await db.commit()
 
@@ -539,7 +539,7 @@ async def publish_queue_item(
     # Pobierz element
     item = await autopilot_service.get_queue_item(item_id, current_user.id)
     if not item:
-        raise HTTPException(status_code=404, detail="Queue item not found")
+        raise NotFoundError("Queue item")
 
     # Sprawdź status
     if item.status == "published":
@@ -592,7 +592,7 @@ async def publish_ready_items(
 
     config = await autopilot_service.get_config(config_id, current_user.id)
     if not config:
-        raise HTTPException(status_code=404, detail="Config not found")
+        raise NotFoundError("Config")
 
     published, failed, results = await publish_service.publish_approved_items(
         config_id=config_id,
@@ -637,7 +637,7 @@ async def retry_failed_items(
 
     config = await autopilot_service.get_config(config_id, current_user.id)
     if not config:
-        raise HTTPException(status_code=404, detail="Config not found")
+        raise NotFoundError("Config")
 
     success, failed = await publish_service.retry_failed_items(
         config_id=config_id,
@@ -721,7 +721,7 @@ async def get_dashboard(
 
     config = await service.get_config(config_id, current_user.id)
     if not config:
-        raise HTTPException(status_code=404, detail="Config not found")
+        raise NotFoundError("Config")
 
     # Pobierz dane
     stats = await service.get_queue_stats(config_id, current_user.id)
@@ -837,7 +837,7 @@ async def force_generate(
     config = await service.get_config(config_id, current_user.id)
 
     if not config:
-        raise HTTPException(status_code=404, detail="Config not found")
+        raise NotFoundError("Config")
 
     await scheduler_service._generate_for_config(db, config)
     return {"message": f"Forced generation for config {config_id}", "status": "completed"}

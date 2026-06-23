@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
-from app.api.deps import get_current_user
+from app.api.deps import get_db, get_current_user
+from app.api.exceptions import NotFoundError
 from app.models.user import User
 from app.models.brand import Brand
 from app.schemas.brand import (
@@ -23,7 +23,7 @@ from app.schemas.brand import (
 )
 from app.services.ai.text.manager import TextAIManager
 
-router = APIRouter()
+router = APIRouter(prefix="/brands", tags=["Brand Voice"])
 
 
 # ============================================================
@@ -123,10 +123,7 @@ async def get_brand(
     brand = result.scalar_one_or_none()
 
     if not brand:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Marka nie została znaleziona"
-        )
+        raise NotFoundError("Brand")
 
     return brand_to_response(brand)
 
@@ -188,10 +185,7 @@ async def update_brand(
     brand = result.scalar_one_or_none()
 
     if not brand:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Marka nie została znaleziona"
-        )
+        raise NotFoundError("Brand")
 
     # Aktualizuj pola podstawowe
     update_data = data.model_dump(exclude_unset=True, exclude={'voice_dna'})
@@ -229,10 +223,7 @@ async def delete_brand(
     brand = result.scalar_one_or_none()
 
     if not brand:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Marka nie została znaleziona"
-        )
+        raise NotFoundError("Brand")
 
     was_default = brand.is_default
     await db.delete(brand)
@@ -277,10 +268,7 @@ async def set_default_brand(
     brand = result.scalar_one_or_none()
 
     if not brand:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Marka nie została znaleziona"
-        )
+        raise NotFoundError("Brand")
 
     # Usuń domyślność z innych marek
     await db.execute(
@@ -322,10 +310,7 @@ async def upload_brand_logo(
     brand = result.scalar_one_or_none()
 
     if not brand:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Marka nie została znaleziona"
-        )
+        raise NotFoundError("Brand")
 
     # Walidacja pliku
     if not file.content_type or not file.content_type.startswith('image/'):
@@ -363,10 +348,7 @@ async def get_brand_analytics(
     brand = result.scalar_one_or_none()
 
     if not brand:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Marka nie została znaleziona"
-        )
+        raise NotFoundError("Brand")
 
     # TODO: Prawdziwe analityki z postów
     # Na razie zwracamy mock data
