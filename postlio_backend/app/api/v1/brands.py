@@ -25,39 +25,6 @@ from app.services.ai.text.manager import TextAIManager
 router = APIRouter(prefix="/brands", tags=["Brand Voice"])
 
 
-def brand_to_response(brand: Brand) -> BrandResponse:
-    voice_dna_data = brand.voice_dna or {}
-    voice_dna = VoiceDNABase(
-        tone_formality=voice_dna_data.get("tone_formality", 50),
-        tone_energy=voice_dna_data.get("tone_energy", 50),
-        tone_humor=voice_dna_data.get("tone_humor", 30),
-        tone_emotion=voice_dna_data.get("tone_emotion", 50),
-        personality_traits=voice_dna_data.get("personality_traits", ["professional", "friendly"]),
-        communication_style=voice_dna_data.get("communication_style", "informative"),
-        keywords=voice_dna_data.get("keywords", []),
-        hashtags=voice_dna_data.get("hashtags", []),
-        forbidden_words=voice_dna_data.get("forbidden_words", []),
-        sample_posts=voice_dna_data.get("sample_posts", []),
-        emoji_usage=voice_dna_data.get("emoji_usage", "moderate"),
-        preferred_emojis=voice_dna_data.get("preferred_emojis", []),
-    )
-    return BrandResponse(
-        id=brand.id,
-        name=brand.name,
-        description=brand.description,
-        logo_url=brand.logo_url,
-        primary_color=brand.primary_color or "#8B5CF6",
-        secondary_color=brand.secondary_color,
-        industry=brand.industry,
-        target_audience=brand.target_audience,
-        voice_dna=voice_dna,
-        is_active=brand.is_active,
-        is_default=brand.is_default,
-        posts_count=brand.posts_count or 0,
-        created_at=brand.created_at,
-        updated_at=brand.updated_at,
-    )
-
 
 @router.get("/", response_model=BrandsListResponse)
 async def get_brands(
@@ -69,7 +36,7 @@ async def get_brands(
 ):
     brands = await brand_repo.list_brands(db, current_user.id, is_active, skip, limit)
     total = await brand_repo.count_brands(db, current_user.id, is_active)
-    return BrandsListResponse(brands=[brand_to_response(b) for b in brands], total=total)
+    return BrandsListResponse(brands=[BrandResponse.model_validate(b) for b in brands], total=total)
 
 
 @router.get("/{brand_id}", response_model=BrandResponse)
@@ -81,7 +48,7 @@ async def get_brand(
     brand = await brand_repo.get_by_id(db, current_user.id, brand_id)
     if not brand:
         raise NotFoundError("Brand")
-    return brand_to_response(brand)
+    return BrandResponse.model_validate(brand)
 
 
 @router.post("/", response_model=BrandResponse, status_code=status.HTTP_201_CREATED)
@@ -106,7 +73,7 @@ async def create_brand(
         is_default=is_first,
     )
     brand = await brand_repo.create(db, brand)
-    return brand_to_response(brand)
+    return BrandResponse.model_validate(brand)
 
 
 @router.patch("/{brand_id}", response_model=BrandResponse)
@@ -129,7 +96,7 @@ async def update_brand(
         brand.voice_dna = current_voice_dna
 
     brand = await brand_repo.save(db, brand)
-    return brand_to_response(brand)
+    return BrandResponse.model_validate(brand)
 
 
 @router.delete("/{brand_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -165,7 +132,7 @@ async def set_default_brand(
     await brand_repo.clear_default(db, current_user.id)
     brand.is_default = True
     brand = await brand_repo.save(db, brand)
-    return brand_to_response(brand)
+    return BrandResponse.model_validate(brand)
 
 
 @router.post("/{brand_id}/logo")

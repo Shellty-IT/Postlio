@@ -44,78 +44,16 @@ router = APIRouter(prefix="/autopilot", tags=["Autopilot"])
 def config_to_response(
     config: AutopilotConfig,
     health_score: int = None,
-    next_gen: datetime = None
+    next_gen: datetime = None,
 ) -> AutopilotConfigResponse:
-    """Konwertuj model do response schema."""
-    return AutopilotConfigResponse(
-        id=config.id,
-        user_id=config.user_id,
-        brand_id=config.brand_id,
-        is_active=config.is_active,
-        is_paused=config.is_paused,
-        posts_per_week=config.posts_per_week,
-        schedule_days=config.schedule_days or [],
-        schedule_time=config.schedule_time,
-        timezone=config.timezone,
-        platforms=config.platforms or [],
-        categories=config.categories or [],
-        # NOWE pola
-        social_account_mapping=config.social_account_mapping or {},
-        auto_publish_on_approve=config.auto_publish_on_approve,
-        # Pozostałe
-        creativity_level=config.creativity_level,
-        post_length=config.post_length,
-        include_images=config.include_images,
-        include_hashtags=config.include_hashtags,
-        include_emoji=config.include_emoji,
-        text_provider=config.text_provider,
-        image_provider=config.image_provider,
-        image_style=config.image_style,
-        total_generated=config.total_generated,
-        total_approved=config.total_approved,
-        total_rejected=config.total_rejected,
-        total_published=config.total_published,
-        streak_days=config.streak_days,
-        last_generation_at=config.last_generation_at,
-        last_published_at=config.last_published_at,
-        created_at=config.created_at,
-        updated_at=config.updated_at,
-        health_score=health_score,
-        next_generation_at=next_gen,
-    )
+    response = AutopilotConfigResponse.model_validate(config)
+    response.health_score = health_score
+    response.next_generation_at = next_gen
+    return response
 
 
 def queue_item_to_response(item: AutopilotQueueItem) -> QueueItemResponse:
-    """Konwertuj model do response schema."""
-    return QueueItemResponse(
-        id=item.id,
-        config_id=item.config_id,
-        user_id=item.user_id,
-        brand_id=item.brand_id,
-        platform=item.platform,
-        content=item.content,
-        image_url=item.image_url,
-        hashtags=item.hashtags or [],
-        category=item.category,
-        status=item.status,
-        scheduled_for=item.scheduled_for,
-        published_at=item.published_at,
-        topic_used=item.topic_used,
-        text_provider_used=item.text_provider_used,
-        image_provider_used=item.image_provider_used,
-        generation_params=item.generation_params or {},
-        # NOWE pola publikacji
-        social_account_id=item.social_account_id,
-        platform_post_id=item.platform_post_id,
-        platform_post_url=item.platform_post_url,
-        publish_error=item.publish_error,
-        publish_attempts=item.publish_attempts or 0,
-        # Pozostałe
-        user_notes=item.user_notes,
-        edit_count=item.edit_count,
-        created_at=item.created_at,
-        updated_at=item.updated_at,
-    )
+    return QueueItemResponse.model_validate(item)
 
 
 # === CONFIG ENDPOINTS ===

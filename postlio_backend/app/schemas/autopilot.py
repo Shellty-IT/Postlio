@@ -5,7 +5,7 @@ Pydantic models dla API Autopilota
 """
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from enum import Enum
 
 
@@ -129,12 +129,26 @@ class AutopilotConfigResponse(AutopilotConfigBase):
     created_at: datetime
     updated_at: datetime
 
-    # Computed fields
+    # Computed fields (set after model_validate)
     health_score: Optional[int] = None
     next_generation_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator('schedule_days', 'platforms', 'categories', mode='before')
+    @classmethod
+    def coerce_list(cls, v):
+        return v or []
+
+    @field_validator('social_account_mapping', mode='before')
+    @classmethod
+    def coerce_mapping(cls, v):
+        return v or {}
+
+    @field_validator('auto_publish_on_approve', mode='before')
+    @classmethod
+    def coerce_bool(cls, v):
+        return bool(v) if v is not None else False
 
 
 # === Queue Item Schemas ===
@@ -183,7 +197,7 @@ class QueueItemResponse(QueueItemBase):
     topic_used: Optional[str]
     text_provider_used: Optional[str]
     image_provider_used: Optional[str]
-    generation_params: dict
+    generation_params: dict = Field(default_factory=dict)
 
     # Pola publikacji
     social_account_id: Optional[int] = None
@@ -198,8 +212,22 @@ class QueueItemResponse(QueueItemBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator('hashtags', mode='before')
+    @classmethod
+    def coerce_hashtags(cls, v):
+        return v or []
+
+    @field_validator('generation_params', mode='before')
+    @classmethod
+    def coerce_generation_params(cls, v):
+        return v or {}
+
+    @field_validator('publish_attempts', mode='before')
+    @classmethod
+    def coerce_publish_attempts(cls, v):
+        return v if v is not None else 0
 
 
 # === Action Schemas ===
