@@ -1,21 +1,15 @@
-﻿# app/api/v1/posts.py
-"""
-Posts API - obsługa wielu platform na post
-
-Każdy post może mieć wiele platform (platforms[]) i osobny status per platforma (platform_statuses{}).
-"""
-
+# app/api/v1/posts.py
 from datetime import datetime
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
 from pydantic import BaseModel
 
 from app.api.deps import get_db, get_current_user
 from app.api.exceptions import NotFoundError
 from app.models.user import User
-from app.models.post import Post, PostStatus, Platform
+from app.models.post import Post, PostStatus
+from app.repositories import post_repo
 from app.schemas.post import (
     PostCreate,
     PostUpdate,
@@ -28,70 +22,36 @@ from app.schemas.post import (
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
-# ============ SCHEMAS DLA NOWYCH ENDPOINTÓW ============
-
 class PlatformStatusUpdate(BaseModel):
-    """Update statusu publikacji dla konkretnej platformy"""
     platform: str
-    status: str  # "draft", "published", "failed"
+    status: str
     platform_post_id: Optional[str] = None
 
 
-# ============ CALENDAR ENDPOINT (MUST BE BEFORE /{post_id}) ============
-
 @router.get("/calendar", response_model=List[CalendarEventResponse])
 async def get_calendar_events(
-        start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
-        end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
-        brand_id: Optional[int] = Query(None, description="Filter by brand ID"),
+        start_date: str = Query(...),
+        end_date: str = Query(...),
+        brand_id: Optional[int] = Query(None),
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
 ):
-    """
-    Get posts for calendar view.
-    Returns posts that have scheduled_at within the date range.
-    Now supports multiple platforms per post.
-    """
     try:
-        if "T" in start_date:
-            start = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-        else:
-            start = datetime.fromisoformat(f"{start_date}T00:00:00")
-
-        if "T" in end_date:
-            end = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
-        else:
-            end = datetime.fromisoformat(f"{end_date}T23:59:59")
+        start = datetime.fromisoformat(
+            start_date.replace("Z", "+00:00") if "T" in start_date else f"{start_date}T00:00:00"
+        )
+        end = datetime.fromisoformat(
+            end_date.replace("Z", "+00:00") if "T" in end_date else f"{end_date}T23:59:59"
+        )
     except ValueError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid date format. Use YYYY-MM-DD or ISO format. Error: {str(e)}"
-        )
+        raise HTTPException(status_code=400, detail=f"Invalid date format: {e}")
 
-    query = select(Post).where(
-        and_(
-            Post.user_id == current_user.id,
-            Post.scheduled_at.isnot(None),
-            Post.scheduled_at >= start,
-            Post.scheduled_at <= end,
-        )
-    )
-
-    if brand_id:
-        query = query.where(Post.brand_id == brand_id)
-
-    query = query.order_by(Post.scheduled_at)
-
-    result = await db.execute(query)
-    posts = result.scalars().all()
+    posts = await post_repo.get_calendar_events(db, current_user.id, start, end, brand_id)
 
     events = []
     for post in posts:
-        title = post.content[:50] + "..." if post.content and len(post.content) > 50 else (post.content or "")
-
-        # Użyj nowego pola platforms[], fallback do legacy platform
+        title = (post.content[:50] + "...") if post.content and len(post.content) > 50 else (post.content or "")
         platforms_list = post.platforms if post.platforms else ([post.platform] if post.platform else [])
-
         events.append(CalendarEventResponse(
             id=str(post.id),
             post_id=str(post.id),
@@ -100,101 +60,37 @@ async def get_calendar_events(
             time=post.scheduled_at.strftime("%H:%M"),
             platforms=platforms_list,
             platform_statuses=post.platform_statuses or {},
-            status=post.get_overall_status() if hasattr(post, 'get_overall_status') else post.status,
+            status=post.get_overall_status() if hasattr(post, "get_overall_status") else post.status,
             preview=post.content[:150] if post.content else None,
             image_url=post.image_url,
             brand_id=post.brand_id,
         ))
-
     return events
 
-
-# ============ STATS ENDPOINT ============
 
 @router.get("/stats")
 async def get_posts_stats(
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
 ):
-    """Get post statistics for current user."""
-    total_result = await db.execute(
-        select(Post).where(Post.user_id == current_user.id)
-    )
-    total_posts = len(total_result.scalars().all())
+    return await post_repo.get_stats(db, current_user.id)
 
-    stats_by_status = {}
-    for status_val in PostStatus:
-        result = await db.execute(
-            select(Post).where(
-                Post.user_id == current_user.id,
-                Post.status == status_val.value
-            )
-        )
-        stats_by_status[status_val.value] = len(result.scalars().all())
-
-    now = datetime.utcnow()
-    scheduled_result = await db.execute(
-        select(Post).where(
-            Post.user_id == current_user.id,
-            Post.status == PostStatus.SCHEDULED.value,
-            Post.scheduled_at > now
-        )
-    )
-    upcoming_scheduled = len(scheduled_result.scalars().all())
-
-    return {
-        "total": total_posts,
-        "by_status": stats_by_status,
-        "upcoming_scheduled": upcoming_scheduled,
-    }
-
-
-# ============ CRUD ENDPOINTS ============
 
 @router.get("/", response_model=PostsListResponse)
 async def get_posts(
-        status: Optional[str] = Query(None, description="Filter by status"),
-        platform: Optional[str] = Query(None, description="Filter by platform"),
-        brand_id: Optional[int] = Query(None, description="Filter by brand"),
+        status: Optional[str] = Query(None),
+        platform: Optional[str] = Query(None),
+        brand_id: Optional[int] = Query(None),
         limit: int = Query(50, ge=1, le=100),
         offset: int = Query(0, ge=0),
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
 ):
-    """Get all posts for current user with optional filters."""
-    query = select(Post).where(Post.user_id == current_user.id)
-
-    if status:
-        query = query.where(Post.status == status)
-    if platform:
-        # Filtruj po platforms[] (JSONB contains) lub legacy platform
-        query = query.where(
-            Post.platforms.contains([platform]) | (Post.platform == platform)
-        )
-    if brand_id:
-        query = query.where(Post.brand_id == brand_id)
-
-    query = query.order_by(Post.created_at.desc()).offset(offset).limit(limit)
-
-    result = await db.execute(query)
-    posts = result.scalars().all()
-
-    count_query = select(Post).where(Post.user_id == current_user.id)
-    if status:
-        count_query = count_query.where(Post.status == status)
-    if platform:
-        count_query = count_query.where(
-            Post.platforms.contains([platform]) | (Post.platform == platform)
-        )
-    if brand_id:
-        count_query = count_query.where(Post.brand_id == brand_id)
-
-    count_result = await db.execute(count_query)
-    total_count = len(count_result.scalars().all())
-
+    posts = await post_repo.list_posts(db, current_user.id, status, platform, brand_id, limit, offset)
+    total = await post_repo.count_posts(db, current_user.id, status, platform, brand_id)
     return PostsListResponse(
-        posts=[PostResponse.model_validate(post) for post in posts],
-        count=total_count
+        posts=[PostResponse.model_validate(p) for p in posts],
+        count=total,
     )
 
 
@@ -204,37 +100,23 @@ async def create_post(
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
 ):
-    """
-    Create a new post with multiple platforms support.
-
-    - platforms: lista platform docelowych ["facebook", "instagram"]
-    - platform_statuses: automatycznie inicjalizowane jako {"facebook": {"status": "draft"}, ...}
-    """
     initial_status = PostStatus.SCHEDULED.value if post_data.scheduled_at else PostStatus.DRAFT.value
-
-    # Pobierz listę platform (z nowego pola lub legacy)
-    platforms_list = [p.value if hasattr(p, 'value') else p for p in post_data.platforms]
-
-    # Inicjalizuj platform_statuses dla każdej platformy
+    platforms_list = [p.value if hasattr(p, "value") else p for p in post_data.platforms]
     initial_platform_statuses = {
         platform: {
             "status": "scheduled" if post_data.scheduled_at else "draft",
             "published_at": None,
-            "platform_post_id": None
+            "platform_post_id": None,
         }
         for platform in platforms_list
     }
-
-    # Legacy: zachowaj pierwszą platformę w starym polu dla kompatybilności
-    legacy_platform = platforms_list[0] if platforms_list else None
-
     post = Post(
         user_id=current_user.id,
         brand_id=post_data.brand_id,
         content=post_data.content,
-        platform=legacy_platform,  # Legacy field
-        platforms=platforms_list,  # Nowe pole
-        platform_statuses=initial_platform_statuses,  # Nowe pole
+        platform=platforms_list[0] if platforms_list else None,
+        platforms=platforms_list,
+        platform_statuses=initial_platform_statuses,
         image_url=post_data.image_url,
         image_prompt=post_data.image_prompt,
         status=initial_status,
@@ -243,11 +125,7 @@ async def create_post(
         ai_model=post_data.ai_model,
         generation_params=post_data.generation_params,
     )
-
-    db.add(post)
-    await db.commit()
-    await db.refresh(post)
-
+    post = await post_repo.create(db, post)
     return PostResponse.model_validate(post)
 
 
@@ -257,18 +135,9 @@ async def get_post(
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
 ):
-    """Get a specific post."""
-    result = await db.execute(
-        select(Post).where(
-            Post.id == post_id,
-            Post.user_id == current_user.id
-        )
-    )
-    post = result.scalar_one_or_none()
-
+    post = await post_repo.get_by_id(db, current_user.id, post_id)
     if not post:
         raise NotFoundError("Post")
-
     return PostResponse.model_validate(post)
 
 
@@ -279,39 +148,24 @@ async def update_post(
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
 ):
-    """Update a post."""
-    result = await db.execute(
-        select(Post).where(
-            Post.id == post_id,
-            Post.user_id == current_user.id
-        )
-    )
-    post = result.scalar_one_or_none()
-
+    post = await post_repo.get_by_id(db, current_user.id, post_id)
     if not post:
         raise NotFoundError("Post")
 
     update_data = post_data.model_dump(exclude_unset=True)
-
     for field, value in update_data.items():
         if field == "platform" and value:
-            value = value.value if hasattr(value, 'value') else value
+            value = value.value if hasattr(value, "value") else value
         if field == "platforms" and value:
-            # Konwertuj enumy na stringi
-            value = [p.value if hasattr(p, 'value') else p for p in value]
-            # Aktualizuj też legacy platform
+            value = [p.value if hasattr(p, "value") else p for p in value]
             if value:
                 setattr(post, "platform", value[0])
         if field == "status" and value:
-            value = value.value if hasattr(value, 'value') else value
+            value = value.value if hasattr(value, "value") else value
         setattr(post, field, value)
 
     post.updated_at = datetime.utcnow()
-
-    await db.commit()
-    await db.refresh(post)
-
-    return PostResponse.model_validate(post)
+    return PostResponse.model_validate(await post_repo.save(db, post))
 
 
 @router.patch("/{post_id}/platform-status", response_model=PostResponse)
@@ -321,50 +175,29 @@ async def update_platform_status(
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
 ):
-    """
-    Update publication status for a specific platform.
-
-    Used when user clicks "Opublikowałem" in manual publish modal.
-    """
-    result = await db.execute(
-        select(Post).where(
-            Post.id == post_id,
-            Post.user_id == current_user.id
-        )
-    )
-    post = result.scalar_one_or_none()
-
+    post = await post_repo.get_by_id(db, current_user.id, post_id)
     if not post:
         raise NotFoundError("Post")
 
-    # Sprawdź czy platforma jest w liście platform posta
     if post.platforms and status_update.platform not in post.platforms:
         raise HTTPException(
             status_code=400,
-            detail=f"Platform {status_update.platform} is not in post's platforms list"
+            detail=f"Platform {status_update.platform} is not in post's platforms list",
         )
 
-    # Użyj metody modelu do aktualizacji
     published_at = datetime.utcnow() if status_update.status == "published" else None
     post.set_platform_status(
         platform=status_update.platform,
         status=status_update.status,
         published_at=published_at,
-        platform_post_id=status_update.platform_post_id
+        platform_post_id=status_update.platform_post_id,
     )
-
-    # Aktualizuj główny status na podstawie wszystkich platform
     post.status = post.get_overall_status()
     post.updated_at = datetime.utcnow()
-
-    # Jeśli wszystko opublikowane, ustaw published_at
     if post.is_fully_published():
         post.published_at = datetime.utcnow()
 
-    await db.commit()
-    await db.refresh(post)
-
-    return PostResponse.model_validate(post)
+    return PostResponse.model_validate(await post_repo.save(db, post))
 
 
 @router.post("/{post_id}/schedule", response_model=PostResponse)
@@ -374,38 +207,21 @@ async def schedule_post(
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
 ):
-    """Schedule a post for publishing."""
-    result = await db.execute(
-        select(Post).where(
-            Post.id == post_id,
-            Post.user_id == current_user.id
-        )
-    )
-    post = result.scalar_one_or_none()
-
+    post = await post_repo.get_by_id(db, current_user.id, post_id)
     if not post:
         raise NotFoundError("Post")
 
     if schedule_data.scheduled_at <= datetime.utcnow():
-        raise HTTPException(
-            status_code=400,
-            detail="Scheduled time must be in the future"
-        )
+        raise HTTPException(status_code=400, detail="Scheduled time must be in the future")
 
     post.scheduled_at = schedule_data.scheduled_at
     post.status = PostStatus.SCHEDULED.value
-
-    # Aktualizuj platform_statuses
     if post.platforms:
         for platform in post.platforms:
             post.set_platform_status(platform, "scheduled")
-
     post.updated_at = datetime.utcnow()
 
-    await db.commit()
-    await db.refresh(post)
-
-    return PostResponse.model_validate(post)
+    return PostResponse.model_validate(await post_repo.save(db, post))
 
 
 @router.post("/{post_id}/unschedule", response_model=PostResponse)
@@ -414,32 +230,18 @@ async def unschedule_post(
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
 ):
-    """Remove scheduling from a post (move back to draft)."""
-    result = await db.execute(
-        select(Post).where(
-            Post.id == post_id,
-            Post.user_id == current_user.id
-        )
-    )
-    post = result.scalar_one_or_none()
-
+    post = await post_repo.get_by_id(db, current_user.id, post_id)
     if not post:
         raise NotFoundError("Post")
 
     post.scheduled_at = None
     post.status = PostStatus.DRAFT.value
-
-    # Aktualizuj platform_statuses
     if post.platforms:
         for platform in post.platforms:
             post.set_platform_status(platform, "draft")
-
     post.updated_at = datetime.utcnow()
 
-    await db.commit()
-    await db.refresh(post)
-
-    return PostResponse.model_validate(post)
+    return PostResponse.model_validate(await post_repo.save(db, post))
 
 
 @router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -448,23 +250,11 @@ async def delete_post(
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
 ):
-    """Delete a post."""
-    result = await db.execute(
-        select(Post).where(
-            Post.id == post_id,
-            Post.user_id == current_user.id
-        )
-    )
-    post = result.scalar_one_or_none()
-
+    post = await post_repo.get_by_id(db, current_user.id, post_id)
     if not post:
         raise NotFoundError("Post")
+    await post_repo.delete(db, post)
 
-    await db.delete(post)
-    await db.commit()
-
-
-# ============ DRAFTS ENDPOINTS ============
 
 @router.get("/drafts/list", response_model=PostsListResponse)
 async def get_drafts(
@@ -472,21 +262,8 @@ async def get_drafts(
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
 ):
-    """Get all draft posts."""
-    query = select(Post).where(
-        Post.user_id == current_user.id,
-        Post.status == PostStatus.DRAFT.value
-    )
-
-    if brand_id:
-        query = query.where(Post.brand_id == brand_id)
-
-    query = query.order_by(Post.updated_at.desc())
-
-    result = await db.execute(query)
-    posts = result.scalars().all()
-
+    posts = await post_repo.get_drafts(db, current_user.id, brand_id)
     return PostsListResponse(
-        posts=[PostResponse.model_validate(post) for post in posts],
-        count=len(posts)
+        posts=[PostResponse.model_validate(p) for p in posts],
+        count=len(posts),
     )

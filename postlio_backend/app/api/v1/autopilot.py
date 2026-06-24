@@ -7,12 +7,12 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 from app.api.deps import get_db, get_current_user
 from app.api.exceptions import NotFoundError
 from app.models.user import User
 from app.models.autopilot import AutopilotConfig, AutopilotQueueItem
+from app.repositories import autopilot_repo
 from app.schemas.autopilot import (
     AutopilotConfigCreate,
     AutopilotConfigUpdate,
@@ -728,16 +728,7 @@ async def get_dashboard(
     pending = await service.get_pending_items(config_id, current_user.id)
     upcoming = await service.get_upcoming_items(config_id, current_user.id)
 
-    # Published items (ostatnie 10)
-    result = await db.execute(
-        select(AutopilotQueueItem)
-        .where(AutopilotQueueItem.config_id == config_id)
-        .where(AutopilotQueueItem.user_id == current_user.id)
-        .where(AutopilotQueueItem.status == "published")
-        .order_by(AutopilotQueueItem.published_at.desc())
-        .limit(10)
-    )
-    recent_published = list(result.scalars().all())
+    recent_published = await autopilot_repo.get_recent_published_items(db, config_id, current_user.id)
 
     # NOWE: Failed items
     failed_items = await publish_service.get_failed_items(

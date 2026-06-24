@@ -11,7 +11,6 @@ import time
 from datetime import datetime
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -19,6 +18,7 @@ from app.api.deps import get_db, get_current_user
 from app.api.exceptions import NotFoundError
 from app.models.user import User
 from app.models.social_account import SocialAccount
+from app.repositories import social_repo
 from app.services.social import social_manager, SocialPlatform
 from app.schemas.social import (
     SocialPlatform as SchemaPlatform,
@@ -179,17 +179,9 @@ async def oauth_callback(
         # Określ typ konta
         account_type = _determine_account_type(platform, result.profile_data)
 
-        # Sprawdź czy konto już istnieje
-        existing = await db.execute(
-            select(SocialAccount).where(
-                and_(
-                    SocialAccount.user_id == current_user.id,
-                    SocialAccount.platform == platform.value,
-                    SocialAccount.platform_user_id == result.platform_user_id
-                )
-            )
+        existing_account = await social_repo.find_existing(
+            db, current_user.id, platform.value, result.platform_user_id
         )
-        existing_account = existing.scalars().first()
 
         # Zaszyfruj tokeny
         encrypted_access = social_manager.encrypt_token(result.access_token)
@@ -219,12 +211,11 @@ async def oauth_callback(
                 refresh_token=encrypted_refresh,
                 token_expires_at=result.expires_at,
                 profile_data=result.profile_data,
-                is_active=True
+                is_active=True,
             )
             db.add(account)
 
-        await db.commit()
-        await db.refresh(account)
+        account = await social_repo.save(db, account)
 
         # ✅ Dodaj więcej danych do odpowiedzi
         return OAuthCallbackResponse(
@@ -240,10 +231,6 @@ async def oauth_callback(
         )
 
     except Exception as e:
-        # ✅ Łap wszystkie wyjątki i zwracaj czytelny błąd
-        import traceback
-        traceback.print_exc()  # Log do konsoli
-
         return OAuthCallbackResponse(
             success=False,
             platform=request.platform,
@@ -259,10 +246,7 @@ async def list_accounts(
         current_user: User = Depends(get_current_user),
 ):
     """Zwraca listę połączonych kont użytkownika."""
-    result = await db.execute(
-        select(SocialAccount).where(SocialAccount.user_id == current_user.id)
-    )
-    accounts = result.scalars().all()
+    accounts = await social_repo.list_accounts(db, current_user.id)
 
     response_accounts = []
     for account in accounts:
@@ -470,26 +454,8 @@ async def get_platforms():
 
 # ==================== Helpers ====================
 
-async def _get_user_account(
-        db: AsyncSession,
-        account_id: int,
-        user_id: int
-) -> SocialAccount:
-    """Pobiera konto użytkownika lub rzuca 404."""
-    result = await db.execute(
-        select(SocialAccount).where(
-            and_(
-                SocialAccount.id == account_id,
-                SocialAccount.user_id == user_id
-            )
-        )
-    )
-    account = result.scalar_one_or_none()
-
-    if not account:
-        raise NotFoundError("Account")
-
-    return account
+async def _get_user_account(db: AsyncSession, account_id: int, user_id: int) -> SocialAccount:
+    return await social_repo.get_by_id(db, user_id, account_id)
 
 
 def _determine_account_type(platform: SocialPlatform, profile_data: dict) -> AccountType:
