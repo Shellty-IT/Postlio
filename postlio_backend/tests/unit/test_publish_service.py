@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit tests for PublishService.
 
 Tests cover:
@@ -12,7 +12,8 @@ import pytest
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.services.publish_service import PublishService, PublishResult
+from app.services.publish_service import PublishService, PublishResult, AUTO_PUBLISH_ACCOUNT_TYPES
+from app.services.publishers import ManualAssistPublisher
 from app.models.social_account import SocialAccount
 from app.models.autopilot import AutopilotConfig, AutopilotQueueItem
 
@@ -36,9 +37,9 @@ class TestCanAutoPublish:
         assert publish_service.can_auto_publish(instagram_business_account) is True
 
     @pytest.mark.unit
-    def test_linkedin_profile_can_auto_publish(self, publish_service, linkedin_profile_account):
-        """LinkedIn Profile should support auto-publish."""
-        assert publish_service.can_auto_publish(linkedin_profile_account) is True
+    def test_linkedin_profile_cannot_auto_publish(self, publish_service, linkedin_profile_account):
+        """LinkedIn Profile should NOT support auto-publish (requires company page)."""
+        assert publish_service.can_auto_publish(linkedin_profile_account) is False
 
     @pytest.mark.unit
     def test_instagram_personal_cannot_auto_publish(self, publish_service, instagram_personal_account):
@@ -62,10 +63,10 @@ class TestCanAutoPublish:
         ("facebook_page", True),
         ("instagram_business", True),
         ("instagram_creator", True),
-        ("linkedin_profile", True),
         ("linkedin_company", True),
         ("facebook_personal", False),
         ("instagram_personal", False),
+        ("linkedin_profile", False),
         ("unknown", False),
     ])
     def test_all_account_types(self, publish_service, db_session, test_user, account_type, expected):
@@ -93,9 +94,8 @@ class TestValidateSocialAccountsForConfig:
             self, publish_service, autopilot_config
     ):
         """Config with platform but no account should return 'missing' status."""
-        # Usuń mapowanie Instagram
         autopilot_config.social_account_mapping = {}
-        autopilot_config.platforms = ["twitter"]  # Platforma bez konta
+        autopilot_config.platforms = ["twitter"]
 
         result = await publish_service.validate_social_accounts_for_config(autopilot_config)
 
@@ -136,19 +136,19 @@ class TestValidateSocialAccountsForConfig:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    async def test_personal_account_returns_manual_only(
+    async def test_personal_account_returns_personal_account_status(
             self, publish_service, autopilot_config, instagram_personal_account
     ):
-        """Personal account should return connected but can_auto_publish=False."""
+        """Personal account should return 'personal_account' status, not 'connected'."""
         autopilot_config.platforms = ["instagram"]
         autopilot_config.social_account_mapping = {"instagram": instagram_personal_account.id}
 
         result = await publish_service.validate_social_accounts_for_config(autopilot_config)
 
         assert "instagram" in result
-        assert result["instagram"]["status"] == "connected"
+        assert result["instagram"]["status"] == "personal_account"
         assert result["instagram"]["can_auto_publish"] is False
-        assert "ręczna" in result["instagram"]["message"].lower()
+        assert "autopilot" in result["instagram"]["message"].lower()
 
 
 class TestPublishQueueItem:
@@ -202,7 +202,6 @@ class TestPublishQueueItem:
     ):
         """Publishing without social account should fail."""
         queue_item_approved.social_account_id = None
-        # Mock get_social_account_for_platform to return None
         publish_service.get_social_account_for_platform = AsyncMock(return_value=None)
 
         result = await publish_service.publish_queue_item(queue_item_approved, force=True)
@@ -215,18 +214,16 @@ class TestPublishQueueItem:
     async def test_personal_account_requires_manual(
             self, publish_service, queue_item_approved, instagram_personal_account
     ):
-        """Personal account should return requires_manual=True."""
+        """Personal account should return requires_manual_publish=True."""
         queue_item_approved.platform = "instagram"
         queue_item_approved.social_account_id = instagram_personal_account.id
-
-        # Mock to return personal account
         publish_service.get_social_account = AsyncMock(return_value=instagram_personal_account)
 
         result = await publish_service.publish_queue_item(queue_item_approved, force=True)
 
         assert result.success is False
-        assert result.requires_manual is True
-        assert "manual" in result.error.lower()
+        assert result.requires_manual_publish is True
+        assert "osobiste" in result.error.lower()
 
     @pytest.mark.unit
     @pytest.mark.asyncio
@@ -235,14 +232,10 @@ class TestPublishQueueItem:
             mock_social_manager, sample_publish_result
     ):
         """Successful Facebook Page publish should update item status."""
-        queue_item_approved.social_account_id = facebook_page_account.id
         mock_social_manager.publish_post.return_value = sample_publish_result
-
-        # Mock get_social_account
         publish_service.get_social_account = AsyncMock(return_value=facebook_page_account)
 
-        with patch("app.services.publish_service.social_manager", mock_social_manager):
-            result = await publish_service.publish_queue_item(queue_item_approved, force=True)
+        result = await publish_service.publish_queue_item(queue_item_approved, force=True)
 
         assert result.success is True
         assert result.post_id == "post_123456"
@@ -258,7 +251,6 @@ class TestPublishQueueItem:
         queue_item_approved.platform = "instagram"
         queue_item_approved.image_url = None
         queue_item_approved.social_account_id = instagram_business_account.id
-
         publish_service.get_social_account = AsyncMock(return_value=instagram_business_account)
 
         result = await publish_service.publish_queue_item(queue_item_approved, force=True)
@@ -276,15 +268,13 @@ class TestPublishQueueItem:
         queue_item_approved.social_account_id = facebook_page_account.id
         queue_item_approved.publish_attempts = 0
         mock_social_manager.publish_post.return_value = sample_failed_publish_result
-
         publish_service.get_social_account = AsyncMock(return_value=facebook_page_account)
 
-        with patch("app.services.publish_service.social_manager", mock_social_manager):
-            result = await publish_service.publish_queue_item(queue_item_approved, force=True)
+        result = await publish_service.publish_queue_item(queue_item_approved, force=True)
 
         assert result.success is False
         assert queue_item_approved.publish_attempts == 1
-        assert queue_item_approved.status != "failed"  # Still not failed (attempts < 3)
+        assert queue_item_approved.status != "failed"
 
     @pytest.mark.unit
     @pytest.mark.asyncio
@@ -294,13 +284,11 @@ class TestPublishQueueItem:
     ):
         """Third failed attempt should mark item as 'failed'."""
         queue_item_approved.social_account_id = facebook_page_account.id
-        queue_item_approved.publish_attempts = 2  # Already 2 attempts
+        queue_item_approved.publish_attempts = 2
         mock_social_manager.publish_post.return_value = sample_failed_publish_result
-
         publish_service.get_social_account = AsyncMock(return_value=facebook_page_account)
 
-        with patch("app.services.publish_service.social_manager", mock_social_manager):
-            result = await publish_service.publish_queue_item(queue_item_approved, force=True)
+        result = await publish_service.publish_queue_item(queue_item_approved, force=True)
 
         assert result.success is False
         assert queue_item_approved.publish_attempts == 3
@@ -325,24 +313,24 @@ class TestPrepareForManualPublish:
 
         result = await publish_service.prepare_for_manual_publish(queue_item_pending)
 
-        assert result["content"] == "Test content"
-        assert "#test" in result["full_content"]
-        assert "#postlio" in result["full_content"]
-        assert result["hashtags"] == ["test", "postlio"]
-        assert "#test #postlio" in result["hashtags_string"]
+        assert result.content == "Test content"
+        assert "#test" in result.full_content
+        assert "#postlio" in result.full_content
+        assert result.hashtags == ["test", "postlio"]
+        assert "#test #postlio" in result.hashtags_string
 
     @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_includes_platform_link(
             self, publish_service, queue_item_pending
     ):
-        """Should include correct platform link."""
+        """Should include correct platform web URL."""
         queue_item_pending.platform = "facebook"
 
         result = await publish_service.prepare_for_manual_publish(queue_item_pending)
 
-        assert result["platform"] == "facebook"
-        assert "facebook.com" in result["platform_link"]
+        assert result.platform == "facebook"
+        assert "facebook.com" in result.web_url
 
     @pytest.mark.unit
     @pytest.mark.asyncio
@@ -354,9 +342,9 @@ class TestPrepareForManualPublish:
 
         result = await publish_service.prepare_for_manual_publish(queue_item_pending)
 
-        assert "instructions" in result
-        assert "Instagram" in result["instructions"]
-        assert "Skopiuj" in result["instructions"]
+        instructions_text = " ".join(result.instructions)
+        assert "Instagram" in instructions_text
+        assert "Skopiuj" in instructions_text
 
     @pytest.mark.unit
     @pytest.mark.asyncio
@@ -369,9 +357,9 @@ class TestPrepareForManualPublish:
 
         result = await publish_service.prepare_for_manual_publish(queue_item_pending)
 
-        assert result["hashtags"] == []
-        assert result["hashtags_string"] == ""
-        assert result["full_content"] == "Just content"
+        assert result.hashtags == []
+        assert result.hashtags_string == ""
+        assert result.full_content == "Just content"
 
     @pytest.mark.unit
     @pytest.mark.asyncio
@@ -381,35 +369,43 @@ class TestPrepareForManualPublish:
         """Should include image URL if present."""
         result = await publish_service.prepare_for_manual_publish(queue_item_with_image)
 
-        assert result["image_url"] == "https://example.com/image.jpg"
+        assert result.image_url == "https://example.com/image.jpg"
 
 
 class TestGetManualPublishInstructions:
-    """Tests for _get_manual_publish_instructions method."""
+    """Tests for ManualAssistPublisher.generate_urls instructions."""
 
     @pytest.fixture
-    def publish_service(self, db_session):
-        return PublishService(db_session)
+    def publisher(self):
+        return ManualAssistPublisher()
 
     @pytest.mark.unit
     @pytest.mark.parametrize("platform,expected_keywords", [
         ("facebook", ["Facebook", "Opublikuj"]),
-        ("instagram", ["Instagram", "zdjęcie", "Udostępnij"]),
+        ("instagram", ["Instagram", "zdjęcie", "Opublikuj"]),
         ("linkedin", ["LinkedIn", "Opublikuj"]),
     ])
     def test_instructions_contain_platform_specific_keywords(
-            self, publish_service, platform, expected_keywords
+            self, publisher, platform, expected_keywords
     ):
         """Each platform should have appropriate instructions."""
-        instructions = publish_service._get_manual_publish_instructions(platform)
-
+        urls = publisher.generate_urls(
+            platform=platform,
+            account_type=f"{platform}_page",
+            content="Test content",
+            hashtags=[],
+        )
+        instructions_text = " ".join(urls["manual_instructions"])
         for keyword in expected_keywords:
-            assert keyword in instructions
+            assert keyword in instructions_text
 
     @pytest.mark.unit
-    def test_unknown_platform_returns_generic_instructions(self, publish_service):
-        """Unknown platform should return generic instructions."""
-        instructions = publish_service._get_manual_publish_instructions("tiktok")
-
-        assert "Skopiuj" in instructions
-        assert "ręcznie" in instructions
+    def test_unknown_platform_returns_empty_instructions(self, publisher):
+        """Unknown platform should return empty instructions list."""
+        urls = publisher.generate_urls(
+            platform="tiktok",
+            account_type="tiktok_personal",
+            content="Test content",
+            hashtags=[],
+        )
+        assert urls["manual_instructions"] == []
