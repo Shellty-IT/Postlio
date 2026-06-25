@@ -19,7 +19,7 @@ from app.api.exceptions import NotFoundError
 from app.models.user import User
 from app.models.social_account import SocialAccount
 from app.repositories import social_repo
-from app.services.social import social_manager, SocialPlatform
+from app.services.social import social_manager, SocialPlatform, OAuthResult
 from app.schemas.social import (
     SocialPlatform as SchemaPlatform,
     AccountType,
@@ -183,38 +183,21 @@ async def oauth_callback(
             db, current_user.id, platform.value, result.platform_user_id
         )
 
-        # Zaszyfruj tokeny
-        encrypted_access = social_manager.encrypt_token(result.access_token)
-        encrypted_refresh = social_manager.encrypt_token(result.refresh_token) if result.refresh_token else None
-
         if existing_account:
-            # Aktualizuj istniejące konto
-            existing_account.access_token = encrypted_access
-            existing_account.refresh_token = encrypted_refresh
-            existing_account.token_expires_at = result.expires_at
-            existing_account.platform_username = result.platform_username
-            existing_account.profile_data = result.profile_data
-            existing_account.account_type = account_type.value
-            existing_account.is_active = True
-            existing_account.last_error = None
-            existing_account.updated_at = datetime.utcnow()
             account = existing_account
         else:
-            # Utwórz nowe konto
             account = SocialAccount(
                 user_id=current_user.id,
                 platform=platform.value,
                 account_type=account_type.value,
                 platform_user_id=result.platform_user_id,
                 platform_username=result.platform_username,
-                access_token=encrypted_access,
-                refresh_token=encrypted_refresh,
-                token_expires_at=result.expires_at,
-                profile_data=result.profile_data,
+                access_token="",
                 is_active=True,
             )
             db.add(account)
 
+        _apply_oauth_result_to_account(account, account_type, result)
         account = await social_repo.save(db, account)
 
         # ✅ Dodaj więcej danych do odpowiedzi
@@ -475,6 +458,44 @@ def _determine_account_type(platform: SocialPlatform, profile_data: dict) -> Acc
         return AccountType.LINKEDIN_PROFILE
 
     return AccountType.FACEBOOK_PAGE
+
+
+def _apply_oauth_result_to_account(
+        account: SocialAccount,
+        account_type: AccountType,
+        result: OAuthResult,
+) -> None:
+    profile_data = result.profile_data or {}
+
+    account.account_type = account_type.value
+    account.platform_user_id = result.platform_user_id
+    account.platform_username = result.platform_username
+    account.access_token = social_manager.encrypt_token(result.access_token)
+    account.refresh_token = (
+        social_manager.encrypt_token(result.refresh_token)
+        if result.refresh_token
+        else None
+    )
+    account.token_expires_at = result.expires_at
+    account.profile_data = profile_data
+    account.is_active = True
+    account.last_error = None
+    account.updated_at = datetime.utcnow()
+
+    page_access_token = result.page_access_token or profile_data.get("page_access_token")
+    account.page_id = result.page_id or profile_data.get("page_id")
+    account.page_name = result.page_name or profile_data.get("page_name")
+    account.page_access_token = (
+        social_manager.encrypt_token(page_access_token)
+        if page_access_token
+        else None
+    )
+
+    instagram_account_id = result.instagram_account_id or profile_data.get("instagram_account_id")
+    if not instagram_account_id and account.platform == "instagram":
+        instagram_account_id = profile_data.get("id")
+    account.instagram_account_id = instagram_account_id
+    account.connected_fb_page_id = result.page_id or profile_data.get("connected_fb_page_id")
 
 
 async def _build_account_response(account: SocialAccount) -> ConnectedAccountResponse:

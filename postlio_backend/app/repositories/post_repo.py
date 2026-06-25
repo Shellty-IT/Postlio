@@ -110,18 +110,18 @@ class PostRepository:
 
     async def create(self, db: AsyncSession, post: Post) -> Post:
         db.add(post)
-        await db.commit()
+        await db.flush()
         await db.refresh(post)
         return post
 
     async def save(self, db: AsyncSession, post: Post) -> Post:
-        await db.commit()
+        await db.flush()
         await db.refresh(post)
         return post
 
     async def delete(self, db: AsyncSession, post: Post) -> None:
         await db.delete(post)
-        await db.commit()
+        await db.flush()
 
     def _base_query(self, user_id: int):
         return select(Post).where(Post.user_id == user_id)

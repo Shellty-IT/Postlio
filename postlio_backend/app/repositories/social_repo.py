@@ -45,19 +45,19 @@ class SocialRepository:
         return list(result.scalars().all())
 
     async def save(self, db: AsyncSession, account: SocialAccount) -> SocialAccount:
-        await db.commit()
+        await db.flush()
         await db.refresh(account)
         return account
 
     async def create(self, db: AsyncSession, account: SocialAccount) -> SocialAccount:
         db.add(account)
-        await db.commit()
+        await db.flush()
         await db.refresh(account)
         return account
 
     async def delete(self, db: AsyncSession, account: SocialAccount) -> None:
         await db.delete(account)
-        await db.commit()
+        await db.flush()
 
 
 social_repo = SocialRepository()

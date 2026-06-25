@@ -112,9 +112,11 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 # ============================================================
 
 async def init_db():
-    """Inicjalizacja bazy danych - tworzenie tabel."""
+    """Inicjalizacja bazy danych dla trybu testowego i lokalnego developmentu."""
+    if not (TESTING or settings.DEBUG):
+        return
+
     async with engine.begin() as conn:
-        # Import modeli żeby SQLAlchemy je "zobaczył"
         from app.models import user, brand, post, social_account, autopilot  # noqa: F401
         await conn.run_sync(Base.metadata.create_all)
 

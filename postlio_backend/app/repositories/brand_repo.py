@@ -59,18 +59,18 @@ class BrandRepository:
 
     async def create(self, db: AsyncSession, brand: Brand) -> Brand:
         db.add(brand)
-        await db.commit()
+        await db.flush()
         await db.refresh(brand)
         return brand
 
     async def save(self, db: AsyncSession, brand: Brand) -> Brand:
-        await db.commit()
+        await db.flush()
         await db.refresh(brand)
         return brand
 
     async def delete(self, db: AsyncSession, brand: Brand) -> None:
         await db.delete(brand)
-        await db.commit()
+        await db.flush()
 
 
 brand_repo = BrandRepository()
