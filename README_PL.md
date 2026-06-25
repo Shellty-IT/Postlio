@@ -267,12 +267,14 @@ Workflow'y leżą w `.github/workflows/` i odpalają się przy każdym pushu i P
 |----------|---------|-------|
 | `backend.yml` | Zmiany w `postlio_backend/**` | Ruff lint → pytest (unit + integration) na Pythonie 3.11 z service-containerem PostgreSQL → upload coverage |
 | `frontend.yml` | Zmiany w `postlio_frontend/**` | Type-check → ESLint → Jest (CI) → `next build` → Playwright E2E (Chromium) → upload artefaktów |
+| `deploy.yml` | Push do `main` dotykający backendu lub frontendu, albo ręczne uruchomienie | Backend lint + pytest i frontend type-check + lint + Jest + build + Playwright → deploy hooki dla zmienionych usług |
 
-Sekrety pobierane są z **GitHub Actions secrets** (`DATABASE_URL`, `SECRET_KEY`, `TOKEN_ENCRYPTION_KEY`, `GOOGLE_API_KEY`, `GROQ_API_KEY`, `POLLINATIONS_API_KEY`, `HUGGINGFACE_API_KEY`, `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`, `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXT_PUBLIC_API_URL`).
+Sekrety pobierane są z **GitHub Actions secrets** (`DATABASE_URL`, `SECRET_KEY`, `TOKEN_ENCRYPTION_KEY`, `GOOGLE_API_KEY`, `GROQ_API_KEY`, `POLLINATIONS_API_KEY`, `HUGGINGFACE_API_KEY`, `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`, `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXT_PUBLIC_API_URL`, `NETLIFY_DEPLOY_HOOK_URL`, `RENDER_DEPLOY_HOOK_URL`).
 
-Same deploye obsługują hostingi:
-- **Render** auto-deployuje `postlio_backend/` po każdym udanym pushu na `main`
-- **Netlify** auto-deployuje `postlio_frontend/` po każdym udanym pushu na `main`
+Deploy produkcyjny jest bramkowany przez GitHub Actions:
+- Wyłącz auto-deploy po pushu do `main` bezpośrednio w Netlify i Render.
+- Utwórz deploy hooki w Netlify i Render, a potem zapisz je jako `NETLIFY_DEPLOY_HOOK_URL` i `RENDER_DEPLOY_HOOK_URL` w GitHub Actions secrets.
+- `deploy.yml` wywołuje odpowiednie hooki dopiero wtedy, gdy wszystkie testy backendu i frontendu przejdą pomyślnie.
 
 ---
 
