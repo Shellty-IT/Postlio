@@ -119,7 +119,7 @@ export function NotificationsDropdown() {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
+                <Button variant="ghost" size="icon" className="relative rounded-xl border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.06]">
                     <Bell className="h-5 w-5" />
                     {hasNotifications && (
                         <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center">

@@ -3,7 +3,7 @@
 
 import { cn } from '@/lib/utils';
 import type { Platform } from '@/types';
-import { Facebook, Instagram, Linkedin, Check } from 'lucide-react';
+import { Facebook, Instagram, Linkedin } from 'lucide-react';
 
 interface PlatformSelectorProps {
     selected: Platform[];
@@ -11,26 +11,23 @@ interface PlatformSelectorProps {
     disabled?: boolean;
 }
 
-const platforms: { id: Platform; name: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
+const platforms: { id: Platform; name: string; icon: React.ReactNode; bgColor: string }[] = [
     {
         id: 'facebook',
         name: 'Facebook',
-        icon: <Facebook className="h-5 w-5" />,
-        color: 'text-[#1877F2]',
+        icon: <Facebook className="h-3 w-3" />,
         bgColor: 'bg-[#1877F2]',
     },
     {
         id: 'instagram',
         name: 'Instagram',
-        icon: <Instagram className="h-5 w-5" />,
-        color: 'text-[#E4405F]',
+        icon: <Instagram className="h-3 w-3" />,
         bgColor: 'bg-[#E4405F]',
     },
     {
         id: 'linkedin',
         name: 'LinkedIn',
-        icon: <Linkedin className="h-5 w-5" />,
-        color: 'text-[#0A66C2]',
+        icon: <Linkedin className="h-3 w-3" />,
         bgColor: 'bg-[#0A66C2]',
     },
 ];
@@ -50,8 +47,8 @@ export function PlatformSelector({ selected, onChange, disabled }: PlatformSelec
     };
 
     return (
-        <div className="space-y-3">
-            <label className="text-sm font-medium">Platformy docelowe</label>
+        <div className="space-y-2">
+            <label className="mono-label">Platformy docelowe</label>
             <div className="flex flex-wrap gap-2">
                 {platforms.map((platform) => {
                     const isSelected = selected.includes(platform.id);
@@ -63,21 +60,27 @@ export function PlatformSelector({ selected, onChange, disabled }: PlatformSelec
                             onClick={() => togglePlatform(platform.id)}
                             disabled={disabled}
                             className={cn(
-                                'relative flex items-center gap-2 px-4 py-2.5 rounded-xl border-2',
+                                'relative flex items-center gap-2 px-4 py-2.5 rounded-[11px] border',
                                 'transition-all duration-200',
                                 'disabled:opacity-50 disabled:cursor-not-allowed',
                                 isSelected
-                                    ? `${platform.bgColor} text-white border-transparent shadow-lg`
-                                    : `bg-card border-border hover:border-muted-foreground/30 ${platform.color}`
+                                    ? 'bg-gradient-to-br from-primary/20 to-accent/10 border-primary/35 text-white'
+                                    : 'border-white/[0.09] text-muted-foreground hover:bg-white/[0.04]'
                             )}
                         >
-                            {platform.icon}
-                            <span className="font-medium text-sm">{platform.name}</span>
+                            <span className={cn(
+                                'flex h-5 w-5 items-center justify-center rounded-[6px] text-white',
+                                platform.bgColor,
+                                platform.id === 'instagram' && 'bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#8134AF]'
+                            )}>
+                                {platform.icon}
+                            </span>
+                            <span className={cn('font-medium text-sm', isSelected ? 'text-white' : 'text-[#c7cad2]')}>
+                                {platform.name}
+                            </span>
 
                             {isSelected && (
-                                <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-white flex items-center justify-center shadow-md">
-                                    <Check className="h-3 w-3 text-success" />
-                                </div>
+                                <span className="absolute -top-1 -right-1 h-[11px] w-[11px] rounded-full bg-emerald-400 border-2 border-background" />
                             )}
                         </button>
                     );

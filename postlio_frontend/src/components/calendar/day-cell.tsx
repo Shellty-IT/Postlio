@@ -10,7 +10,7 @@
 import { memo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
-import { Plus } from 'lucide-react';
+import { Plus, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CalendarDay, ScheduledPost } from '@/types/calendar';
 import { useCalendarStore } from '@/store/calendar-store';
@@ -28,6 +28,12 @@ const platformColors: Record<Platform, string> = {
     instagram: '#E4405F',
     linkedin: '#0A66C2',
 };
+
+const AI_SLOT_TIMES = ['09:00', '12:30', '18:00'];
+
+function getSuggestedTime(dayOfMonth: number): string {
+    return AI_SLOT_TIMES[dayOfMonth % AI_SLOT_TIMES.length];
+}
 
 export const DayCell = memo(function DayCell({ day, onDrop }: DayCellProps) {
     const { openScheduleModal, selectDate } = useCalendarStore();
@@ -71,6 +77,9 @@ export const DayCell = memo(function DayCell({ day, onDrop }: DayCellProps) {
         })
     )).filter((p): p is Platform => !!p);
 
+    const isEmptySlot = day.isCurrentMonth && !day.isToday && day.posts.length === 0;
+    const suggestedTime = isEmptySlot ? getSuggestedTime(day.date.getDate()) : null;
+
     return (
         <motion.div
             onMouseEnter={() => setIsHovered(true)}
@@ -79,12 +88,14 @@ export const DayCell = memo(function DayCell({ day, onDrop }: DayCellProps) {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             className={cn(
-                "min-h-[120px] p-2 border-b border-r border-border/50 transition-all duration-200",
+                "min-h-[104px] xs:min-h-[120px] flex flex-col rounded-[14px] border p-2 transition-all duration-200",
                 "group relative",
-                !day.isCurrentMonth && "bg-muted/30",
-                day.isToday && "bg-primary/5 ring-1 ring-primary/20",
-                isDragOver && "bg-primary/10 ring-2 ring-primary/30",
-                isHovered && day.isCurrentMonth && "bg-muted/50"
+                !day.isCurrentMonth && "border-white/[0.045] bg-white/[0.008] opacity-45",
+                day.isCurrentMonth && !day.isToday && !isEmptySlot && "border-white/[0.06] bg-white/[0.015]",
+                day.isToday && "border-primary/40 bg-primary/[0.08] shadow-[0_12px_30px_-18px_hsl(var(--primary)/0.5)]",
+                isEmptySlot && "dashed-slot",
+                isDragOver && "!border-primary !bg-primary/10 ring-2 ring-primary/30",
+                isHovered && day.isCurrentMonth && !isEmptySlot && "bg-white/[0.03]"
             )}
         >
             {/* Day Header */}
@@ -92,9 +103,12 @@ export const DayCell = memo(function DayCell({ day, onDrop }: DayCellProps) {
                 <div className="flex items-center gap-2">
                     <span
                         className={cn(
-                            "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
-                            day.isToday && "bg-primary text-primary-foreground",
-                            !day.isCurrentMonth && "text-muted-foreground"
+                            "text-xs font-medium w-[22px] h-[22px] flex items-center justify-center rounded-[7px]",
+                            day.isToday
+                                ? "bg-gradient-to-br from-primary to-accent font-bold text-white"
+                                : day.isCurrentMonth
+                                    ? "text-muted-foreground"
+                                    : "text-muted-foreground/60"
                         )}
                     >
                         {format(day.date, 'd')}
@@ -152,6 +166,14 @@ export const DayCell = memo(function DayCell({ day, onDrop }: DayCellProps) {
                 )}
             </div>
 
+            {/* AI-suggested empty slot chip */}
+            {suggestedTime && (
+                <div className="mt-auto flex items-center gap-1 self-start rounded-[7px] border border-dashed border-primary/35 bg-primary/10 px-1.5 py-1 text-[10px] text-primary/80">
+                    <Sparkles className="h-2.5 w-2.5" />
+                    {suggestedTime}
+                </div>
+            )}
+
             {/* Drop zone overlay - pokazuje się gdy coś jest przeciągane nad komórką */}
             <AnimatePresence>
                 {isDragOver && (
@@ -159,7 +181,7 @@ export const DayCell = memo(function DayCell({ day, onDrop }: DayCellProps) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="absolute inset-0 border-2 border-dashed rounded-lg pointer-events-none border-primary bg-primary/10"
+                        className="absolute inset-0 rounded-[14px] border-2 border-dashed pointer-events-none border-primary bg-primary/10"
                     />
                 )}
             </AnimatePresence>

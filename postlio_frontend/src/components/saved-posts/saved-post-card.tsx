@@ -32,7 +32,6 @@ import {
     Send,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -106,27 +105,27 @@ const STATUS_CONFIG: Record<PostStatus, {
     draft: {
         label: 'Szkic',
         icon: Edit3,
-        className: 'bg-muted text-muted-foreground',
+        className: 'bg-warning/[0.14] text-warning',
     },
     scheduled: {
         label: 'Zaplanowany',
         icon: Clock,
-        className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+        className: 'bg-primary/[0.14] text-primary',
     },
     publishing: {
         label: 'Publikowanie...',
         icon: Send,
-        className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+        className: 'bg-warning/[0.14] text-warning',
     },
     published: {
         label: 'Opublikowany',
         icon: CheckCircle2,
-        className: 'bg-green-500/10 text-green-600 dark:text-green-400',
+        className: 'bg-success/[0.14] text-success',
     },
     failed: {
         label: 'Błąd',
         icon: AlertCircle,
-        className: 'bg-red-500/10 text-red-600 dark:text-red-400',
+        className: 'bg-destructive/[0.14] text-destructive',
     },
 };
 
@@ -185,12 +184,10 @@ export const SavedPostCard = forwardRef<HTMLDivElement, SavedPostCardProps>(
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                whileHover={{ y: -2 }}
                 onHoverStart={() => setIsHovered(true)}
                 onHoverEnd={() => setIsHovered(false)}
                 className={cn(
-                    'group relative rounded-xl border bg-card transition-all duration-200',
-                    'hover:shadow-lg hover:border-primary/20',
+                    'glass-card-interactive group relative flex flex-col overflow-hidden',
                     isSelected && 'ring-2 ring-primary border-primary'
                 )}
             >
@@ -210,7 +207,7 @@ export const SavedPostCard = forwardRef<HTMLDivElement, SavedPostCardProps>(
 
                 {/* Image thumbnail */}
                 {post.image_url ? (
-                    <div className="relative aspect-video w-full overflow-hidden rounded-t-xl">
+                    <div className="relative aspect-video w-full overflow-hidden">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src={post.image_url}
@@ -221,7 +218,7 @@ export const SavedPostCard = forwardRef<HTMLDivElement, SavedPostCardProps>(
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
                         {/* Platform badges on image */}
-                        <div className="absolute bottom-2 left-2 flex gap-1">
+                        <div className="absolute bottom-2.5 left-2.5 flex gap-1">
                             {allPlatforms.map((platform) => {
                                 const config = PLATFORM_CONFIG[platform as Platform];
                                 if (!config) return null;
@@ -229,7 +226,7 @@ export const SavedPostCard = forwardRef<HTMLDivElement, SavedPostCardProps>(
                                 return (
                                     <div
                                         key={platform}
-                                        className="flex items-center gap-1 rounded-full px-2 py-1 text-white text-xs font-medium backdrop-blur-sm"
+                                        className="flex h-6 items-center gap-1 rounded-[7px] px-2 text-white text-xs font-semibold shadow-[0_4px_12px_-3px_rgba(0,0,0,0.5)] backdrop-blur-sm"
                                         style={{ backgroundColor: `${config.color}CC` }}
                                     >
                                         <Icon className="h-3 w-3" />
@@ -241,23 +238,21 @@ export const SavedPostCard = forwardRef<HTMLDivElement, SavedPostCardProps>(
 
                         {/* AI badge */}
                         {post.ai_generated && (
-                            <div className="absolute bottom-2 right-2">
-                                <div className="flex items-center gap-1 rounded-full bg-violet-500/90 px-2 py-1 text-white text-xs font-medium backdrop-blur-sm">
-                                    <Sparkles className="h-3 w-3" />
-                                    AI
-                                </div>
+                            <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1 rounded-[8px] bg-gradient-to-br from-primary to-accent px-2.5 py-1 text-[10.5px] font-semibold text-white shadow-[0_4px_12px_-3px_rgba(0,0,0,0.5)]">
+                                <Sparkles className="h-3 w-3" />
+                                AI
                             </div>
                         )}
                     </div>
                 ) : (
                     // Placeholder when no image
-                    <div className="relative aspect-video w-full overflow-hidden rounded-t-xl bg-muted/50">
+                    <div className="relative aspect-video w-full overflow-hidden bg-gradient-to-br from-primary/15 to-accent/15">
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <ImageIcon className="h-12 w-12 text-muted-foreground/30" />
+                            <ImageIcon className="h-9 w-9 text-muted-foreground/40" />
                         </div>
 
                         {/* Platform badges */}
-                        <div className="absolute bottom-2 left-2 flex gap-1">
+                        <div className="absolute bottom-2.5 left-2.5 flex gap-1">
                             {allPlatforms.map((platform) => {
                                 const config = PLATFORM_CONFIG[platform as Platform];
                                 if (!config) return null;
@@ -265,8 +260,8 @@ export const SavedPostCard = forwardRef<HTMLDivElement, SavedPostCardProps>(
                                 return (
                                     <div
                                         key={platform}
-                                        className={cn('flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium', config.bgColor)}
-                                        style={{ color: config.color }}
+                                        className="flex h-6 items-center gap-1 rounded-[7px] px-2 text-white text-xs font-semibold shadow-[0_4px_12px_-3px_rgba(0,0,0,0.5)]"
+                                        style={{ backgroundColor: config.color }}
                                     >
                                         <Icon className="h-3 w-3" />
                                         {allPlatforms.length === 1 && config.label}
@@ -276,38 +271,36 @@ export const SavedPostCard = forwardRef<HTMLDivElement, SavedPostCardProps>(
                         </div>
 
                         {post.ai_generated && (
-                            <div className="absolute bottom-2 right-2">
-                                <Badge variant="secondary" className="bg-violet-500/10 text-violet-600 dark:text-violet-400">
-                                    <Sparkles className="h-3 w-3 mr-1" />
-                                    AI
-                                </Badge>
+                            <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1 rounded-[8px] bg-gradient-to-br from-primary to-accent px-2.5 py-1 text-[10.5px] font-semibold text-white shadow-[0_4px_12px_-3px_rgba(0,0,0,0.5)]">
+                                <Sparkles className="h-3 w-3" />
+                                AI
                             </div>
                         )}
                     </div>
                 )}
 
                 {/* Content */}
-                <div className="p-4 space-y-3">
+                <div className="flex flex-1 flex-col gap-2.5 p-3.5">
                     {/* Status & Date */}
                     <div className="flex items-center justify-between gap-2">
-                        <Badge variant="secondary" className={cn('text-xs', statusConfig.className)}>
+                        <Badge variant="secondary" className={cn('text-xs rounded-[7px] border-0', statusConfig.className)}>
                             <StatusIcon className="h-3 w-3 mr-1" />
                             {statusConfig.label}
                         </Badge>
 
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-[11.5px] text-muted-foreground/80">
                             {formattedDate}
                         </span>
                     </div>
 
                     {/* Post content preview */}
-                    <p className="text-sm text-foreground/80 line-clamp-3 min-h-[3.75rem]">
+                    <p className="text-[13.5px] leading-relaxed text-foreground/80 line-clamp-2 min-h-[2.5rem]">
                         {truncatedContent}
                     </p>
 
                     {/* Scheduled date if exists */}
                     {scheduledDate && post.status === 'scheduled' && (
-                        <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400">
+                        <div className="flex items-center gap-1.5 text-xs text-primary">
                             <Clock className="h-3.5 w-3.5" />
                             <span>Zaplanowano: {scheduledDate}</span>
                         </div>
@@ -315,77 +308,66 @@ export const SavedPostCard = forwardRef<HTMLDivElement, SavedPostCardProps>(
 
                     {/* Hashtags preview */}
                     {post.hashtags && post.hashtags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                            {post.hashtags.slice(0, 3).map((tag) => (
-                                <span
-                                    key={tag}
-                                    className="text-xs text-primary/70 hover:text-primary cursor-default"
-                                >
-                                    #{tag}
-                                </span>
-                            ))}
-                            {post.hashtags.length > 3 && (
-                                <span className="text-xs text-muted-foreground">
-                                    +{post.hashtags.length - 3}
-                                </span>
-                            )}
+                        <div className="text-[11px] text-primary/70 truncate">
+                            {post.hashtags.slice(0, 3).map(tag => `#${tag}`).join(' ')}
+                            {post.hashtags.length > 3 && ` +${post.hashtags.length - 3}`}
                         </div>
                     )}
 
                     {/* Actions */}
-                    <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                        <div className="flex items-center gap-1">
-                            <TooltipProvider delayDuration={300}>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8"
-                                            onClick={() => onEdit?.(post)}
-                                        >
-                                            <Edit3 className="h-4 w-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Edytuj</TooltipContent>
-                                </Tooltip>
+                    <div className="mt-auto flex items-center gap-1.5 border-t border-white/[0.05] pt-2.5">
+                        <button
+                            type="button"
+                            onClick={() => onEdit?.(post)}
+                            className="flex-1 rounded-[8px] border border-white/[0.08] py-1.5 text-[11.5px] text-[#c7cad2] transition-colors hover:bg-white/[0.05]"
+                        >
+                            Edytuj
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => onSchedule?.(post)}
+                            className="flex-1 rounded-[8px] border border-primary/25 py-1.5 text-[11.5px] font-semibold text-primary transition-colors hover:bg-primary/10"
+                        >
+                            Zaplanuj
+                        </button>
 
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8"
-                                            onClick={() => onSchedule?.(post)}
-                                        >
-                                            <Calendar className="h-4 w-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Zaplanuj</TooltipContent>
-                                </Tooltip>
+                        <TooltipProvider delayDuration={300}>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        type="button"
+                                        onClick={() => onPublish?.(post)}
+                                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] border border-white/[0.08] text-accent transition-colors hover:bg-accent/10"
+                                    >
+                                        <Hand className="h-3.5 w-3.5" />
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Opublikuj ręcznie</TooltipContent>
+                            </Tooltip>
 
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-violet-600 hover:text-violet-700 hover:bg-violet-50 dark:hover:bg-violet-950"
-                                            onClick={() => onPublish?.(post)}
-                                        >
-                                            <Hand className="h-4 w-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Opublikuj ręcznie</TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        </div>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        type="button"
+                                        onClick={() => onDuplicate?.(post)}
+                                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] border border-white/[0.08] text-muted-foreground transition-colors hover:bg-white/[0.05] hover:text-foreground"
+                                    >
+                                        <Copy className="h-3.5 w-3.5" />
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Duplikuj</TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
 
                         {/* More options dropdown */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
+                                <button
+                                    type="button"
+                                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] border border-white/[0.08] text-muted-foreground transition-colors hover:bg-white/[0.05] hover:text-foreground"
+                                >
+                                    <MoreHorizontal className="h-3.5 w-3.5" />
+                                </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
                                 <DropdownMenuItem onClick={() => onEdit?.(post)}>

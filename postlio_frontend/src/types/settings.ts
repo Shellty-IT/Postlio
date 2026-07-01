@@ -61,11 +61,9 @@ export interface NotificationPreferences {
 
 // ==================== APPEARANCE ====================
 
-export type ThemeMode = 'light' | 'dark' | 'system';
 export type AccentColor = 'blue' | 'violet' | 'green' | 'orange' | 'rose';
 
 export interface AppearancePreferences {
-    theme: ThemeMode;
     accentColor: AccentColor;
     reducedMotion: boolean;
     compactMode: boolean;
@@ -129,12 +127,6 @@ export const SETTINGS_SECTIONS: SettingsSectionInfo[] = [
 ];
 
 // ==================== CONSTANTS ====================
-
-export const THEME_OPTIONS: { value: ThemeMode; label: string; icon: string }[] = [
-    { value: 'light', label: 'Jasny', icon: 'Sun' },
-    { value: 'dark', label: 'Ciemny', icon: 'Moon' },
-    { value: 'system', label: 'Systemowy', icon: 'Monitor' },
-];
 
 export const ACCENT_COLORS: { value: AccentColor; label: string; color: string }[] = [
     { value: 'blue', label: 'Niebieski', color: '#3B82F6' },

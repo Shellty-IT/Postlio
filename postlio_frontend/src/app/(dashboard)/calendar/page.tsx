@@ -21,8 +21,10 @@ import {
     endOfMonth,
     startOfWeek,
     endOfWeek,
+    isWithinInterval,
 } from 'date-fns';
-import { FileText } from 'lucide-react';
+import { pl } from 'date-fns/locale';
+import { FileText, Sparkles } from 'lucide-react';
 import {
     CalendarHeader,
     MonthView,
@@ -125,6 +127,18 @@ export default function CalendarPage() {
     const posts = useMemo(() => {
         return apiEvents.map(convertToScheduledPost);
     }, [apiEvents]);
+
+    const currentWeek = useMemo(() => {
+        const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+        return { start: weekStart, end: weekEnd };
+    }, []);
+
+    const isCurrentWeekEmpty = useMemo(() => {
+        return !posts.some((post) =>
+            isWithinInterval(new Date(post.scheduledAt), currentWeek)
+        );
+    }, [posts, currentWeek]);
 
     const handlePostMove = useCallback(async (postId: string, newDate: Date) => {
         const event = apiEvents.find(e => e.id === postId);
@@ -235,6 +249,7 @@ export default function CalendarPage() {
     }
 
     const draftCount = drafts.filter(d => d.status === 'draft').length;
+    const showAiEmptyWeekBanner = isCurrentWeekEmpty && draftCount > 0;
 
     return (
         <DndContext
@@ -255,21 +270,25 @@ export default function CalendarPage() {
                             {isMobile && (
                                 <Sheet open={isDraftSheetOpen} onOpenChange={setIsDraftSheetOpen}>
                                     <SheetTrigger asChild>
-                                        <Button variant="outline" size="sm" className="gap-2 flex-shrink-0">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="gap-2 flex-shrink-0 rounded-[11px] border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06]"
+                                        >
                                             <FileText className="h-4 w-4" />
                                             <span className="hidden xs:inline">Szkice</span>
                                             {draftCount > 0 && (
-                                                <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                                                <Badge className="h-5 rounded-md bg-warning/16 px-1.5 text-xs text-warning hover:bg-warning/16">
                                                     {draftCount}
                                                 </Badge>
                                             )}
                                         </Button>
                                     </SheetTrigger>
-                                    <SheetContent side="right" className="w-full xs:w-80 p-0">
-                                        <SheetHeader className="p-4 border-b">
-                                            <SheetTitle className="flex items-center gap-2">
+                                    <SheetContent side="right" className="w-full xs:w-80 p-0 border-white/10 bg-[#0a0a0f]">
+                                        <SheetHeader className="p-4 border-b border-white/[0.06]">
+                                            <SheetTitle className="mono-label flex items-center gap-2 text-foreground/70">
                                                 <FileText className="h-4 w-4" />
-                                                Szkice
+                                                SZKICE
                                             </SheetTitle>
                                         </SheetHeader>
                                         <DraftsSidebar
@@ -284,6 +303,33 @@ export default function CalendarPage() {
                         </div>
 
                         <CalendarHeader isMobile={isMobile} />
+
+                        {showAiEmptyWeekBanner && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="hero-card flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5"
+                            >
+                                <span className="ai-pulse relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-glow-primary">
+                                    <Sparkles className="h-[18px] w-[18px] text-white" />
+                                </span>
+                                <div className="relative flex-1">
+                                    <p className="text-[14.5px] font-semibold">
+                                        Ten tydzień ({format(currentWeek.start, 'd MMM', { locale: pl })} – {format(currentWeek.end, 'd MMM', { locale: pl })}) jest pusty
+                                    </p>
+                                    <p className="mt-1 text-[13px] text-muted-foreground">
+                                        Mam {draftCount} {draftCount === 1 ? 'szkic gotowy' : 'szkice gotowe'} do zaplanowania — mogę dobrać dla nich najlepsze godziny.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="btn-gradient relative w-full px-5 py-2.5 text-[13.5px] sm:w-auto"
+                                >
+                                    <Sparkles className="h-[15px] w-[15px]" />
+                                    Wypełnij tydzień z AI
+                                </button>
+                            </motion.div>
+                        )}
 
                         <AnimatePresence mode="wait">
                             <motion.div

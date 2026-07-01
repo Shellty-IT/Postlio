@@ -13,8 +13,6 @@ import { persist } from 'zustand/middleware';
 // TYPY
 // ============================================================
 
-type Theme = 'light' | 'dark' | 'system';
-
 type ModalType =
     | 'create-post'
     | 'edit-post'
@@ -31,10 +29,6 @@ interface ModalData {
 }
 
 interface UIState {
-    // Theme
-    theme: Theme;
-    setTheme: (theme: Theme) => void;
-
     // Sidebar
     sidebarOpen: boolean;
     sidebarCollapsed: boolean;
@@ -75,28 +69,6 @@ interface UIState {
 export const useUIStore = create<UIState>()(
     persist(
         (set, get) => ({
-            // ==================== THEME ====================
-            theme: 'system',
-
-            setTheme: (theme: Theme) => {
-                set({ theme });
-
-                // Aplikuj theme do dokumentu
-                if (typeof window !== 'undefined') {
-                    const root = window.document.documentElement;
-                    root.classList.remove('light', 'dark');
-
-                    if (theme === 'system') {
-                        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-                            ? 'dark'
-                            : 'light';
-                        root.classList.add(systemTheme);
-                    } else {
-                        root.classList.add(theme);
-                    }
-                }
-            },
-
             // ==================== SIDEBAR ====================
             sidebarOpen: true,
             sidebarCollapsed: false,
@@ -183,7 +155,6 @@ export const useUIStore = create<UIState>()(
             name: 'postlio-ui',
             // Zapisuj tylko wybrane pola w localStorage
             partialize: (state) => ({
-                theme: state.theme,
                 sidebarCollapsed: state.sidebarCollapsed,
             }),
         }
@@ -193,16 +164,6 @@ export const useUIStore = create<UIState>()(
 // ============================================================
 // HOOKI POMOCNICZE
 // ============================================================
-
-/**
- * Hook do zarządzania theme
- */
-export function useTheme() {
-    const theme = useUIStore((state) => state.theme);
-    const setTheme = useUIStore((state) => state.setTheme);
-
-    return { theme, setTheme };
-}
 
 /**
  * Hook do zarządzania sidebar

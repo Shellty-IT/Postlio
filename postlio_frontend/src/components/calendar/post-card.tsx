@@ -112,9 +112,8 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
                     onMouseEnter={() => setIsHovered(true)}
                     onMouseLeave={() => setIsHovered(false)}
                     className={cn(
-                        "relative px-2 py-1 rounded-md text-xs cursor-pointer",
-                        "transition-all duration-200 hover:shadow-md",
-                        "border-l-2"
+                        "relative rounded-[8px] border-l-2 px-2 py-1 text-xs cursor-pointer",
+                        "transition-all duration-200 hover:brightness-110"
                     )}
                     style={{
                         backgroundColor: platformStyle.bgColor,
@@ -124,7 +123,7 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
                     <div className="flex items-center gap-1.5">
                         {/* AI Badge */}
                         {post.aiGenerated && (
-                            <Sparkles className="h-3 w-3 text-violet-500 flex-shrink-0" />
+                            <Sparkles className="h-3 w-3 text-accent flex-shrink-0" />
                         )}
 
                         {/* Title */}
@@ -145,8 +144,8 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
                             initial={{ opacity: 0, y: 5 }}
                             animate={{ opacity: 1, y: 0 }}
                             className={cn(
-                                "absolute z-50 left-full ml-2 top-0 w-64 p-3 rounded-lg",
-                                "bg-popover border shadow-lg pointer-events-none"
+                                "absolute z-50 left-full ml-2 top-0 w-64 p-3",
+                                "glass-card-strong shadow-xl pointer-events-none"
                             )}
                         >
                             <p className="text-sm line-clamp-3">{post.content}</p>
@@ -177,7 +176,7 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 className={cn(
-                    "p-3 rounded-lg border bg-card hover:shadow-lg transition-all duration-200",
+                    "glass-card-interactive p-3",
                     "cursor-grab active:cursor-grabbing"
                 )}
             >
@@ -207,9 +206,9 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
                         {post.aiGenerated && (
                             <Tooltip>
                                 <TooltipTrigger>
-                                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-violet-500/10">
-                                        <Sparkles className="h-3 w-3 text-violet-500" />
-                                        <span className="text-[10px] text-violet-600 dark:text-violet-400 font-medium">
+                                    <div className="flex items-center gap-1 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 px-1.5 py-0.5">
+                                        <Sparkles className="h-3 w-3 text-accent" />
+                                        <span className="text-[10px] font-medium text-[#c3ccff]">
                                             AI
                                         </span>
                                     </div>
@@ -280,7 +279,7 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
 
                 {/* Brand badge */}
                 {post.brandName && (
-                    <div className="mt-2 pt-2 border-t">
+                    <div className="mt-2 pt-2 border-t border-white/[0.06]">
                         <span className="text-xs text-muted-foreground">
                             Marka: <span className="font-medium text-foreground">{post.brandName}</span>
                         </span>

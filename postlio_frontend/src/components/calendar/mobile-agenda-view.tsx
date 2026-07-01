@@ -73,12 +73,12 @@ export function MobileAgendaView({ posts }: MobileAgendaViewProps) {
 
     if (posts.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
+            <div className="empty-state-card">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/[0.04]">
                     <Calendar className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-medium mb-1">Brak zaplanowanych postów</h3>
-                <p className="text-sm text-muted-foreground max-w-xs">
+                <h3 className="text-lg font-medium">Brak zaplanowanych postów</h3>
+                <p className="text-sm text-muted-foreground max-w-xs -mt-1">
                     Przeciągnij szkic na kalendarz lub użyj przycisku &quot;Zaplanuj post&quot;
                 </p>
             </div>
@@ -92,18 +92,18 @@ export function MobileAgendaView({ posts }: MobileAgendaViewProps) {
                     key={date.toISOString()}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl border bg-card overflow-hidden"
+                    className="glass-card overflow-hidden"
                 >
                     <div className={cn(
-                        "px-4 py-2.5 border-b flex items-center justify-between",
+                        "px-4 py-2.5 border-b border-white/[0.06] flex items-center justify-between",
                         isToday(date) && "bg-primary/5"
                     )}>
                         <div className="flex items-center gap-2">
                             <div className={cn(
                                 "w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold",
                                 isToday(date)
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-muted text-muted-foreground"
+                                    ? "bg-gradient-to-br from-primary to-accent text-white"
+                                    : "bg-white/[0.04] text-muted-foreground"
                             )}>
                                 {format(date, 'd')}
                             </div>
@@ -128,7 +128,7 @@ export function MobileAgendaView({ posts }: MobileAgendaViewProps) {
 
                     <AnimatePresence>
                         {dayPosts.length > 0 ? (
-                            <div className="divide-y">
+                            <div className="divide-y divide-white/[0.05]">
                                 {dayPosts.map((post) => {
                                     const platforms = post.platforms || [post.platform || 'facebook'];
                                     const primaryPlatform = platforms[0] as Platform;
@@ -142,7 +142,7 @@ export function MobileAgendaView({ posts }: MobileAgendaViewProps) {
                                             animate={{ opacity: 1 }}
                                             exit={{ opacity: 0 }}
                                             onClick={() => handlePostClick(post)}
-                                            className="w-full px-4 py-3 flex items-start gap-3 hover:bg-muted/50 transition-colors text-left"
+                                            className="w-full px-4 py-3 flex items-start gap-3 hover:bg-white/[0.03] transition-colors text-left"
                                         >
                                             <div
                                                 className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -161,7 +161,7 @@ export function MobileAgendaView({ posts }: MobileAgendaViewProps) {
                                                         {format(new Date(post.scheduledAt), 'HH:mm')}
                                                     </span>
                                                     {post.aiGenerated && (
-                                                        <Sparkles className="h-3.5 w-3.5 text-violet-500 flex-shrink-0" />
+                                                        <Sparkles className="h-3.5 w-3.5 text-accent flex-shrink-0" />
                                                     )}
                                                     {platforms.length > 1 && (
                                                         <span className="text-xs text-muted-foreground">

@@ -95,10 +95,10 @@ function StatusIndicator({
                 icon: Pencil,
                 text: 'Tryb edycji',
                 shortText: 'Edycja',
-                color: 'text-violet-500',
-                bgColor: 'bg-violet-500/10',
-                borderColor: 'border-violet-500/30',
-                dotColor: 'bg-violet-500',
+                color: 'text-accent',
+                bgColor: 'bg-accent/10',
+                borderColor: 'border-accent/30',
+                dotColor: 'bg-accent',
                 pulse: false,
             };
         }
@@ -108,10 +108,10 @@ function StatusIndicator({
                 icon: ImageOff,
                 text: 'Instagram wymaga zdjęcia',
                 shortText: 'Dodaj zdjęcie',
-                color: 'text-amber-500',
-                bgColor: 'bg-amber-500/10',
-                borderColor: 'border-amber-500/30',
-                dotColor: 'bg-amber-500',
+                color: 'text-warning',
+                bgColor: 'bg-warning/10',
+                borderColor: 'border-warning/30',
+                dotColor: 'bg-warning',
                 pulse: true,
             };
         }
@@ -121,10 +121,10 @@ function StatusIndicator({
                 icon: CheckCircle2,
                 text: 'Gotowy do publikacji',
                 shortText: 'Gotowy',
-                color: 'text-emerald-500',
-                bgColor: 'bg-emerald-500/10',
-                borderColor: 'border-emerald-500/30',
-                dotColor: 'bg-emerald-500',
+                color: 'text-success',
+                bgColor: 'bg-success/10',
+                borderColor: 'border-success/30',
+                dotColor: 'bg-success',
                 pulse: false,
             };
         }
@@ -264,8 +264,8 @@ export function ActionBar({
                                     onClick={handleSaveDraft}
                                     disabled={!canSave || isLoading}
                                     className={cn(
-                                        "h-9 px-2 sm:px-3",
-                                        isEditMode && 'border-violet-300 text-violet-600 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-400 dark:hover:bg-violet-950'
+                                        "h-9 px-2 sm:px-3 rounded-[11px] border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
+                                        isEditMode && 'border-accent/30 text-accent hover:bg-accent/10'
                                     )}
                                 >
                                     {isLoading ? (
@@ -293,7 +293,7 @@ export function ActionBar({
                                             variant="outline"
                                             size="sm"
                                             disabled={!canPublish || isLoading}
-                                            className="h-9 px-2 sm:px-3"
+                                            className="h-9 px-2 sm:px-3 rounded-[11px] border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
                                         >
                                             <Calendar className="w-4 h-4" />
                                             <span className="hidden sm:inline ml-2">Zaplanuj</span>
@@ -327,7 +327,7 @@ export function ActionBar({
                                     size="sm"
                                     onClick={onPublishManually}
                                     disabled={!canPublish || isLoading}
-                                    className="h-9 px-2 sm:px-3 gap-1.5 bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90 shadow-lg shadow-primary/25"
+                                    className="h-9 px-2 sm:px-3 gap-1.5 btn-gradient"
                                 >
                                     <Sparkles className="w-4 h-4" />
                                     <span className="hidden xs:inline">Publikuj</span>

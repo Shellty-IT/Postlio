@@ -196,7 +196,7 @@ export function ImageCropModal({
                 <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 p-3 xs:p-4 sm:p-6 pt-2 sm:pt-4">
                         <div className="lg:col-span-2 space-y-3 sm:space-y-4">
-                            <div className="relative h-[220px] xs:h-[260px] sm:h-[320px] lg:h-[400px] bg-black rounded-lg overflow-hidden">
+                            <div className="relative h-[220px] xs:h-[260px] sm:h-[320px] lg:h-[400px] bg-black rounded-2xl overflow-hidden border border-white/10">
                                 <Cropper
                                     image={imageSrc}
                                     crop={crop}
@@ -207,7 +207,7 @@ export function ImageCropModal({
                                     onCropComplete={onCropAreaComplete}
                                     showGrid
                                     classes={{
-                                        containerClassName: 'rounded-lg',
+                                        containerClassName: 'rounded-2xl',
                                     }}
                                 />
                             </div>
@@ -258,11 +258,11 @@ export function ImageCropModal({
                                             key={key}
                                             onClick={() => setSelectedAspect(key)}
                                             className={cn(
-                                                'flex flex-col items-center gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-lg border transition-all min-h-[44px]',
-                                                'hover:bg-muted/50 active:bg-muted',
+                                                'flex flex-col items-center gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-[14px] border transition-all min-h-[44px]',
+                                                'hover:bg-white/[0.04] active:bg-white/[0.06]',
                                                 selectedAspect === key
-                                                    ? 'border-primary bg-primary/5'
-                                                    : 'border-border'
+                                                    ? 'border-primary/40 bg-primary/[0.06]'
+                                                    : 'border-white/[0.07]'
                                             )}
                                         >
                                             <div className={cn(
@@ -388,7 +388,7 @@ export function ImageCropModal({
                     <Button
                         onClick={handleConfirm}
                         disabled={isProcessing}
-                        className="bg-gradient-to-r from-primary to-violet-500 h-9 sm:h-10 text-xs sm:text-sm flex-1 sm:flex-none"
+                        className="btn-gradient h-9 sm:h-10 text-xs sm:text-sm flex-1 sm:flex-none"
                     >
                         {isProcessing ? (
                             <>

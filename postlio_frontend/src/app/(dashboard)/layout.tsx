@@ -61,7 +61,7 @@ export default function DashboardLayout({
             <div
                 className={cn(
                     'min-h-screen transition-all duration-300',
-                    !isMobile && (isCollapsed ? 'lg:pl-20' : 'lg:pl-64'),
+                    !isMobile && (isCollapsed ? 'lg:pl-[104px]' : 'lg:pl-[266px]'),
                     'pb-20 xs:pb-24 lg:pb-6'
                 )}
             >

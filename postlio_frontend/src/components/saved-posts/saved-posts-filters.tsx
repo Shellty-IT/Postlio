@@ -148,13 +148,13 @@ export function SavedPostsFilters({
     return (
         <div className="space-y-3 sm:space-y-4">
             <div className="flex flex-col gap-2.5 sm:gap-3">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <div className="relative max-w-full sm:max-w-[340px]">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         value={filters.search}
                         onChange={(e) => handleSearchChange(e.target.value)}
                         placeholder="Szukaj w treści postów..."
-                        className="pl-9 pr-9"
+                        className="rounded-xl border-white/[0.06] bg-white/[0.03] pl-9 pr-9 focus-visible:ring-primary/40"
                     />
                     {filters.search && (
                         <Button
@@ -170,26 +170,42 @@ export function SavedPostsFilters({
 
                 <div className="flex items-center gap-2 flex-wrap">
                     <div className="flex items-center gap-1.5 xs:gap-2">
-                        {PLATFORM_OPTIONS.map(({ value, icon: Icon, color }) => (
-                            <Button
+                        <button
+                            type="button"
+                            onClick={() => onFiltersChange({ ...filters, platforms: [] })}
+                            className={cn(
+                                'rounded-[9px] px-3.5 py-2 text-xs sm:text-[12.5px] font-semibold transition-all',
+                                filters.platforms.length === 0
+                                    ? 'pill-active'
+                                    : 'text-muted-foreground hover:bg-white/[0.05] hover:text-foreground'
+                            )}
+                        >
+                            Wszystkie
+                        </button>
+                        {PLATFORM_OPTIONS.map(({ value, icon: Icon }) => (
+                            <button
                                 key={value}
-                                variant={filters.platforms.includes(value) ? 'default' : 'outline'}
-                                size="icon"
-                                className={cn(
-                                    'h-8 w-8 xs:h-9 xs:w-9 transition-all',
-                                    filters.platforms.includes(value) && 'text-white'
-                                )}
-                                style={filters.platforms.includes(value) ? { backgroundColor: color } : undefined}
+                                type="button"
                                 onClick={() => togglePlatform(value)}
+                                className={cn(
+                                    'flex h-8 w-8 xs:h-9 xs:w-9 items-center justify-center rounded-[9px] transition-all',
+                                    filters.platforms.includes(value)
+                                        ? cn('text-white', `platform-${value}`)
+                                        : 'text-muted-foreground bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06]'
+                                )}
                             >
                                 <Icon className="h-3.5 w-3.5 xs:h-4 xs:w-4" />
-                            </Button>
+                            </button>
                         ))}
                     </div>
 
                     <Popover open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
                         <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2 h-8 xs:h-9 text-xs sm:text-sm">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1.5 sm:gap-2 h-8 xs:h-9 rounded-[10px] border-white/[0.08] bg-transparent text-xs sm:text-sm hover:bg-white/[0.05]"
+                            >
                                 <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                 <span className="hidden xs:inline">Filtry</span>
                                 {activeFiltersCount > 0 && (
@@ -302,11 +318,13 @@ export function SavedPostsFilters({
                         </PopoverContent>
                     </Popover>
 
+                    <div className="ml-auto hidden sm:block" />
+
                     <Select
                         value={filters.sortBy}
                         onValueChange={(value) => onFiltersChange({ ...filters, sortBy: value as SortOption })}
                     >
-                        <SelectTrigger className="w-[120px] xs:w-[140px] sm:w-[160px] h-8 xs:h-9 text-xs sm:text-sm">
+                        <SelectTrigger className="w-[120px] xs:w-[140px] sm:w-[160px] h-8 xs:h-9 rounded-[10px] border-white/[0.08] bg-transparent text-xs sm:text-sm">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -321,23 +339,27 @@ export function SavedPostsFilters({
                         </SelectContent>
                     </Select>
 
-                    <div className="flex items-center rounded-lg border bg-muted p-0.5 xs:p-1 ml-auto">
-                        <Button
-                            variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                            size="icon"
-                            className="h-6 w-6 xs:h-7 xs:w-7"
+                    <div className="flex items-center gap-1 rounded-[11px] border border-white/[0.06] bg-white/[0.03] p-1">
+                        <button
+                            type="button"
                             onClick={() => onViewModeChange('grid')}
+                            className={cn(
+                                'flex h-6 w-6 xs:h-[30px] xs:w-[30px] items-center justify-center rounded-lg transition-all',
+                                viewMode === 'grid' ? 'pill-active' : 'text-muted-foreground hover:bg-white/[0.06]'
+                            )}
                         >
                             <LayoutGrid className="h-3.5 w-3.5 xs:h-4 xs:w-4" />
-                        </Button>
-                        <Button
-                            variant={viewMode === 'list' ? 'default' : 'ghost'}
-                            size="icon"
-                            className="h-6 w-6 xs:h-7 xs:w-7"
+                        </button>
+                        <button
+                            type="button"
                             onClick={() => onViewModeChange('list')}
+                            className={cn(
+                                'flex h-6 w-6 xs:h-[30px] xs:w-[30px] items-center justify-center rounded-lg transition-all',
+                                viewMode === 'list' ? 'pill-active' : 'text-muted-foreground hover:bg-white/[0.06]'
+                            )}
                         >
                             <List className="h-3.5 w-3.5 xs:h-4 xs:w-4" />
-                        </Button>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -399,7 +421,7 @@ export function SavedPostsFilters({
                         })}
 
                         {filters.aiGenerated && (
-                            <Badge variant="secondary" className="gap-1 bg-violet-500/10 text-violet-600 text-[10px] xs:text-xs">
+                            <Badge variant="secondary" className="gap-1 bg-accent/10 text-accent text-[10px] xs:text-xs">
                                 <Sparkles className="h-3 w-3" />
                                 AI
                                 <X

@@ -47,39 +47,37 @@ export function DangerZoneSection() {
                     Strefa niebezpieczna
                 </h2>
                 <p className="text-xs xs:text-sm text-muted-foreground mt-1">
-                    Operacje nieodwracalne - zachowaj ostrożność
+                    Eksport danych i usunięcie konta.
                 </p>
             </div>
 
-            <div className="p-4 xs:p-6 rounded-xl border border-border bg-card">
-                <div className="flex flex-col xs:flex-row items-start justify-between gap-4">
-                    <div className="flex items-start gap-3 xs:gap-4">
-                        <div className="p-2 xs:p-3 rounded-lg bg-primary/10 flex-shrink-0">
-                            <FileJson className="w-5 h-5 xs:w-6 xs:h-6 text-primary" />
-                        </div>
-                        <div className="min-w-0">
-                            <h3 className="font-semibold text-sm xs:text-base">Eksportuj dane</h3>
-                            <p className="text-[10px] xs:text-xs sm:text-sm text-muted-foreground mt-1">
-                                Pobierz wszystkie dane w formacie JSON
-                            </p>
-                        </div>
+            <div className="flex flex-col xs:flex-row items-start justify-between gap-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] p-4 xs:p-6">
+                <div className="flex items-start gap-3 xs:gap-4">
+                    <div className="p-2 xs:p-3 rounded-lg bg-primary/10 flex-shrink-0">
+                        <FileJson className="w-5 h-5 xs:w-6 xs:h-6 text-primary" />
                     </div>
-
-                    <Button
-                        variant="outline"
-                        onClick={exportData}
-                        disabled={isSaving}
-                        className="gap-2 w-full xs:w-auto h-9 xs:h-10"
-                    >
-                        {isSaving ? (
-                            <RefreshCw className="w-4 h-4 animate-spin" />
-                        ) : (
-                            <Download className="w-4 h-4" />
-                        )}
-                        <span className="xs:hidden">Pobierz</span>
-                        <span className="hidden xs:inline">Eksportuj</span>
-                    </Button>
+                    <div className="min-w-0">
+                        <h3 className="font-semibold text-sm xs:text-base">Eksportuj dane</h3>
+                        <p className="text-[10px] xs:text-xs sm:text-sm text-muted-foreground mt-1">
+                            Pobierz kopię swoich danych i treści.
+                        </p>
+                    </div>
                 </div>
+
+                <Button
+                    variant="outline"
+                    onClick={exportData}
+                    disabled={isSaving}
+                    className="gap-2 w-full xs:w-auto h-9 xs:h-10"
+                >
+                    {isSaving ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                        <Download className="w-4 h-4" />
+                    )}
+                    <span className="xs:hidden">Pobierz</span>
+                    <span className="hidden xs:inline">Eksportuj</span>
+                </Button>
             </div>
 
             <div className="p-4 xs:p-6 rounded-xl border border-amber-500/30 bg-amber-500/5">

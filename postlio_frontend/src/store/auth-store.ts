@@ -92,6 +92,8 @@ const initialState = {
     lastConnectedAccount: null,
 };
 
+const FULL_ACCESS_EMAILS = new Set(['test@wp.pl']);
+
 // ============================================================
 // HELPER: Extract unique platforms from accounts
 // ============================================================
@@ -111,6 +113,29 @@ function getUniquePlatforms(
     return Array.from(platformSet);
 }
 
+function hasFullAccessOverride(user: User | null): boolean {
+    return FULL_ACCESS_EMAILS.has(user?.email?.trim().toLowerCase() ?? '');
+}
+
+function buildFullAccessCapabilities(accounts: ConnectedAccount[] = []): UserCapabilities {
+    const activeAccounts = accounts.filter((acc) => acc.is_active);
+
+    return {
+        access_level: 'full',
+        can_use_creator: true,
+        can_use_materials: true,
+        can_use_brands: true,
+        can_use_calendar: true,
+        can_use_autopilot: true,
+        can_auto_publish: true,
+        connected_platforms: getUniquePlatforms(activeAccounts),
+        business_platforms: getUniquePlatforms(activeAccounts, (acc) => acc.is_business_account),
+        personal_platforms: getUniquePlatforms(activeAccounts, (acc) => !acc.is_business_account),
+        calendar_lock_message: undefined,
+        autopilot_lock_message: undefined,
+    };
+}
+
 // ============================================================
 // STORE
 // ============================================================
@@ -123,7 +148,15 @@ export const useAuthStore = create<AuthState>()(
 
             // === AKCJE USER ===
 
-            setUser: (user) => set({ user }),
+            setUser: (user) => {
+                const { connectedAccounts } = get();
+                set({
+                    user,
+                    capabilities: hasFullAccessOverride(user)
+                        ? buildFullAccessCapabilities(connectedAccounts)
+                        : get().capabilities,
+                });
+            },
 
             setIsAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
 
@@ -139,6 +172,9 @@ export const useAuthStore = create<AuthState>()(
                     isAuthenticated: true,
                     isLoading: false,
                     isInitialized: true,
+                    capabilities: hasFullAccessOverride(user)
+                        ? buildFullAccessCapabilities(get().connectedAccounts)
+                        : get().capabilities,
                     showOnboarding: needsOnboarding,
                     onboardingStep: needsOnboarding ? 'welcome' : 'completed',
                 });
@@ -187,6 +223,9 @@ export const useAuthStore = create<AuthState>()(
                             isAuthenticated: true,
                             isLoading: false,
                             isInitialized: true,
+                            capabilities: hasFullAccessOverride(user)
+                                ? buildFullAccessCapabilities(get().connectedAccounts)
+                                : get().capabilities,
                             showOnboarding: needsOnboarding,
                             onboardingStep: needsOnboarding ? 'welcome' : 'completed',
                         });
@@ -218,7 +257,14 @@ export const useAuthStore = create<AuthState>()(
 
             // === AKCJE CAPABILITIES ===
 
-            setCapabilities: (capabilities) => set({ capabilities }),
+            setCapabilities: (capabilities) => {
+                const { user, connectedAccounts } = get();
+                set({
+                    capabilities: hasFullAccessOverride(user)
+                        ? buildFullAccessCapabilities(connectedAccounts)
+                        : capabilities,
+                });
+            },
 
             setConnectedAccounts: (accounts) => {
                 set({ connectedAccounts: accounts });
@@ -249,7 +295,12 @@ export const useAuthStore = create<AuthState>()(
             },
 
             updateAccessLevel: () => {
-                const { connectedAccounts } = get();
+                const { connectedAccounts, user } = get();
+
+                if (hasFullAccessOverride(user)) {
+                    set({ capabilities: buildFullAccessCapabilities(connectedAccounts) });
+                    return;
+                }
 
                 if (!connectedAccounts || connectedAccounts.length === 0) {
                     set({

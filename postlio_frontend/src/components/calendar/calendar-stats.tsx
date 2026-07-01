@@ -31,24 +31,21 @@ export function CalendarStats({ posts }: CalendarStatsProps) {
             shortLabel: 'Zapl.',
             value: stats.scheduled,
             icon: Clock,
-            color: 'text-warning',
-            bgColor: 'bg-warning/10',
+            variant: 'default' as const,
         },
         {
             label: 'Opublikowane',
             shortLabel: 'Opubl.',
             value: stats.published,
             icon: CheckCircle,
-            color: 'text-success',
-            bgColor: 'bg-success/10',
+            variant: 'default' as const,
         },
         {
             label: 'Błędy',
             shortLabel: 'Błędy',
             value: stats.failed,
             icon: AlertCircle,
-            color: 'text-destructive',
-            bgColor: 'bg-destructive/10',
+            variant: 'destructive' as const,
             hideIfZero: true,
         },
         {
@@ -56,8 +53,7 @@ export function CalendarStats({ posts }: CalendarStatsProps) {
             shortLabel: 'AI',
             value: stats.aiGenerated,
             icon: Sparkles,
-            color: 'text-violet-500',
-            bgColor: 'bg-violet-500/10',
+            variant: 'ai' as const,
         },
     ];
 
@@ -67,7 +63,7 @@ export function CalendarStats({ posts }: CalendarStatsProps) {
         <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-wrap gap-2 sm:gap-3"
+            className="flex flex-wrap gap-2 sm:gap-2.5"
         >
             {visibleItems.map((item, index) => (
                 <motion.div
@@ -76,13 +72,18 @@ export function CalendarStats({ posts }: CalendarStatsProps) {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.05 }}
                     className={cn(
-                        "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg",
-                        item.bgColor
+                        "flex items-center gap-1.5 sm:gap-2 rounded-xl border px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-[13px]",
+                        item.variant === 'ai' &&
+                            "border-[hsl(225_100%_78%/0.25)] bg-gradient-to-br from-primary/[0.14] to-accent/10 text-[#c3ccff]",
+                        item.variant === 'destructive' &&
+                            "border-destructive/20 bg-destructive/10 text-destructive",
+                        item.variant === 'default' &&
+                            "border-white/[0.07] bg-white/[0.025] text-muted-foreground"
                     )}
                 >
-                    <item.icon className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", item.color)} />
-                    <span className="text-xs sm:text-sm font-medium">{item.value}</span>
-                    <span className="text-[10px] sm:text-xs text-muted-foreground">
+                    <item.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span className="font-semibold text-foreground">{item.value}</span>
+                    <span>
                         <span className="xs:hidden">{item.shortLabel}</span>
                         <span className="hidden xs:inline">{item.label}</span>
                     </span>

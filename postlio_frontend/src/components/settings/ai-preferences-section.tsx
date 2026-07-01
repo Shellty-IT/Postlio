@@ -49,14 +49,18 @@ export function AIPreferencesSection() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6 sm:space-y-8"
         >
-            <div>
-                <h2 className="text-lg xs:text-xl font-semibold text-foreground flex items-center gap-2">
-                    <Wand2 className="w-4 h-4 xs:w-5 xs:h-5 text-violet-500" />
-                    Preferencje AI
-                </h2>
-                <p className="text-xs xs:text-sm text-muted-foreground mt-1">
-                    Domyślne ustawienia generowania treści
-                </p>
+            <div className="flex items-center gap-2.5">
+                <span className="flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-[9px] bg-gradient-to-br from-primary to-accent">
+                    <Wand2 className="h-3.5 w-3.5 text-white" />
+                </span>
+                <div>
+                    <h2 className="text-lg xs:text-xl font-semibold text-foreground">
+                        Preferencje AI
+                    </h2>
+                    <p className="text-xs xs:text-sm text-muted-foreground mt-0.5">
+                        Domyślne ustawienia generowania treści.
+                    </p>
+                </div>
             </div>
 
             <div className="space-y-3 xs:space-y-4">
@@ -82,7 +86,7 @@ export function AIPreferencesSection() {
                                     "hover:border-primary/50",
                                     isSelected
                                         ? "border-primary bg-primary/5"
-                                        : "border-border bg-card"
+                                        : "border-white/10 bg-white/[0.02]"
                                 )}
                             >
                                 <div className="flex items-center gap-2 mb-1 xs:mb-2">
@@ -141,7 +145,7 @@ export function AIPreferencesSection() {
                                     "hover:border-violet-500/50",
                                     isSelected
                                         ? "border-violet-500 bg-violet-500/10"
-                                        : "border-border bg-card"
+                                        : "border-white/10 bg-white/[0.02]"
                                 )}
                             >
                                 <div className="flex items-center gap-2 mb-1 xs:mb-2">
@@ -171,7 +175,7 @@ export function AIPreferencesSection() {
                 </p>
             </div>
 
-            <div className="space-y-3 xs:space-y-4 p-4 xs:p-6 rounded-xl border border-border bg-card">
+            <div className="glass-card space-y-3 xs:space-y-4 p-4 xs:p-6">
                 <Label className="flex items-center gap-2 text-sm xs:text-base">
                     <Gauge className="w-4 h-4 text-orange-500" />
                     Kreatywność: {getCreativityPreset().label}
@@ -231,7 +235,7 @@ export function AIPreferencesSection() {
                                     "hover:border-blue-500/50",
                                     isSelected
                                         ? "border-blue-500 bg-blue-500/10"
-                                        : "border-border bg-card"
+                                        : "border-white/10 bg-white/[0.02]"
                                 )}
                             >
                                 <span className="font-medium block text-sm xs:text-base">{preset.label}</span>
@@ -245,7 +249,7 @@ export function AIPreferencesSection() {
             </div>
 
             <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 xs:gap-4">
-                <div className="p-4 xs:p-5 rounded-xl border border-border bg-card space-y-3 xs:space-y-4">
+                <div className="glass-card p-4 xs:p-5 space-y-3 xs:space-y-4">
                     <div className="flex items-center justify-between">
                         <Label htmlFor="auto-hashtags" className="flex items-center gap-2 text-xs xs:text-sm">
                             <Hash className="w-4 h-4 text-green-500" />
@@ -279,7 +283,7 @@ export function AIPreferencesSection() {
                     )}
                 </div>
 
-                <div className="p-4 xs:p-5 rounded-xl border border-border bg-card">
+                <div className="glass-card p-4 xs:p-5">
                     <div className="flex items-center justify-between">
                         <div>
                             <Label htmlFor="auto-emoji" className="flex items-center gap-2 text-xs xs:text-sm">

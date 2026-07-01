@@ -4,9 +4,7 @@
 import { motion } from 'framer-motion';
 import {
     Palette,
-    Sun,
     Moon,
-    Monitor,
     Minimize2,
     Eye,
     Zap
@@ -15,20 +13,10 @@ import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useSettingsStore } from '@/store/settings-store';
-import {
-    THEME_OPTIONS,
-    ACCENT_COLORS,
-    type ThemeMode,
-} from '@/types/settings';
-
-const THEME_ICONS: Record<ThemeMode, React.ReactNode> = {
-    light: <Sun className="w-4 h-4 xs:w-5 xs:h-5" />,
-    dark: <Moon className="w-4 h-4 xs:w-5 xs:h-5" />,
-    system: <Monitor className="w-4 h-4 xs:w-5 xs:h-5" />,
-};
+import { ACCENT_COLORS } from '@/types/settings';
 
 export function AppearanceSection() {
-    const { settings, updateAppearance, setTheme } = useSettingsStore();
+    const { settings, updateAppearance } = useSettingsStore();
     const { appearance } = settings;
 
     return (
@@ -43,50 +31,21 @@ export function AppearanceSection() {
                     Wygląd
                 </h2>
                 <p className="text-xs xs:text-sm text-muted-foreground mt-1">
-                    Dostosuj wygląd aplikacji do swoich preferencji
+                    Motyw, kolory i personalizacja.
                 </p>
             </div>
 
-            <div className="space-y-3 xs:space-y-4">
-                <Label className="text-sm xs:text-base">Motyw</Label>
-
-                <div className="grid grid-cols-3 gap-2 xs:gap-3 sm:gap-4">
-                    {THEME_OPTIONS.map((option) => {
-                        const isSelected = appearance.theme === option.value;
-
-                        return (
-                            <button
-                                key={option.value}
-                                onClick={() => setTheme(option.value)}
-                                className={cn(
-                                    "relative p-3 xs:p-4 sm:p-6 rounded-xl border-2 text-center transition-all",
-                                    "hover:border-primary/50 min-h-[80px] xs:min-h-[100px]",
-                                    isSelected
-                                        ? "border-primary bg-primary/5"
-                                        : "border-border bg-card"
-                                )}
-                            >
-                                <div className={cn(
-                                    "w-10 h-10 xs:w-12 xs:h-12 rounded-full mx-auto mb-2 xs:mb-3 flex items-center justify-center",
-                                    option.value === 'light' && "bg-amber-100 text-amber-600",
-                                    option.value === 'dark' && "bg-slate-800 text-slate-200",
-                                    option.value === 'system' && "bg-gradient-to-br from-amber-100 to-slate-800 text-white"
-                                )}>
-                                    {THEME_ICONS[option.value]}
-                                </div>
-                                <span className="font-medium text-xs xs:text-sm">{option.label}</span>
-
-                                {isSelected && (
-                                    <motion.div
-                                        layoutId="theme-selected"
-                                        className="absolute inset-0 rounded-xl border-2 border-primary"
-                                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                                    />
-                                )}
-                            </button>
-                        );
-                    })}
+            <div className="glass-card flex items-center justify-between gap-3 px-4 py-3.5 xs:px-5 xs:py-4">
+                <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
+                        <Moon className="h-4 w-4 text-white" />
+                    </span>
+                    <div>
+                        <p className="text-sm font-medium text-foreground">Ciemny motyw</p>
+                        <p className="text-xs text-muted-foreground">Postlio działa wyłącznie w trybie ciemnym.</p>
+                    </div>
                 </div>
+                <span className="rounded-md bg-primary/15 px-2.5 py-1 text-[11px] font-semibold text-primary">Stały</span>
             </div>
 
             <div className="space-y-3 xs:space-y-4">
@@ -108,7 +67,7 @@ export function AppearanceSection() {
                                     "hover:scale-105 min-h-[44px]",
                                     isSelected
                                         ? "border-current shadow-lg"
-                                        : "border-border bg-card"
+                                        : "border-white/10 bg-white/[0.02]"
                                 )}
                                 style={{
                                     borderColor: isSelected ? color.color : undefined,
@@ -126,7 +85,7 @@ export function AppearanceSection() {
                 </div>
             </div>
 
-            <div className="p-4 xs:p-6 rounded-xl border border-border bg-card space-y-3 xs:space-y-4">
+            <div className="glass-card p-4 xs:p-6 space-y-3 xs:space-y-4">
                 <h3 className="font-medium flex items-center gap-2 text-sm xs:text-base">
                     <Eye className="w-4 h-4" />
                     Podgląd
@@ -161,12 +120,12 @@ export function AppearanceSection() {
             </div>
 
             <div className="space-y-3 xs:space-y-4">
-                <h3 className="text-[10px] xs:text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <h3 className="mono-label">
                     Dodatkowe opcje
                 </h3>
 
                 <div className="space-y-2 xs:space-y-3">
-                    <div className="flex items-center justify-between p-3 xs:p-4 rounded-xl border border-border bg-card gap-3">
+                    <div className="glass-card flex items-center justify-between p-3 xs:p-4 gap-3">
                         <div className="flex items-center gap-2 xs:gap-3 min-w-0">
                             <Zap className="w-4 h-4 xs:w-5 xs:h-5 text-muted-foreground flex-shrink-0" />
                             <div className="min-w-0">
@@ -182,7 +141,7 @@ export function AppearanceSection() {
                         />
                     </div>
 
-                    <div className="flex items-center justify-between p-3 xs:p-4 rounded-xl border border-border bg-card gap-3">
+                    <div className="glass-card flex items-center justify-between p-3 xs:p-4 gap-3">
                         <div className="flex items-center gap-2 xs:gap-3 min-w-0">
                             <Minimize2 className="w-4 h-4 xs:w-5 xs:h-5 text-muted-foreground flex-shrink-0" />
                             <div className="min-w-0">
@@ -198,7 +157,7 @@ export function AppearanceSection() {
                         />
                     </div>
 
-                    <div className="flex items-center justify-between p-3 xs:p-4 rounded-xl border border-border bg-card gap-3">
+                    <div className="glass-card flex items-center justify-between p-3 xs:p-4 gap-3">
                         <div className="flex items-center gap-2 xs:gap-3 min-w-0">
                             <Eye className="w-4 h-4 xs:w-5 xs:h-5 text-muted-foreground flex-shrink-0" />
                             <div className="min-w-0">

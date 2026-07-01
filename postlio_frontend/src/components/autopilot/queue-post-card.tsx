@@ -249,10 +249,10 @@ export function QueuePostCard({ post, onPreview }: QueuePostCardProps) {
             >
                 <Card
                     className={cn(
-                        'overflow-hidden transition-all duration-200',
-                        isExpanded && 'ring-2 ring-violet-500/50',
+                        'glass-card shadow-none overflow-hidden transition-all duration-200',
+                        isExpanded && 'ring-2 ring-accent/50',
                         isLoading && 'opacity-70',
-                        post.status === 'failed' && 'ring-1 ring-red-500/30'
+                        post.status === 'failed' && 'ring-1 ring-destructive/30'
                     )}
                 >
                     <div className="flex items-start gap-3 p-4">

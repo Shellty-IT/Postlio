@@ -39,11 +39,11 @@ export function NotificationsSection() {
                     Powiadomienia
                 </h2>
                 <p className="text-xs xs:text-sm text-muted-foreground mt-1">
-                    Zarządzaj jak i kiedy otrzymujesz powiadomienia
+                    Zarządzaj alertami i powiadomieniami.
                 </p>
             </div>
 
-            <div className="p-4 xs:p-6 rounded-xl border border-border bg-card space-y-4 xs:space-y-6">
+            <div className="glass-card p-4 xs:p-6 space-y-4 xs:space-y-6">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 xs:gap-3 min-w-0">
                         <div className="p-1.5 xs:p-2 rounded-lg bg-primary/10 flex-shrink-0">
@@ -128,7 +128,7 @@ export function NotificationsSection() {
                 )}
             </div>
 
-            <div className="p-4 xs:p-6 rounded-xl border border-border bg-card space-y-4 xs:space-y-6">
+            <div className="glass-card p-4 xs:p-6 space-y-4 xs:space-y-6">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 xs:gap-3 min-w-0">
                         <div className="p-1.5 xs:p-2 rounded-lg bg-violet-500/10 flex-shrink-0">
@@ -189,7 +189,7 @@ export function NotificationsSection() {
                 )}
             </div>
 
-            <div className="p-4 xs:p-6 rounded-xl border border-border bg-card space-y-4 xs:space-y-6">
+            <div className="glass-card p-4 xs:p-6 space-y-4 xs:space-y-6">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 xs:gap-3 min-w-0">
                         <div className="p-1.5 xs:p-2 rounded-lg bg-blue-500/10 flex-shrink-0">

@@ -2,7 +2,7 @@
 'use client';
 
 import { Save, RotateCcw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useSettingsStore } from '@/store/settings-store';
 
@@ -18,24 +18,29 @@ export function SettingsHeader() {
                 </Badge>
             )}
 
-            <Button
-                variant="outline"
+            <button
                 onClick={resetToDefaults}
-                className="gap-1.5 xs:gap-2 h-9 xs:h-10 px-2.5 xs:px-4"
+                className={cn(
+                    'inline-flex items-center gap-1.5 xs:gap-2 rounded-[11px] border border-white/10 bg-white/[0.03] px-2.5 xs:px-4 h-9 xs:h-10',
+                    'text-[13.5px] font-medium text-foreground/80 transition-colors hover:bg-white/[0.06]'
+                )}
             >
                 <RotateCcw className="w-4 h-4" />
                 <span className="hidden xs:inline">Resetuj</span>
-            </Button>
+            </button>
 
-            <Button
+            <button
                 onClick={saveSettings}
                 disabled={!hasUnsavedChanges || isSaving}
-                className="gap-1.5 xs:gap-2 h-9 xs:h-10 px-2.5 xs:px-4"
+                className={cn(
+                    'btn-gradient h-9 xs:h-10 px-2.5 xs:px-5 text-[13.5px]',
+                    'disabled:opacity-50 disabled:pointer-events-none disabled:hover:translate-y-0 disabled:hover:brightness-100'
+                )}
             >
                 <Save className="w-4 h-4" />
                 <span className="hidden xs:inline">{isSaving ? 'Zapisuję...' : 'Zapisz zmiany'}</span>
                 <span className="xs:hidden">{isSaving ? '...' : 'Zapisz'}</span>
-            </Button>
+            </button>
         </div>
     );
 }

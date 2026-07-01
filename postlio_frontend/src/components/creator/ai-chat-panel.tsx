@@ -278,14 +278,15 @@ export function AIChatPanel({
 
     const chatContent = (
         <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border/40">
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center">
+            <div className="flex items-center justify-between p-3 sm:p-4 border-b border-white/[0.06]">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-[11px] bg-gradient-to-br from-[#6a8bff] to-[#a855f7] flex items-center justify-center flex-shrink-0 shadow-[0_8px_20px_-6px_rgba(139,92,246,0.7)]">
                         <Sparkles className="w-4 h-4 text-white" />
                     </div>
                     <div>
                         <h3 className="font-semibold text-sm">Asystent AI</h3>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="flex items-center gap-1.5 text-xs text-success">
+                            <span className="h-1.5 w-1.5 rounded-full bg-success" />
                             {selectedBrandName ? `Brand: ${selectedBrandName}` : 'Gotowy do pomocy'}
                         </p>
                     </div>
@@ -341,8 +342,8 @@ export function AIChatPanel({
                             <div
                                 className={`max-w-[90%] sm:max-w-[85%] rounded-2xl px-3 py-2 sm:px-4 sm:py-3 ${
                                     message.role === 'user'
-                                        ? 'bg-primary text-primary-foreground'
-                                        : 'bg-muted'
+                                        ? 'bg-gradient-to-br from-primary to-accent text-primary-foreground'
+                                        : 'bg-white/[0.03] border border-white/[0.05]'
                                 }`}
                             >
                                 <p className="text-xs sm:text-sm whitespace-pre-wrap">{message.content}</p>
@@ -405,7 +406,7 @@ export function AIChatPanel({
                             animate={{ opacity: 1 }}
                             className="flex justify-start"
                         >
-                            <div className="bg-muted rounded-2xl px-3 py-2 sm:px-4 sm:py-3">
+                            <div className="bg-white/[0.03] border border-white/[0.05] rounded-2xl px-3 py-2 sm:px-4 sm:py-3">
                                 <div className="flex items-center gap-2">
                                     <Loader2 className="w-4 h-4 animate-spin text-primary" />
                                     <span className="text-xs sm:text-sm text-muted-foreground">AI myśli...</span>
@@ -417,7 +418,7 @@ export function AIChatPanel({
             </ScrollArea>
 
             {messages.length <= 1 && (
-                <div className="p-3 sm:p-4 border-t border-border/40">
+                <div className="p-3 sm:p-4 border-t border-white/[0.06]">
                     <p className="text-xs text-muted-foreground mb-2">Szybkie akcje</p>
                     <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                         {QUICK_ACTIONS.map((action) => (
@@ -425,10 +426,10 @@ export function AIChatPanel({
                                 key={action.label}
                                 variant="outline"
                                 size="sm"
-                                className="justify-start gap-1.5 sm:gap-2 h-auto py-1.5 sm:py-2"
+                                className="justify-start gap-1.5 sm:gap-2 h-auto py-1.5 sm:py-2 rounded-[9px] border-accent/[0.22] bg-accent/[0.05] text-[#d9c9fb] hover:bg-accent/[0.1] hover:text-[#d9c9fb]"
                                 onClick={() => handleQuickAction(action.prompt)}
                             >
-                                <action.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500 flex-shrink-0" />
+                                <action.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
                                 <span className="text-[10px] sm:text-xs truncate">{action.label}</span>
                             </Button>
                         ))}
@@ -436,7 +437,7 @@ export function AIChatPanel({
                 </div>
             )}
 
-            <div className="p-3 sm:p-4 border-t border-border/40">
+            <div className="p-3 sm:p-4 border-t border-white/[0.06]">
                 <div className="flex gap-2">
                     <Textarea
                         ref={inputRef}
@@ -449,13 +450,13 @@ export function AIChatPanel({
                             }
                         }}
                         placeholder="Napisz wiadomość..."
-                        className="min-h-[40px] sm:min-h-[44px] max-h-32 resize-none text-sm"
+                        className="min-h-[40px] sm:min-h-[44px] max-h-32 resize-none text-sm rounded-[11px] border-white/[0.09] bg-white/[0.03]"
                         disabled={isLoading}
                     />
                     <Button
                         onClick={handleSend}
                         disabled={!input.trim() || isLoading}
-                        className="px-3 bg-gradient-to-r from-primary to-violet-500"
+                        className="px-3 btn-gradient"
                     >
                         {isLoading ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
@@ -478,7 +479,7 @@ export function AIChatPanel({
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.9 }}
                             onClick={onToggle}
-                            className="fixed right-4 bottom-24 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-primary to-violet-500 text-white shadow-lg"
+                            className="fixed right-4 bottom-24 z-40 flex items-center gap-2 px-4 py-3 rounded-full btn-gradient text-white"
                         >
                             <MessageSquare className="w-5 h-5" />
                             <span className="text-sm font-medium">AI</span>
@@ -504,7 +505,7 @@ export function AIChatPanel({
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 20 }}
                         onClick={onToggle}
-                        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex items-center gap-2 px-3 py-4 rounded-l-xl bg-gradient-to-r from-primary to-violet-500 text-white shadow-lg"
+                        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex items-center gap-2 px-3 py-4 rounded-l-xl btn-gradient text-white"
                     >
                         <ChevronLeft className="w-5 h-5" />
                         <MessageSquare className="w-5 h-5" />
@@ -515,7 +516,7 @@ export function AIChatPanel({
             <motion.div
                 initial={false}
                 animate={{ width: isOpen ? 380 : 0 }}
-                className="relative flex-shrink-0 border-l border-border/40 bg-background overflow-hidden"
+                className="relative flex-shrink-0 border-l border-accent/20 bg-gradient-to-b from-accent/[0.06] to-white/[0.015] overflow-hidden"
             >
                 <div className="absolute inset-0 flex flex-col" style={{ width: 380 }}>
                     {chatContent}

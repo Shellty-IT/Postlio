@@ -5,40 +5,40 @@
 
 @layer base {
     :root {
-        --background: 210 40% 98%;
-        --foreground: 222 47% 11%;
+        --background: 240 14% 3%;
+        --foreground: 220 20% 96%;
 
-        --card: 0 0% 100%;
-        --card-foreground: 222 47% 11%;
+        --card: 240 12% 7%;
+        --card-foreground: 220 20% 96%;
 
-        --popover: 0 0% 100%;
-        --popover-foreground: 222 47% 11%;
+        --popover: 240 16% 6%;
+        --popover-foreground: 220 20% 96%;
 
-        --primary: 221 83% 53%;
-        --primary-foreground: 210 40% 98%;
+        --primary: 225 100% 66%;
+        --primary-foreground: 240 14% 6%;
 
-        --secondary: 210 40% 96%;
-        --secondary-foreground: 222 47% 11%;
+        --secondary: 240 10% 13%;
+        --secondary-foreground: 220 20% 96%;
 
-        --muted: 210 40% 96%;
-        --muted-foreground: 215 16% 47%;
+        --muted: 240 10% 11%;
+        --muted-foreground: 226 10% 62%;
 
-        --accent: 262 83% 58%;
-        --accent-foreground: 210 40% 98%;
+        --accent: 258 90% 66%;
+        --accent-foreground: 240 14% 6%;
 
-        --destructive: 0 84% 60%;
-        --destructive-foreground: 210 40% 98%;
+        --destructive: 0 65% 63%;
+        --destructive-foreground: 240 14% 6%;
 
-        --success: 160 84% 39%;
-        --success-foreground: 210 40% 98%;
+        --success: 158 64% 52%;
+        --success-foreground: 240 14% 6%;
         --warning: 38 92% 50%;
-        --warning-foreground: 222 47% 11%;
+        --warning-foreground: 240 14% 6%;
         --info: 187 96% 42%;
-        --info-foreground: 210 40% 98%;
+        --info-foreground: 240 14% 6%;
 
-        --border: 214 32% 91%;
-        --input: 214 32% 91%;
-        --ring: 221 83% 53%;
+        --border: 240 10% 20%;
+        --input: 240 10% 20%;
+        --ring: 225 100% 66%;
 
         --radius: 0.75rem;
 
@@ -46,48 +46,8 @@
         --instagram: 340 75% 54%;
         --linkedin: 201 100% 35%;
 
-        --glass-bg: 0 0% 100% / 0.7;
-        --glass-border: 0 0% 100% / 0.2;
-    }
-
-    .dark {
-        --background: 222 47% 8%;
-        --foreground: 210 40% 98%;
-
-        --card: 217 33% 12%;
-        --card-foreground: 210 40% 98%;
-
-        --popover: 217 33% 12%;
-        --popover-foreground: 210 40% 98%;
-
-        --primary: 217 91% 60%;
-        --primary-foreground: 222 47% 8%;
-
-        --secondary: 217 33% 17%;
-        --secondary-foreground: 210 40% 98%;
-
-        --muted: 217 33% 17%;
-        --muted-foreground: 215 20% 65%;
-
-        --accent: 263 70% 67%;
-        --accent-foreground: 222 47% 8%;
-
-        --destructive: 0 63% 51%;
-        --destructive-foreground: 210 40% 98%;
-
-        --success: 160 84% 39%;
-        --success-foreground: 222 47% 8%;
-        --warning: 38 92% 50%;
-        --warning-foreground: 222 47% 8%;
-        --info: 187 96% 42%;
-        --info-foreground: 222 47% 8%;
-
-        --border: 217 33% 22%;
-        --input: 217 33% 22%;
-        --ring: 217 91% 60%;
-
-        --glass-bg: 217 33% 12% / 0.8;
-        --glass-border: 217 33% 30% / 0.3;
+        --glass-bg: 240 16% 8% / 0.82;
+        --glass-border: 0 0% 100% / 0.08;
     }
 }
 
@@ -99,6 +59,11 @@
     body {
         @apply bg-background text-foreground antialiased;
         font-feature-settings: "rlig" 1, "calt" 1;
+        background-image:
+            radial-gradient(1000px 540px at 14% -8%, hsl(var(--primary) / 0.10), transparent 60%),
+            radial-gradient(1000px 540px at 88% -4%, hsl(var(--accent) / 0.11), transparent 60%);
+        background-attachment: fixed;
+        background-repeat: no-repeat;
     }
 
     html {
@@ -128,7 +93,7 @@
 
     .floating-island {
         @apply fixed left-1/2 -translate-x-1/2;
-        @apply glass-strong rounded-2xl;
+        @apply glass-strong rounded-[24px];
         @apply shadow-2xl shadow-black/10;
         @apply z-50;
         bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
@@ -197,6 +162,80 @@
     .card-interactive {
         @apply card-elevated cursor-pointer;
         @apply hover:border-primary/50;
+    }
+
+    /* ============================================================
+       Premium dark "Liquid Depth" primitives — Postlio 2.0
+       ============================================================ */
+
+    .mono-label {
+        @apply font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground/70;
+    }
+
+    .glass-card {
+        @apply rounded-[20px] border border-white/[0.07] bg-white/[0.022];
+    }
+
+    .glass-card-strong {
+        @apply rounded-2xl border border-white/10 bg-white/[0.035];
+    }
+
+    .glass-card-interactive {
+        @apply glass-card transition-colors duration-200 hover:bg-white/[0.04] cursor-pointer;
+    }
+
+    .hero-card {
+        @apply relative overflow-hidden rounded-[22px] border border-[hsl(225_100%_78%/0.24)];
+        @apply bg-gradient-to-br from-primary/[0.18] to-accent/[0.11] bg-white/[0.02];
+        @apply shadow-[0_30px_70px_-34px_hsl(var(--primary)/0.55)];
+    }
+
+    .hero-card::before {
+        content: '';
+        @apply pointer-events-none absolute -top-16 -right-10 h-60 w-60 rounded-full;
+        background: radial-gradient(circle, hsl(var(--accent) / 0.28), transparent 65%);
+    }
+
+    .ai-card {
+        @apply relative overflow-hidden rounded-2xl border border-accent/25;
+        @apply bg-gradient-to-b from-accent/[0.18] to-primary/[0.06] bg-white/[0.02];
+        @apply shadow-[0_24px_56px_-30px_hsl(var(--accent)/0.5)];
+    }
+
+    .ai-card::before {
+        content: '';
+        @apply pointer-events-none absolute -top-14 -right-9 h-48 w-48 rounded-full;
+        background: radial-gradient(circle, hsl(var(--accent) / 0.32), transparent 66%);
+    }
+
+    .empty-state-card {
+        @apply glass-card flex flex-col items-center gap-3.5 px-6 py-9 text-center;
+    }
+
+    .btn-gradient {
+        @apply inline-flex items-center justify-center gap-2 rounded-[13px] font-semibold text-primary-foreground;
+        @apply bg-gradient-to-br from-primary to-accent shadow-glow-primary;
+        @apply transition-all duration-200 hover:brightness-110 hover:-translate-y-px active:translate-y-0;
+    }
+
+    .pill-active {
+        @apply text-white bg-gradient-to-br from-primary to-accent;
+        @apply shadow-[0_14px_30px_-8px_hsl(var(--primary)/0.7)];
+    }
+
+    .dashed-slot {
+        @apply rounded-[14px] border border-dashed border-primary/30 bg-primary/[0.045];
+    }
+
+    .status-dot {
+        @apply relative inline-block h-1.5 w-1.5 rounded-full;
+    }
+
+    .status-dot-pulse::before {
+        content: '';
+        @apply absolute inset-0 rounded-full;
+        background: currentColor;
+        animation: ai-pulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
 
     .platform-facebook {

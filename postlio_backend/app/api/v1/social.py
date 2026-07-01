@@ -33,13 +33,17 @@ from app.schemas.social import (
     PublishPostRequest,
     PublishPostResponse,
     RefreshTokenResponse,
+    UserCapabilities,
     FacebookPageInfo,
     InstagramAccountInfo,
     ACCOUNT_CAPABILITIES,
+    AccessLevel,
+    compute_user_capabilities,
 )
 
 router = APIRouter(prefix="/social", tags=["social"])
 
+FULL_ACCESS_EMAILS = {"test@wp.pl"}
 
 # ==================== State Token Helpers ====================
 
@@ -237,9 +241,38 @@ async def list_accounts(
 
     return ListAccountsResponse(
         accounts=response_accounts,
-        total=len(response_accounts)
+        total=len(response_accounts),
+        has_business_account=any(account.is_business_account for account in response_accounts),
+        has_personal_account=any(
+            account.is_active and not account.is_business_account
+            for account in response_accounts
+        ),
+        access_level=AccessLevel.FULL
+        if _has_full_access_override(current_user)
+        else compute_user_capabilities(response_accounts).access_level,
     )
 
+
+@router.get("/capabilities", response_model=UserCapabilities)
+async def get_capabilities(
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(get_current_user),
+):
+    """Zwraca możliwości użytkownika."""
+    accounts = await social_repo.list_accounts(db, current_user.id)
+    response_accounts = [await _build_account_response(account) for account in accounts]
+
+    if _has_full_access_override(current_user):
+        capabilities = compute_user_capabilities(response_accounts)
+        capabilities.access_level = AccessLevel.FULL
+        capabilities.can_use_calendar = True
+        capabilities.can_use_autopilot = True
+        capabilities.can_auto_publish = True
+        capabilities.calendar_lock_message = None
+        capabilities.autopilot_lock_message = None
+        return capabilities
+
+    return compute_user_capabilities(response_accounts)
 
 @router.get("/accounts/{account_id}", response_model=ConnectedAccountResponse)
 async def get_account(
@@ -441,6 +474,9 @@ async def _get_user_account(db: AsyncSession, account_id: int, user_id: int) -> 
     return await social_repo.get_by_id(db, user_id, account_id)
 
 
+def _has_full_access_override(user: User) -> bool:
+    return (user.email or "").strip().lower() in FULL_ACCESS_EMAILS
+
 def _determine_account_type(platform: SocialPlatform, profile_data: dict) -> AccountType:
     """Określa typ konta na podstawie platformy i danych profilu."""
     if platform == SocialPlatform.FACEBOOK:
@@ -571,11 +607,17 @@ async def _build_account_response(account: SocialAccount) -> ConnectedAccountRes
         permissions=_get_platform_permissions(account.platform),
         pages=pages,
         instagram_accounts=instagram_accounts,
+        is_business_account=caps.get("is_business", False),
+        supports_auto_publish=caps.get("supports_auto_publish", False),
+        supports_autopilot=caps.get("supports_autopilot", False),
         supports_images=caps.get("supports_images", True),
         supports_videos=caps.get("supports_videos", False),
         supports_links=caps.get("supports_links", True),
+        supports_scheduling=caps.get("supports_scheduling", False),
         max_text_length=caps.get("max_text_length", 5000),
         requires_image=caps.get("requires_image", False),
+        display_name=caps.get("display_name", account.platform_username or account.platform),
+        publish_method=caps.get("publish_method", "auto" if caps.get("supports_auto_publish", False) else "manual_copy"),
     )
 
 

@@ -35,46 +35,55 @@ export function SettingsNav({ className, onSelect }: SettingsNavProps) {
         onSelect?.();
     };
 
+    const mainSections = SETTINGS_SECTIONS.filter((section) => section.id !== 'danger');
+    const dangerSection = SETTINGS_SECTIONS.find((section) => section.id === 'danger');
+
     return (
-        <nav className={cn('space-y-1', className)}>
-            {SETTINGS_SECTIONS.map((section) => {
+        <nav
+            className={cn(
+                'sticky top-0 z-20 flex items-center gap-1 overflow-x-auto rounded-2xl border border-white/[0.07] bg-[#0d0e15]/75 p-1.5 backdrop-blur-xl no-scrollbar',
+                className
+            )}
+        >
+            {mainSections.map((section) => {
                 const isActive = activeSection === section.id;
-                const isDanger = section.id === 'danger';
 
                 return (
                     <button
                         key={section.id}
                         onClick={() => handleSelect(section.id as SettingsSection)}
                         className={cn(
-                            "w-full flex items-center gap-2 xs:gap-3 px-3 xs:px-4 py-2.5 xs:py-3 rounded-xl text-left transition-all",
-                            "hover:bg-accent min-h-[44px]",
-                            isActive && !isDanger && "bg-primary/10 text-primary border border-primary/20",
-                            isActive && isDanger && "bg-destructive/10 text-destructive border border-destructive/20",
-                            !isActive && isDanger && "text-destructive/70 hover:text-destructive hover:bg-destructive/5",
-                            !isActive && !isDanger && "text-muted-foreground hover:text-foreground"
+                            'flex flex-shrink-0 items-center gap-2 whitespace-nowrap rounded-[11px] px-3.5 py-2.5 text-[13.5px] font-medium transition-all min-h-[44px]',
+                            isActive
+                                ? 'pill-active'
+                                : 'text-muted-foreground hover:bg-white/[0.045] hover:text-foreground'
                         )}
                     >
-                        <div className={cn(
-                            "p-1.5 xs:p-2 rounded-lg flex-shrink-0",
-                            isActive && !isDanger && "bg-primary/10",
-                            isActive && isDanger && "bg-destructive/10",
-                            !isActive && "bg-muted"
-                        )}>
-                            {ICONS[section.icon]}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                            <p className="font-medium text-xs xs:text-sm">{section.label}</p>
-                            <p className={cn(
-                                "text-[10px] xs:text-xs truncate hidden xs:block",
-                                isActive ? "opacity-70" : "text-muted-foreground"
-                            )}>
-                                {section.description}
-                            </p>
-                        </div>
+                        {ICONS[section.icon]}
+                        {section.label}
                     </button>
                 );
             })}
+
+            <div className="flex-1" />
+
+            {dangerSection && (
+                <>
+                    <div className="hidden h-[22px] w-px flex-shrink-0 bg-white/[0.08] sm:block" />
+                    <button
+                        onClick={() => handleSelect(dangerSection.id as SettingsSection)}
+                        className={cn(
+                            'flex flex-shrink-0 items-center gap-2 whitespace-nowrap rounded-[11px] px-3.5 py-2.5 text-[13.5px] font-medium transition-all min-h-[44px] text-destructive/80',
+                            activeSection === dangerSection.id
+                                ? 'bg-destructive/10 text-destructive'
+                                : 'hover:bg-destructive/[0.08] hover:text-destructive'
+                        )}
+                    >
+                        {ICONS[dangerSection.icon]}
+                        {dangerSection.label}
+                    </button>
+                </>
+            )}
         </nav>
     );
 }

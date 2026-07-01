@@ -89,8 +89,8 @@ function CharCounter({ current, max, className }: CharCounterProps) {
                 <motion.div
                     className={cn(
                         'h-full transition-colors duration-300',
-                        isOverLimit ? 'bg-red-500' :
-                            isNearLimit ? 'bg-amber-500' : 'bg-primary'
+                        isOverLimit ? 'bg-destructive' :
+                            isNearLimit ? 'bg-warning' : 'bg-primary'
                     )}
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min(percentage, 100)}%` }}
@@ -99,8 +99,8 @@ function CharCounter({ current, max, className }: CharCounterProps) {
             </div>
             <span className={cn(
                 'font-medium tabular-nums text-[10px] sm:text-xs',
-                isOverLimit ? 'text-red-500' :
-                    isNearLimit ? 'text-amber-500' : 'text-muted-foreground'
+                isOverLimit ? 'text-destructive' :
+                    isNearLimit ? 'text-warning' : 'text-muted-foreground'
             )}>
         {current}/{max}
       </span>
@@ -164,8 +164,8 @@ export function PostEditor({
     const isOverSoftLimit = charCount > SOFT_LIMIT && charCount <= charLimit;
 
     const getCounterColor = () => {
-        if (isOverLimit) return 'text-red-500';
-        if (isOverSoftLimit) return 'text-amber-500';
+        if (isOverLimit) return 'text-destructive';
+        if (isOverSoftLimit) return 'text-warning';
         if (isNearSoftLimit) return 'text-yellow-500';
         return 'text-muted-foreground';
     };
@@ -323,15 +323,15 @@ export function PostEditor({
 
     return (
         <div className="space-y-3 sm:space-y-4">
-            <div className="relative">
+            <div className="relative glass-card p-3 sm:p-4">
                 <Textarea
                     ref={textareaRef}
                     value={content}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder="Co chcesz opublikować? Napisz sam lub użyj AI..."
                     className={cn(
-                        'min-h-[150px] sm:min-h-[200px] resize-none text-sm sm:text-base leading-relaxed pb-10',
-                        isOverLimit && 'border-red-500 focus-visible:ring-red-500'
+                        'min-h-[150px] sm:min-h-[200px] resize-none border-none bg-transparent text-sm sm:text-base leading-relaxed pb-10 shadow-none focus-visible:ring-0',
+                        isOverLimit && 'text-destructive'
                     )}
                     disabled={isGenerating}
                 />
@@ -358,8 +358,8 @@ export function PostEditor({
                             <motion.div
                                 className={cn(
                                     'h-full transition-colors duration-300',
-                                    isOverLimit ? 'bg-red-500' :
-                                        isOverSoftLimit ? 'bg-amber-500' :
+                                    isOverLimit ? 'bg-destructive' :
+                                        isOverSoftLimit ? 'bg-warning' :
                                             isNearSoftLimit ? 'bg-yellow-500' :
                                                 'bg-primary'
                                 )}
@@ -370,7 +370,7 @@ export function PostEditor({
                         </div>
                     </div>
 
-                    <div className={cn('flex items-center gap-1 text-[10px] sm:text-xs font-medium', getCounterColor())}>
+                    <div className={cn('flex items-center gap-1 font-mono text-[10px] sm:text-xs font-medium', getCounterColor())}>
                         {isOverSoftLimit && !isOverLimit && (
                             <TooltipProvider>
                                 <Tooltip>
@@ -403,9 +403,9 @@ export function PostEditor({
                                 size="sm"
                                 onClick={() => setIsGenerateTextOpen(true)}
                                 disabled={isGenerating}
-                                className="gap-1.5 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3"
+                                className="gap-1.5 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm px-2.5 sm:px-4 rounded-[11px] border-accent/30 bg-accent/[0.07] text-[#d9c9fb] hover:bg-accent/[0.13] hover:text-[#d9c9fb]"
                             >
-                                <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
+                                <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 <span className="hidden xs:inline">Generuj tekst</span>
                                 <span className="xs:hidden">Tekst</span>
                             </Button>
@@ -421,11 +421,11 @@ export function PostEditor({
                                 onClick={() => setIsGenerateImageOpen(true)}
                                 disabled={isGenerating}
                                 className={cn(
-                                    "gap-1.5 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3",
+                                    "gap-1.5 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm px-2.5 sm:px-4 rounded-[11px] border-primary/30 bg-primary/[0.07] text-[#bcd0ff] hover:bg-primary/[0.13] hover:text-[#bcd0ff]",
                                     videoUrl && "opacity-50"
                                 )}
                             >
-                                <Wand2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
+                                <Wand2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 <span className="hidden xs:inline">Generuj obraz</span>
                                 <span className="xs:hidden">Obraz</span>
                             </Button>
@@ -441,11 +441,11 @@ export function PostEditor({
                                 onClick={() => setIsGenerateVideoOpen(true)}
                                 disabled={isGenerating || isGeneratingVideo}
                                 className={cn(
-                                    "gap-1.5 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3",
+                                    "gap-1.5 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm px-2.5 sm:px-4 rounded-[11px] border-success/30 bg-success/[0.06] text-[#9be7c4] hover:bg-success/[0.11] hover:text-[#9be7c4]",
                                     imageUrl && !videoUrl && "opacity-50"
                                 )}
                             >
-                                <Film className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500" />
+                                <Film className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 <span className="hidden xs:inline">Generuj film</span>
                                 <span className="xs:hidden">Film</span>
                             </Button>
@@ -460,7 +460,7 @@ export function PostEditor({
                                 size="sm"
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={isGenerating}
-                                className="h-8 w-8 sm:h-9 sm:w-9 p-0"
+                                className="h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-[11px] border-white/[0.09]"
                             >
                                 <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </Button>
@@ -474,7 +474,7 @@ export function PostEditor({
                                 variant="outline"
                                 size="sm"
                                 disabled={isGenerating}
-                                className="h-8 w-8 sm:h-9 sm:w-9 p-0"
+                                className="h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-[11px] border-white/[0.09]"
                             >
                                 <Smile className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </Button>
@@ -494,7 +494,7 @@ export function PostEditor({
                                 }
                             }}
                             placeholder="Hashtag"
-                            className="w-20 xs:w-28 sm:w-32 h-8 sm:h-9 text-xs sm:text-sm"
+                            className="w-20 xs:w-28 sm:w-32 h-8 sm:h-9 text-xs sm:text-sm rounded-[10px] border-white/[0.09] bg-white/[0.03]"
                             disabled={isGenerating}
                         />
                         <Button
@@ -542,7 +542,7 @@ export function PostEditor({
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="relative rounded-lg overflow-hidden border border-border"
+                        className="relative rounded-2xl overflow-hidden border border-white/10"
                     >
                         <div className="relative w-full h-48 xs:h-64 sm:h-80">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -587,7 +587,7 @@ export function PostEditor({
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="relative rounded-lg overflow-hidden border border-border bg-black"
+                        className="relative rounded-2xl overflow-hidden border border-white/10 bg-black"
                     >
                         <video
                             src={videoUrl}
@@ -635,7 +635,7 @@ export function PostEditor({
                 <DialogContent className="w-[calc(100%-2rem)] sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-                            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-violet-500" />
+                            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
                             Generuj tekst z AI
                         </DialogTitle>
                         <DialogDescription className="text-xs sm:text-sm">
@@ -701,7 +701,7 @@ export function PostEditor({
                         <Button
                             onClick={handleGenerateText}
                             disabled={!textPrompt.trim() || isGeneratingLocal}
-                            className="flex-1 sm:flex-none gap-2 bg-gradient-to-r from-primary to-violet-500"
+                            className="flex-1 sm:flex-none gap-2 btn-gradient"
                         >
                             {isGeneratingLocal ? (
                                 <>
@@ -723,7 +723,7 @@ export function PostEditor({
                 <DialogContent className="w-[calc(100%-2rem)] sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-                            <Wand2 className="w-4 h-4 sm:w-5 sm:h-5 text-violet-500" />
+                            <Wand2 className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
                             Generuj obraz z AI
                         </DialogTitle>
                         <DialogDescription className="text-xs sm:text-sm">
@@ -754,7 +754,7 @@ export function PostEditor({
                                 className="min-h-[80px] sm:min-h-[100px] text-sm"
                                 maxLength={PROMPT_LIMIT}
                             />
-                            <p className="text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400">
+                            <p className="text-[10px] sm:text-xs text-success">
                                 ✨ Prompt zostanie automatycznie ulepszony
                             </p>
                         </div>
@@ -795,7 +795,7 @@ export function PostEditor({
                         <Button
                             onClick={handleGenerateImage}
                             disabled={!imagePrompt.trim() || isGeneratingLocal}
-                            className="flex-1 sm:flex-none gap-2 bg-gradient-to-r from-primary to-violet-500"
+                            className="flex-1 sm:flex-none gap-2 btn-gradient"
                         >
                             {isGeneratingLocal ? (
                                 <>
@@ -820,7 +820,7 @@ export function PostEditor({
                 <DialogContent className="w-[calc(100%-2rem)] sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-                            <Film className="w-4 h-4 sm:w-5 sm:h-5 text-violet-500" />
+                            <Film className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
                             Generuj film z AI
                         </DialogTitle>
                         <DialogDescription className="text-xs sm:text-sm">
@@ -852,7 +852,7 @@ export function PostEditor({
                                 maxLength={PROMPT_LIMIT}
                             />
                             <div className="space-y-0.5">
-                                <p className="text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400">
+                                <p className="text-[10px] sm:text-xs text-success">
                                     ✨ Prompt zostanie automatycznie ulepszony i przetłumaczony
                                 </p>
                                 <p className="text-[10px] sm:text-xs text-muted-foreground">
@@ -886,7 +886,7 @@ export function PostEditor({
                         </div>
 
                         {videoError && (
-                            <div className="text-sm text-red-500 bg-red-50 dark:bg-red-950/50 rounded-lg p-3 flex items-start gap-2">
+                            <div className="text-sm text-destructive bg-destructive/10 rounded-lg p-3 flex items-start gap-2">
                                 <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                                 <span>{videoError}</span>
                             </div>
@@ -905,7 +905,7 @@ export function PostEditor({
                         <Button
                             onClick={handleGenerateVideo}
                             disabled={!videoPrompt.trim() || isGeneratingVideo}
-                            className="flex-1 sm:flex-none gap-2 bg-gradient-to-r from-primary to-violet-500"
+                            className="flex-1 sm:flex-none gap-2 btn-gradient"
                         >
                             {isGeneratingVideo ? (
                                 <>
