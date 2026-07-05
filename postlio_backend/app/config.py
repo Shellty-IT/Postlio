@@ -33,9 +33,6 @@ class Settings(BaseSettings):
     HUGGINGFACE_API_KEY: Optional[str] = None
     POLLINATIONS_API_KEY: Optional[str] = None
 
-    # Legacy (nieużywane)
-    CLIPDROP_API_KEY: Optional[str] = None
-
     # AI Defaults
     DEFAULT_TEXT_PROVIDER: str = "gemini"
     DEFAULT_IMAGE_PROVIDER: str = "pollinations"
