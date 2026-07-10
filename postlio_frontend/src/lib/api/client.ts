@@ -126,13 +126,13 @@ async function fetchWithTimeout(
 // ============================================================
 
 let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
+let refreshSubscribers: ((token: string | null) => void)[] = [];
 
-function subscribeToTokenRefresh(callback: (token: string) => void): void {
+function subscribeToTokenRefresh(callback: (token: string | null) => void): void {
     refreshSubscribers.push(callback);
 }
 
-function onTokenRefreshed(token: string): void {
+function onRefreshComplete(token: string | null): void {
     refreshSubscribers.forEach((callback) => callback(token));
     refreshSubscribers = [];
 }
@@ -225,9 +225,9 @@ async function apiRequest<T>(
 
             const newToken = await refreshAccessToken();
             isRefreshing = false;
+            onRefreshComplete(newToken);
 
             if (newToken) {
-                onTokenRefreshed(newToken);
                 // Powtórz request z nowym tokenem
                 headers.set('Authorization', `Bearer ${newToken}`);
                 response = await fetchWithTimeout(
@@ -250,6 +250,14 @@ async function apiRequest<T>(
             // Czekaj na odświeżenie tokenu przez inny request
             return new Promise((resolve, reject) => {
                 subscribeToTokenRefresh(async (token) => {
+                    if (!token) {
+                        reject(new ApiException({
+                            message: 'Sesja wygasła - zaloguj się ponownie',
+                            status: 401,
+                            code: 'SESSION_EXPIRED',
+                        }));
+                        return;
+                    }
                     try {
                         headers.set('Authorization', `Bearer ${token}`);
                         const retryResponse = await fetchWithTimeout(
