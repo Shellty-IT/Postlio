@@ -25,6 +25,10 @@ class OnboardingComplete(BaseModel):
     skipped: bool = False
 
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
 # === RESPONSE SCHEMAS ===
 
 class UserResponse(BaseModel):
