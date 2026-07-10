@@ -3,7 +3,7 @@
 Modele Autopilot - konfiguracja i kolejka postów.
 """
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
 from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, JSON, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base

@@ -1,11 +1,11 @@
 ﻿"""
 API endpoints dla Autopilota.
 """
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Optional
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_current_user

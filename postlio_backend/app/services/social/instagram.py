@@ -11,7 +11,7 @@ Dokumentacja: https://developers.facebook.com/docs/instagram-api/
 
 import httpx
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from urllib.parse import urlencode
 
 from app.config import settings
