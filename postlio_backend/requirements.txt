@@ -34,6 +34,9 @@ pytz>=2024.1
 # HTTP clients (dla AI providers i Social Media APIs)
 httpx>=0.26.0
 
+# Rate Limiting
+slowapi==0.1.10
+
 # Utils
 python-dotenv>=1.0.1
 Pillow>=10.2.0

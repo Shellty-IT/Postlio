@@ -7,20 +7,24 @@ import hmac
 import hashlib
 import base64
 import json
+import logging
 import time
 import secrets
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel
 from typing import Optional
 
 from app.api.deps import get_db, get_current_user
+from app.api.rate_limit import limiter
 from app.models.user import User
-from app.schemas.user import UserRegister, UserLogin, UserResponse, Token, OnboardingComplete
+from app.schemas.user import UserRegister, UserLogin, UserResponse, Token, OnboardingComplete, RefreshTokenRequest
 from app.utils.security import hash_password, verify_password, create_tokens, decode_token
 from app.config import settings
 from app.services.social import social_manager, SocialPlatform
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -116,7 +120,9 @@ def verify_login_state_token(state: str) -> Optional[dict]:
 # ==================== Standard Auth Endpoints ====================
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def register(
+        request: Request,
         user_data: UserRegister,
         db: AsyncSession = Depends(get_db),
 ):
@@ -142,7 +148,9 @@ async def register(
 
 
 @router.post("/login", response_model=Token)
+@limiter.limit("10/minute")
 async def login(
+        request: Request,
         user_data: UserLogin,
         db: AsyncSession = Depends(get_db),
 ):
@@ -172,11 +180,11 @@ async def login(
 
 @router.post("/refresh", response_model=Token)
 async def refresh_token(
-        refresh_token: str,
+        request: RefreshTokenRequest,
         db: AsyncSession = Depends(get_db),
 ):
     """Refresh access token."""
-    payload = decode_token(refresh_token)
+    payload = decode_token(request.refresh_token)
 
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(
@@ -376,12 +384,11 @@ async def oauth_login_callback(
             is_new_user=is_new_user,
         )
 
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
+    except Exception:
+        logger.exception("OAuth login callback failed for platform %s", platform)
 
         return OAuthLoginResponse(
             success=False,
             error="server_error",
-            error_description=str(e)
+            error_description="An unexpected error occurred during login. Please try again."
         )
