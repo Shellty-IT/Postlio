@@ -7,8 +7,8 @@ import { useAuthStore } from '@/store/auth-store';
 import { Sidebar } from '@/components/layout/sidebar';
 import { FloatingNav } from '@/components/layout/floating-nav';
 import { TopBar } from '@/components/layout/top-bar';
-import { useSidebar } from '@/store/ui-store';
-import { Sparkles } from 'lucide-react';
+import { useSidebar, useDock } from '@/store/ui-store';
+import { AppLogo } from '@/components/common/app-logo';
 
 export default function DashboardLayout({
                                             children,
@@ -18,6 +18,7 @@ export default function DashboardLayout({
     const router = useRouter();
     const { isAuthenticated, isInitialized } = useAuthStore();
     const { isCollapsed } = useSidebar();
+    const { mode: dockMode } = useDock();
     const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
@@ -39,9 +40,7 @@ export default function DashboardLayout({
         return (
             <div className="min-h-screen flex items-center justify-center bg-background px-4">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-500 to-primary flex items-center justify-center">
-                        <Sparkles className="h-6 w-6 text-white animate-pulse" />
-                    </div>
+                    <AppLogo className="h-12 w-12 animate-pulse" />
                     <p className="text-sm text-muted-foreground text-center">Ładowanie...</p>
                 </div>
             </div>
@@ -61,8 +60,10 @@ export default function DashboardLayout({
             <div
                 className={cn(
                     'min-h-screen transition-all duration-300',
-                    !isMobile && (isCollapsed ? 'lg:pl-[104px]' : 'lg:pl-[266px]'),
-                    'pb-20 xs:pb-24 lg:pb-6'
+                    'pb-20 xs:pb-24 lg:pb-6',
+                    !isMobile && dockMode === 'left' && (isCollapsed ? 'lg:pl-[var(--dock-w-collapsed)]' : 'lg:pl-[var(--dock-w-expanded)]'),
+                    !isMobile && dockMode === 'right' && (isCollapsed ? 'lg:pr-[var(--dock-w-collapsed)]' : 'lg:pr-[var(--dock-w-expanded)]'),
+                    !isMobile && dockMode === 'bottom' && 'lg:pb-24'
                 )}
             >
                 <TopBar />

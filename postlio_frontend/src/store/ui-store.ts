@@ -13,6 +13,13 @@ import { persist } from 'zustand/middleware';
 // TYPY
 // ============================================================
 
+export type DockMode = 'left' | 'right' | 'bottom' | 'floating';
+
+interface DockPosition {
+    x: number;
+    y: number;
+}
+
 type ModalType =
     | 'create-post'
     | 'edit-post'
@@ -35,6 +42,11 @@ interface UIState {
     toggleSidebar: () => void;
     setSidebarOpen: (open: boolean) => void;
     setSidebarCollapsed: (collapsed: boolean) => void;
+
+    dockMode: DockMode;
+    dockPosition: DockPosition;
+    setDockMode: (mode: DockMode) => void;
+    setDockPosition: (position: DockPosition) => void;
 
     // Mobile menu
     mobileMenuOpen: boolean;
@@ -84,6 +96,17 @@ export const useUIStore = create<UIState>()(
 
             setSidebarCollapsed: (collapsed: boolean) => {
                 set({ sidebarCollapsed: collapsed });
+            },
+
+            dockMode: 'left',
+            dockPosition: { x: 24, y: 96 },
+
+            setDockMode: (mode: DockMode) => {
+                set({ dockMode: mode });
+            },
+
+            setDockPosition: (position: DockPosition) => {
+                set({ dockPosition: position });
             },
 
             // ==================== MOBILE MENU ====================
@@ -156,6 +179,8 @@ export const useUIStore = create<UIState>()(
             // Zapisuj tylko wybrane pola w localStorage
             partialize: (state) => ({
                 sidebarCollapsed: state.sidebarCollapsed,
+                dockMode: state.dockMode,
+                dockPosition: state.dockPosition,
             }),
         }
     )
@@ -181,6 +206,23 @@ export function useSidebar() {
         toggle: toggleSidebar,
         setOpen: setSidebarOpen,
         setCollapsed: setSidebarCollapsed,
+    };
+}
+
+/**
+ * Hook do zarządzania pływającym dockiem nawigacji
+ */
+export function useDock() {
+    const dockMode = useUIStore((state) => state.dockMode);
+    const dockPosition = useUIStore((state) => state.dockPosition);
+    const setDockMode = useUIStore((state) => state.setDockMode);
+    const setDockPosition = useUIStore((state) => state.setDockPosition);
+
+    return {
+        mode: dockMode,
+        position: dockPosition,
+        setMode: setDockMode,
+        setPosition: setDockPosition,
     };
 }
 

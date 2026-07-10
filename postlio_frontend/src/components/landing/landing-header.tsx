@@ -7,10 +7,10 @@ import { Button } from '@/components/ui/button';
 import {
     Menu,
     X,
-    Sparkles,
     ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AppLogo } from '@/components/common/app-logo';
 
 const navLinks = [
     { href: '#features', label: 'Funkcje' },
@@ -72,12 +72,11 @@ export function LandingHeader() {
                         {/* Logo */}
                         <Link href="/" className="flex items-center gap-2 group">
                             <motion.div
-                                className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center shadow-lg shadow-primary/25"
+                                className="relative w-9 h-9 flex items-center justify-center"
                                 whileHover={{ scale: 1.05, rotate: 5 }}
                                 whileTap={{ scale: 0.95 }}
                             >
-                                <Sparkles className="w-5 h-5 text-white" />
-                                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent" />
+                                <AppLogo className="h-9 w-9" />
                             </motion.div>
                             <span className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                 Postlio

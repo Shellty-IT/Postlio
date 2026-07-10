@@ -3,9 +3,9 @@
 
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { ServerStatus } from '@/components/common';
+import { AppLogo } from '@/components/common/app-logo';
 
 export default function AuthLayout({
                                        children,
@@ -36,7 +36,7 @@ export default function AuthLayout({
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
                 <div className="flex flex-col items-center gap-4">
-                    <Sparkles className="h-8 w-8 animate-pulse text-primary" />
+                    <AppLogo className="h-8 w-8 animate-pulse" />
                     <p className="text-muted-foreground">Ładowanie...</p>
                 </div>
             </div>
@@ -52,7 +52,7 @@ export default function AuthLayout({
     if (isAuthenticated) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
-                <Sparkles className="h-8 w-8 animate-pulse text-primary" />
+                <AppLogo className="h-8 w-8 animate-pulse" />
             </div>
         );
     }

@@ -48,6 +48,9 @@
 
         --glass-bg: 240 16% 8% / 0.82;
         --glass-border: 0 0% 100% / 0.08;
+
+        --dock-w-collapsed: 104px;
+        --dock-w-expanded: 266px;
     }
 }
 

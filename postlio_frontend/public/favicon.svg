@@ -1,105 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <!-- Główny gradient tła -->
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#4F46E5"/>
-      <stop offset="50%" style="stop-color:#3B82F6"/>
-      <stop offset="100%" style="stop-color:#0EA5E9"/>
-    </linearGradient>
-    
-    <!-- Gradient dla litery P -->
-    <linearGradient id="pGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#FFFFFF"/>
-      <stop offset="100%" style="stop-color:#E0E7FF"/>
-    </linearGradient>
-    
-    <!-- Gradient dla iskry AI -->
-    <linearGradient id="sparkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#FDE047"/>
-      <stop offset="100%" style="stop-color:#FBBF24"/>
-    </linearGradient>
-    
-    <!-- Cień -->
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#1E40AF" flood-opacity="0.3"/>
-    </filter>
-    
-    <!-- Glow dla iskry -->
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-      <feMerge>
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-  </defs>
-  
-  <!-- Tło - zaokrąglony kwadrat -->
-  <rect x="32" y="32" width="448" height="448" rx="96" ry="96" fill="url(#bgGradient)"/>
-  
-  <!-- Subtelny overlay dla głębi -->
-  <rect x="32" y="32" width="448" height="224" rx="96" ry="96" fill="white" opacity="0.1"/>
-  
-  <!-- Stylizowana litera P -->
-  <g filter="url(#shadow)">
-    <!-- Główne P -->
-    <path d="M160 120 
-             L160 380 
-             C160 395 190 395 190 380 
-             L190 285
-             L280 285
-             C340 285 380 245 380 195
-             C380 145 340 120 280 120
-             L160 120
-             Z
-             M190 150
-             L270 150
-             C310 150 345 165 345 195
-             C345 225 310 255 270 255
-             L190 255
-             L190 150
-             Z" 
-          fill="url(#pGradient)"/>
-    
-    <!-- Strzałka wysyłania zintegrowana z P -->
-    <path d="M300 180 L340 195 L300 210 L310 195 Z" 
-          fill="url(#pGradient)" opacity="0.8"/>
-  </g>
-  
-  <!-- Iskra AI - 4-ramienna gwiazda -->
-  <g filter="url(#glow)">
-    <path d="M390 100 
-             L395 130 
-             C396 135 400 140 405 140
-             L435 145
-             L405 150
-             C400 150 396 155 395 160
-             L390 190
-             L385 160
-             C384 155 380 150 375 150
-             L345 145
-             L375 140
-             C380 140 384 135 385 130
-             Z" 
-          fill="url(#sparkGradient)"/>
-  </g>
-  
-  <!-- Mniejsza iskra -->
-  <g filter="url(#glow)" opacity="0.7">
-    <path d="M420 200 
-             L423 218 
-             L440 222
-             L423 226
-             L420 244
-             L417 226
-             L400 222
-             L417 218
-             Z" 
-          fill="url(#sparkGradient)"/>
-  </g>
-  
-  <!-- Kropki dekoracyjne - LEWY DOLNY RÓG, POD NOGĄ P -->
-  <circle cx="100" cy="440" r="8" fill="white" opacity="0.4"/>
-  <circle cx="130" cy="455" r="5" fill="white" opacity="0.3"/>
-  <circle cx="80" cy="460" r="4" fill="white" opacity="0.25"/>
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="681pt" height="787pt" viewBox="0 0 681 787" version="1.1" xmlns="http://www.w3.org/2000/svg">
+<g id="#5739fcff">
+<path fill="#5739fc" opacity="1.00" d=" M 106.08 85.08 C 149.49 43.41 208.80 18.62 269.01 17.57 C 315.01 17.44 361.00 17.51 407.00 17.50 C 467.88 17.40 528.43 41.48 572.56 83.44 C 627.56 135.48 657.79 211.57 656.65 287.00 C 657.35 357.68 632.09 428.35 586.22 482.19 C 541.23 535.53 474.00 569.97 403.97 572.32 C 373.33 572.81 342.66 572.37 312.01 572.60 C 297.16 573.38 282.56 579.49 272.00 590.03 C 209.95 645.65 147.63 700.97 85.63 756.64 C 73.56 767.08 54.54 768.74 41.14 759.87 C 32.28 754.31 26.66 744.50 25.13 734.28 C 25.11 577.75 24.94 421.20 25.15 264.67 C 28.19 197.55 57.38 131.56 106.08 85.08 M 263.70 127.74 C 215.69 131.05 171.15 161.22 148.50 203.41 C 136.04 226.46 129.20 252.74 130.03 278.99 C 130.01 385.46 129.72 491.93 130.18 598.39 C 159.03 565.18 188.16 532.20 216.79 498.79 C 235.91 475.81 265.16 461.99 294.99 461.23 C 328.99 461.07 363.01 461.51 397.00 460.98 C 450.11 459.18 499.89 426.12 524.45 379.37 C 544.44 343.89 548.61 301.84 544.80 261.91 C 539.92 218.13 515.76 176.57 479.21 151.74 C 459.55 138.07 436.23 129.35 412.28 127.76 C 398.27 126.10 384.08 127.26 370.00 126.91 C 334.58 127.37 299.04 125.97 263.70 127.74 Z" />
+<path fill="#5739fc" opacity="1.00" d=" M 231.34 268.42 C 242.09 266.57 253.67 271.01 259.96 280.01 C 267.81 290.44 266.95 306.42 257.78 315.78 C 249.93 324.84 235.99 328.27 225.13 322.81 C 212.19 317.51 204.73 301.61 209.27 288.34 C 211.96 278.15 221.07 270.27 231.34 268.42 Z" />
+<path fill="#5739fc" opacity="1.00" d=" M 331.31 268.37 C 338.25 267.70 345.64 268.49 351.56 272.46 C 362.85 279.64 367.68 295.11 362.49 307.44 C 356.97 322.20 337.63 330.19 323.64 322.39 C 310.88 316.51 304.45 300.49 309.18 287.33 C 312.33 277.57 321.19 269.96 331.31 268.37 Z" />
+<path fill="#5739fc" opacity="1.00" d=" M 430.34 268.43 C 447.31 264.87 464.96 279.60 463.82 297.02 C 464.77 314.63 445.97 329.14 429.13 324.69 C 416.26 321.82 406.34 309.25 407.13 295.99 C 406.90 282.75 417.26 270.46 430.34 268.43 Z" />
+</g>
+<g id="#0015326a">
+<path fill="#001532" opacity="0.42" d=" M 263.70 127.74 C 299.04 125.97 334.58 127.37 370.00 126.91 C 384.08 127.26 398.27 126.10 412.28 127.76 C 362.76 127.75 313.22 127.76 263.70 127.74 Z" />
+</g>
+<g id="#0005113c">
+<path fill="#000511" opacity="0.24" d=" M 24.28 274.00 C 24.48 270.90 23.57 267.51 25.15 264.67 C 24.94 421.20 25.11 577.75 25.13 734.28 C 24.93 733.70 24.53 732.55 24.33 731.98 C 24.30 579.32 24.30 426.66 24.28 274.00 Z" />
+</g>
 </svg>

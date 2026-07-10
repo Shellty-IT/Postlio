@@ -2,7 +2,11 @@ import logging
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
+from app.config import settings
+
 logger = logging.getLogger(__name__)
+
+ALLOWED_ORIGINS = {settings.FRONTEND_URL, "http://localhost:3000"}
 
 
 class NotFoundError(Exception):
@@ -46,4 +50,9 @@ def register_exception_handlers(app) -> None:
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception):
         logger.exception("Unhandled exception on %s %s: %s", request.method, request.url.path, exc)
-        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+        response = JSONResponse(status_code=500, content={"detail": "Internal server error"})
+        origin = request.headers.get("origin")
+        if origin in ALLOWED_ORIGINS:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response

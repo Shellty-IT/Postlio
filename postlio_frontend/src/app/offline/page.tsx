@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { WifiOff, RefreshCw, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AppLogo } from '@/components/common/app-logo';
 import Link from 'next/link';
 
 export default function OfflinePage() {
@@ -116,7 +117,7 @@ export default function OfflinePage() {
 
                 {/* Branding */}
                 <div className="mt-12 flex items-center justify-center gap-2 text-slate-500">
-                    <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-violet-600 rounded-lg" />
+                    <AppLogo className="h-6 w-6" />
                     <span className="font-semibold">Postlio</span>
                 </div>
             </motion.div>

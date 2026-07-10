@@ -4,12 +4,12 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
 
 import { useAuthStore } from '@/store/auth-store';
 import { OnboardingWelcome } from '@/components/onboarding/onboarding-welcome';
 import { OnboardingConnect } from '@/components/onboarding/onboarding-connect';
 import { OnboardingSuccess } from '@/components/onboarding/onboarding-success';
+import { AppLogo } from '@/components/common/app-logo';
 
 export default function OnboardingPage() {
     const router = useRouter();
@@ -38,7 +38,7 @@ export default function OnboardingPage() {
     if (!isInitialized) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
-                <Sparkles className="h-8 w-8 animate-pulse text-primary" />
+                <AppLogo className="h-8 w-8 animate-pulse" />
             </div>
         );
     }
@@ -47,7 +47,7 @@ export default function OnboardingPage() {
     if (!isAuthenticated) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
-                <Sparkles className="h-8 w-8 animate-pulse text-primary" />
+                <AppLogo className="h-8 w-8 animate-pulse" />
             </div>
         );
     }
@@ -56,7 +56,7 @@ export default function OnboardingPage() {
     if (!user) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
-                <Sparkles className="h-8 w-8 animate-pulse text-primary" />
+                <AppLogo className="h-8 w-8 animate-pulse" />
             </div>
         );
     }
@@ -65,7 +65,7 @@ export default function OnboardingPage() {
     if (!user.needs_onboarding) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
-                <Sparkles className="h-8 w-8 animate-pulse text-primary" />
+                <AppLogo className="h-8 w-8 animate-pulse" />
             </div>
         );
     }

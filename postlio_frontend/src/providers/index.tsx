@@ -18,7 +18,7 @@ import { InstallPrompt } from '@/components/pwa/install-prompt';
 import { OfflineIndicator } from '@/components/pwa/offline-indicator';
 import { UpdateNotification } from '@/components/pwa/update-notification';
 import { initReminders } from '@/lib/reminders';
-import { Sparkles } from 'lucide-react';
+import { AppLogo } from '@/components/common/app-logo';
 
 interface ProvidersProps {
     children: ReactNode;
@@ -110,9 +110,7 @@ function AuthInitializer({ children }: { children: ReactNode }) {
             <div className="fixed inset-0 flex items-center justify-center bg-background">
                 <div className="flex flex-col items-center gap-4">
                     <div className="relative">
-                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center">
-                            <Sparkles className="h-6 w-6 text-white animate-pulse" />
-                        </div>
+                        <AppLogo className="h-12 w-12 animate-pulse" />
                         <div className="absolute inset-0 h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 animate-ping opacity-20" />
                     </div>
                     <p className="text-sm text-muted-foreground animate-pulse">
