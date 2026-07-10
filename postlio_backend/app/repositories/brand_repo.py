@@ -52,7 +52,7 @@ class BrandRepository:
 
     async def clear_default(self, db: AsyncSession, user_id: int) -> None:
         result = await db.execute(
-            select(Brand).where(Brand.user_id == user_id, Brand.is_default == True)
+            select(Brand).where(Brand.user_id == user_id, Brand.is_default)
         )
         for brand in result.scalars().all():
             brand.is_default = False
