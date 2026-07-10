@@ -2,11 +2,18 @@
 """
 Konfiguracja aplikacji.
 """
+import os
 from pathlib import Path
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from typing import Optional
 
 ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
+
+_DEFAULT_SECRET_KEY = "dev-secret-key-change-this-in-production-min-32-chars"
+
+# pytest-env ustawia TESTING=true przed importem modułów (patrz database.py)
+TESTING = os.environ.get("TESTING", "false").lower() == "true"
 
 
 class Settings(BaseSettings):
@@ -17,7 +24,7 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
 
     # Security
-    SECRET_KEY: str = "dev-secret-key-change-this-in-production-min-32-chars"
+    SECRET_KEY: str = _DEFAULT_SECRET_KEY
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ALGORITHM: str = "HS256"
@@ -78,6 +85,26 @@ class Settings(BaseSettings):
     class Config:
         env_file = ENV_FILE
         extra = "ignore"
+
+    @model_validator(mode="after")
+    def _validate_production_secrets(self) -> "Settings":
+        """Fail fast zamiast cicho startować z niebezpiecznymi defaultami."""
+        if self.DEBUG or TESTING:
+            return self
+
+        if self.SECRET_KEY == _DEFAULT_SECRET_KEY or len(self.SECRET_KEY) < 32:
+            raise ValueError(
+                "SECRET_KEY must be set to a unique value of at least 32 characters "
+                "when DEBUG=false. Set the SECRET_KEY environment variable."
+            )
+
+        if not self.TOKEN_ENCRYPTION_KEY:
+            raise ValueError(
+                "TOKEN_ENCRYPTION_KEY must be set when DEBUG=false. "
+                "There is no insecure fallback in production."
+            )
+
+        return self
 
 
 settings = Settings()
