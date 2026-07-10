@@ -27,40 +27,36 @@ export interface ApiResponse<T> {
 interface RequestConfig extends RequestInit {
     skipAuth?: boolean;
     timeout?: number;
+    /** Don't force-redirect to /login if the session can't be restored (used for the silent boot-time check). */
+    silentAuth?: boolean;
 }
 
 // ============================================================
 // TOKEN MANAGEMENT
 // ============================================================
+//
+// The refresh token lives only in an httpOnly cookie set by the backend -
+// it is never readable from JS. The access token is short-lived and kept
+// in memory only (not localStorage/sessionStorage), so a page reload
+// always requires a silent /auth/refresh round-trip using the cookie.
 
 class TokenManager {
-    private static ACCESS_TOKEN_KEY = 'postlio_access_token';
-    private static REFRESH_TOKEN_KEY = 'postlio_refresh_token';
+    private static accessToken: string | null = null;
 
     static getAccessToken(): string | null {
-        if (typeof window === 'undefined') return null;
-        return localStorage.getItem(this.ACCESS_TOKEN_KEY);
+        return this.accessToken;
     }
 
-    static getRefreshToken(): string | null {
-        if (typeof window === 'undefined') return null;
-        return localStorage.getItem(this.REFRESH_TOKEN_KEY);
+    static setAccessToken(accessToken: string): void {
+        this.accessToken = accessToken;
     }
 
-    static setTokens(accessToken: string, refreshToken: string): void {
-        if (typeof window === 'undefined') return;
-        localStorage.setItem(this.ACCESS_TOKEN_KEY, accessToken);
-        localStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
+    static clearAccessToken(): void {
+        this.accessToken = null;
     }
 
-    static clearTokens(): void {
-        if (typeof window === 'undefined') return;
-        localStorage.removeItem(this.ACCESS_TOKEN_KEY);
-        localStorage.removeItem(this.REFRESH_TOKEN_KEY);
-    }
-
-    static hasTokens(): boolean {
-        return !!this.getAccessToken();
+    static hasAccessToken(): boolean {
+        return !!this.accessToken;
     }
 }
 
@@ -112,6 +108,7 @@ async function fetchWithTimeout(
 
     try {
         const response = await fetch(url, {
+            credentials: 'include',
             ...options,
             signal: controller.signal,
         });
@@ -138,28 +135,22 @@ function onRefreshComplete(token: string | null): void {
 }
 
 async function refreshAccessToken(): Promise<string | null> {
-    const refreshToken = TokenManager.getRefreshToken();
-    if (!refreshToken) return null;
-
     try {
         const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ refresh_token: refreshToken }),
+            credentials: 'include',
         });
 
         if (!response.ok) {
-            TokenManager.clearTokens();
+            TokenManager.clearAccessToken();
             return null;
         }
 
         const data = await response.json();
-        TokenManager.setTokens(data.access_token, data.refresh_token);
+        TokenManager.setAccessToken(data.access_token);
         return data.access_token;
     } catch {
-        TokenManager.clearTokens();
+        TokenManager.clearAccessToken();
         return null;
     }
 }
@@ -172,7 +163,7 @@ async function apiRequest<T>(
     endpoint: string,
     config: RequestConfig = {}
 ): Promise<T> {
-    const { skipAuth = false, timeout = 30000, ...fetchConfig } = config;
+    const { skipAuth = false, timeout = 30000, silentAuth = false, ...fetchConfig } = config;
 
     // Budowanie URL
     const url = endpoint.startsWith('http')
@@ -236,8 +227,8 @@ async function apiRequest<T>(
                     timeout
                 );
             } else {
-                // Przekieruj do logowania
-                if (typeof window !== 'undefined') {
+                // Przekieruj do logowania (chyba że to cichy check sesji przy starcie)
+                if (!silentAuth && typeof window !== 'undefined') {
                     window.location.href = '/login';
                 }
                 throw new ApiException({
@@ -388,6 +379,7 @@ export const apiClient = {
 
             const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
             xhr.open('POST', url);
+            xhr.withCredentials = true;
 
             const token = TokenManager.getAccessToken();
             if (token) {

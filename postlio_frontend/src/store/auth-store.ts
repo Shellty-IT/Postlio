@@ -181,7 +181,7 @@ export const useAuthStore = create<AuthState>()(
             },
 
             logout: () => {
-                TokenManager.clearTokens();
+                TokenManager.clearAccessToken();
                 set({
                     ...initialState,
                     isInitialized: true,
@@ -191,24 +191,12 @@ export const useAuthStore = create<AuthState>()(
             reset: () => set(initialState),
 
             /**
-             * ✅ ZAKTUALIZOWANE: Weryfikuje token z backendem
-             * Jeśli token jest nieprawidłowy, wylogowuje użytkownika
+             * Weryfikuje sesję z backendem. Access token żyje tylko w pamięci,
+             * więc po każdym przeładowaniu strony ta funkcja próbuje cichego
+             * odświeżenia przez httpOnly refresh cookie - nie ma jak sprawdzić
+             * to synchronicznie z samego JS.
              */
             checkAuth: async () => {
-                const hasTokens = TokenManager.hasTokens();
-
-                if (!hasTokens) {
-                    set({
-                        user: null,
-                        isAuthenticated: false,
-                        isInitialized: true,
-                        capabilities: DEFAULT_CAPABILITIES,
-                        connectedAccounts: [],
-                    });
-                    return;
-                }
-
-                // Mamy tokeny - weryfikuj z backendem
                 set({ isLoading: true });
 
                 try {
@@ -243,7 +231,7 @@ export const useAuthStore = create<AuthState>()(
                 } catch (error) {
                     console.error('Auth check failed:', error);
                     // Błąd weryfikacji - wyloguj dla bezpieczeństwa
-                    TokenManager.clearTokens();
+                    TokenManager.clearAccessToken();
                     set({
                         user: null,
                         isAuthenticated: false,

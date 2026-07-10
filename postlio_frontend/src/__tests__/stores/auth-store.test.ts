@@ -10,14 +10,22 @@ import type { User } from '@/types';
 // Mock TokenManager
 jest.mock('@/lib/api/client', () => ({
     TokenManager: {
-        clearTokens: jest.fn(),
-        hasTokens: jest.fn(() => false),
+        clearAccessToken: jest.fn(),
+        hasAccessToken: jest.fn(() => false),
         getAccessToken: jest.fn(() => null),
-        setTokens: jest.fn(),
+        setAccessToken: jest.fn(),
+    },
+}));
+
+// checkAuth() dynamically imports '@/lib/api/auth' - mock its verifySession
+jest.mock('@/lib/api/auth', () => ({
+    authApi: {
+        verifySession: jest.fn(),
     },
 }));
 
 import { TokenManager } from '@/lib/api/client';
+import { authApi } from '@/lib/api/auth';
 
 // Mock user data - must match User type exactly
 const mockUser: User = {
@@ -177,7 +185,7 @@ describe('useAuthStore', () => {
             expect(state.isLoading).toBe(false);
         });
 
-        it('should call TokenManager.clearTokens', () => {
+        it('should call TokenManager.clearAccessToken', () => {
             act(() => {
                 useAuthStore.getState().login(mockUser);
             });
@@ -186,16 +194,16 @@ describe('useAuthStore', () => {
                 useAuthStore.getState().logout();
             });
 
-            expect(TokenManager.clearTokens).toHaveBeenCalled();
+            expect(TokenManager.clearAccessToken).toHaveBeenCalled();
         });
     });
 
     describe('checkAuth', () => {
-        it('should set isAuthenticated true when tokens exist', () => {
-            (TokenManager.hasTokens as jest.Mock).mockReturnValue(true);
+        it('should set isAuthenticated true when the session is valid', async () => {
+            (authApi.verifySession as jest.Mock).mockResolvedValue(mockUser);
 
-            act(() => {
-                useAuthStore.getState().checkAuth();
+            await act(async () => {
+                await useAuthStore.getState().checkAuth();
             });
 
             const state = useAuthStore.getState();
@@ -203,11 +211,11 @@ describe('useAuthStore', () => {
             expect(state.isInitialized).toBe(true);
         });
 
-        it('should set isAuthenticated false when no tokens', () => {
-            (TokenManager.hasTokens as jest.Mock).mockReturnValue(false);
+        it('should set isAuthenticated false when the session is invalid', async () => {
+            (authApi.verifySession as jest.Mock).mockResolvedValue(null);
 
-            act(() => {
-                useAuthStore.getState().checkAuth();
+            await act(async () => {
+                await useAuthStore.getState().checkAuth();
             });
 
             const state = useAuthStore.getState();
@@ -216,11 +224,11 @@ describe('useAuthStore', () => {
             expect(state.user).toBeNull();
         });
 
-        it('should always set isInitialized to true', () => {
-            (TokenManager.hasTokens as jest.Mock).mockReturnValue(false);
+        it('should always set isInitialized to true', async () => {
+            (authApi.verifySession as jest.Mock).mockResolvedValue(null);
 
-            act(() => {
-                useAuthStore.getState().checkAuth();
+            await act(async () => {
+                await useAuthStore.getState().checkAuth();
             });
 
             expect(useAuthStore.getState().isInitialized).toBe(true);
