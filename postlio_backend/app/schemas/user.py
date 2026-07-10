@@ -25,10 +25,6 @@ class OnboardingComplete(BaseModel):
     skipped: bool = False
 
 
-class RefreshTokenRequest(BaseModel):
-    refresh_token: str
-
-
 # === RESPONSE SCHEMAS ===
 
 class UserResponse(BaseModel):
@@ -70,9 +66,9 @@ class UserBasicResponse(BaseModel):
         from_attributes = True
 
 
-class Token(BaseModel):
+class AccessTokenResponse(BaseModel):
+    """Access token w body; refresh token jest ustawiany jako httpOnly cookie."""
     access_token: str
-    refresh_token: str
     token_type: str = "bearer"
 
 

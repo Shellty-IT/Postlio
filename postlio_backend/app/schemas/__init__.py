@@ -6,7 +6,7 @@ from app.schemas.user import (
     UserRegister,
     UserLogin,
     UserResponse,
-    Token,
+    AccessTokenResponse,
     TokenPayload,
 )
 from app.schemas.autopilot import (
@@ -29,7 +29,7 @@ __all__ = [
     "UserRegister",
     "UserLogin",
     "UserResponse",
-    "Token",
+    "AccessTokenResponse",
     "TokenPayload",
     # Autopilot
     "AutopilotConfigCreate",

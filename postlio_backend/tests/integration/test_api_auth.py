@@ -94,7 +94,8 @@ class TestLogin:
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
-        assert "refresh_token" in data
+        assert "refresh_token" not in data
+        assert response.cookies.get("refresh_token") is not None
 
     @pytest.mark.asyncio
     async def test_login_wrong_password(self, client: AsyncClient, integration_user):
@@ -197,8 +198,8 @@ class TestTokenRefresh:
     async def test_refresh_token_success(
         self, client: AsyncClient, integration_user
     ):
-        """Should return new tokens with valid refresh token."""
-        # First login to get refresh token
+        """Should return a new access token using the httpOnly refresh cookie."""
+        # Login sets the refresh cookie on the shared client's cookie jar
         login_response = await client.post(
             "/api/v1/auth/login",
             json={
@@ -206,30 +207,56 @@ class TestTokenRefresh:
                 "password": "TestPassword123!",
             }
         )
-
         assert login_response.status_code == 200
-        refresh_token = login_response.json()["refresh_token"]
 
-        # Use refresh token to get new tokens
-        response = await client.post(
-            "/api/v1/auth/refresh",
-            json={"refresh_token": refresh_token}
-        )
+        # Refresh cookie is sent automatically - no body needed
+        response = await client.post("/api/v1/auth/refresh")
 
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
-        assert "refresh_token" in data
+        assert "refresh_token" not in data
+        # Cookie is rotated on every refresh
+        assert response.cookies.get("refresh_token") is not None
 
     @pytest.mark.asyncio
     async def test_refresh_invalid_token(self, client: AsyncClient):
-        """Should reject invalid refresh token."""
-        response = await client.post(
-            "/api/v1/auth/refresh",
-            json={"refresh_token": "invalid_token"}
-        )
+        """Should reject a request with no refresh cookie."""
+        response = await client.post("/api/v1/auth/refresh")
 
         assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_refresh_malformed_cookie(self, client: AsyncClient):
+        """Should reject a malformed refresh cookie."""
+        client.cookies.set("refresh_token", "not-a-valid-jwt")
+        response = await client.post("/api/v1/auth/refresh")
+
+        assert response.status_code == 401
+
+
+class TestLogout:
+    """Tests for POST /api/v1/auth/logout"""
+
+    @pytest.mark.asyncio
+    async def test_logout_clears_refresh_cookie(
+        self, client: AsyncClient, integration_user
+    ):
+        """Should clear the refresh cookie so a subsequent refresh fails."""
+        login_response = await client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": integration_user.email,
+                "password": "TestPassword123!",
+            }
+        )
+        assert login_response.status_code == 200
+
+        logout_response = await client.post("/api/v1/auth/logout")
+        assert logout_response.status_code == 200
+
+        refresh_response = await client.post("/api/v1/auth/refresh")
+        assert refresh_response.status_code == 401
 
 
 class TestPasswordChange:
