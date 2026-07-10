@@ -298,6 +298,7 @@ class PublishService:
             .where(AutopilotQueueItem.scheduled_for <= now)
             .order_by(AutopilotQueueItem.scheduled_for.asc())
             .limit(limit)
+            .with_for_update(skip_locked=True)
         )
         if config_id:
             query = query.where(AutopilotQueueItem.config_id == config_id)
