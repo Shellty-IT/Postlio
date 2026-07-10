@@ -247,7 +247,7 @@ export function ScheduleModal() {
     return (
         <>
             <Dialog open={isScheduleModalOpen} onOpenChange={closeScheduleModal}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-card-strong border-white/10 bg-[#0d0e15]">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Calendar className="h-5 w-5 text-primary" />
@@ -270,7 +270,7 @@ export function ScheduleModal() {
                                                 "flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all",
                                                 selectedPlatform === platform
                                                     ? "border-current shadow-md"
-                                                    : "border-transparent bg-muted hover:bg-muted/80"
+                                                    : "border-transparent bg-white/[0.04] hover:bg-white/[0.07]"
                                             )}
                                             style={{
                                                 color: selectedPlatform === platform ? config.color : undefined,

@@ -40,7 +40,7 @@ export function DroppableDay({
         <div
             ref={setNodeRef}
             className={cn(
-                'relative transition-all duration-200',
+                'relative rounded-[14px] transition-all duration-200',
                 isDragging && isDraftBeingDragged && !disabled && 'ring-2 ring-primary/30 ring-inset',
                 isOver && !disabled && 'bg-primary/10 ring-2 ring-primary',
                 className
@@ -50,8 +50,8 @@ export function DroppableDay({
 
             {/* Drop indicator overlay */}
             {isOver && !disabled && (
-                <div className="absolute inset-0 bg-primary/5 flex items-center justify-center pointer-events-none z-10">
-                    <div className="bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded-full shadow-lg">
+                <div className="absolute inset-0 flex items-center justify-center rounded-[14px] bg-primary/5 pointer-events-none z-10">
+                    <div className="btn-gradient px-2 py-1 text-xs">
                         Upuść tutaj
                     </div>
                 </div>

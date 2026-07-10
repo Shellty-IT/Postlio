@@ -68,23 +68,23 @@ export function WeekView({ posts, onPostMove, enableDroppable = false }: WeekVie
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="border rounded-xl overflow-hidden bg-card"
+            className="glass-card overflow-hidden"
         >
             {/* Header z dniami tygodnia */}
-            <div className="grid grid-cols-[60px_repeat(7,1fr)] bg-muted/50 border-b sticky top-0 z-10">
+            <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-white/[0.06] bg-white/[0.02] sticky top-0 z-10">
                 {/* Puste miejsce na godziny */}
-                <div className="p-2 border-r" />
+                <div className="p-2 border-r border-white/[0.06]" />
 
                 {/* Dni tygodnia */}
                 {weekDays.map((day) => {
                     const headerContent = (
                         <div
                             className={cn(
-                                "p-3 text-center border-r last:border-r-0",
+                                "p-3 text-center border-r border-white/[0.06] last:border-r-0",
                                 isToday(day) && "bg-primary/10"
                             )}
                         >
-                            <div className="text-xs text-muted-foreground uppercase">
+                            <div className="mono-label">
                                 {format(day, 'EEE', { locale: pl })}
                             </div>
                             <div
@@ -111,10 +111,10 @@ export function WeekView({ posts, onPostMove, enableDroppable = false }: WeekVie
                 {HOURS.filter(h => h >= WORKING_HOURS.start && h <= WORKING_HOURS.end).map((hour) => (
                     <div
                         key={hour}
-                        className="grid grid-cols-[60px_repeat(7,1fr)] border-b last:border-b-0"
+                        className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-white/[0.05] last:border-b-0"
                     >
                         {/* Etykieta godziny */}
-                        <div className="p-2 text-xs text-muted-foreground text-right pr-3 border-r bg-muted/30">
+                        <div className="p-2 text-xs text-muted-foreground text-right pr-3 border-r border-white/[0.06] bg-white/[0.015]">
                             {format(setHours(new Date(), hour), 'HH:00')}
                         </div>
 
@@ -130,8 +130,8 @@ export function WeekView({ posts, onPostMove, enableDroppable = false }: WeekVie
                                     onDragOver={(e) => e.preventDefault()}
                                     onDrop={(e) => handleDrop(e, day, hour)}
                                     className={cn(
-                                        "min-h-[60px] h-full p-1 border-r last:border-r-0 cursor-pointer",
-                                        "hover:bg-muted/50 transition-colors",
+                                        "min-h-[60px] h-full p-1 border-r border-white/[0.05] last:border-r-0 cursor-pointer",
+                                        "hover:bg-white/[0.03] transition-colors",
                                         isCurrentHour && "bg-primary/5 ring-1 ring-inset ring-primary/20"
                                     )}
                                 >

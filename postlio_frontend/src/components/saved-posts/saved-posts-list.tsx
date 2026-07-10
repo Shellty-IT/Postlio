@@ -16,6 +16,8 @@ import {
     Loader2,
 } from 'lucide-react';
 
+import { Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -159,6 +161,7 @@ export function SavedPostsList({
                                    onBulkDelete,
                                    onBulkSchedule,
                                }: SavedPostsListProps) {
+    const router = useRouter();
     const [filters, setFilters] = useState<FiltersType>({
         search: '',
         platforms: [],
@@ -247,7 +250,7 @@ export function SavedPostsList({
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-2.5 xs:gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20"
+                        className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-2.5 xs:gap-3 p-3 rounded-[14px] bg-primary/[0.06] border border-primary/20"
                     >
                         <div className="flex items-center gap-2.5 sm:gap-3">
                             <Checkbox
@@ -305,19 +308,21 @@ export function SavedPostsList({
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center py-10 sm:py-16 text-center px-4"
+                    className="empty-state-card"
                 >
-                    <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-muted flex items-center justify-center mb-3 sm:mb-4">
-                        <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
+                    <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
+                        <FileText className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground" />
                     </div>
-                    <h3 className="text-base sm:text-lg font-medium mb-1">
-                        {posts.length === 0 ? 'Brak zapisanych materiałów' : 'Brak wyników'}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground max-w-sm">
-                        {posts.length === 0
-                            ? 'Stwórz swój pierwszy post w Kreatorze AI, a pojawi się tutaj jako szkic.'
-                            : 'Spróbuj zmienić filtry lub wyszukiwaną frazę.'}
-                    </p>
+                    <div>
+                        <h3 className="text-base sm:text-lg font-medium mb-1">
+                            {posts.length === 0 ? 'Brak zapisanych materiałów' : 'Brak wyników'}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground max-w-sm">
+                            {posts.length === 0
+                                ? 'Stwórz swój pierwszy post w Kreatorze AI, a pojawi się tutaj jako szkic.'
+                                : 'Spróbuj zmienić filtry lub wyszukiwaną frazę.'}
+                        </p>
+                    </div>
                 </motion.div>
             )}
 
@@ -345,6 +350,22 @@ export function SavedPostsList({
                             />
                         ))}
                     </AnimatePresence>
+
+                    {viewMode === 'grid' && (
+                        <button
+                            type="button"
+                            onClick={() => router.push('/creator')}
+                            className="dashed-slot flex min-h-[220px] flex-col items-center justify-center gap-3 transition-colors hover:bg-primary/[0.07]"
+                        >
+                            <span className="flex h-11 w-11 items-center justify-center rounded-[14px] border border-primary/25 bg-gradient-to-br from-primary/[0.18] to-accent/[0.14] text-primary">
+                                <Plus className="h-5 w-5" />
+                            </span>
+                            <div className="text-center">
+                                <div className="text-[13.5px] font-semibold">Stwórz nowy post</div>
+                                <div className="text-xs text-muted-foreground mt-0.5">z Kreatorem AI</div>
+                            </div>
+                        </button>
+                    )}
                 </motion.div>
             )}
 

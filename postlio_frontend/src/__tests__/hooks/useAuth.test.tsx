@@ -83,13 +83,17 @@ import type { User } from '@/types';
 // ============================================================
 
 const mockUser: User = {
-    id: '1',
+    id: 1,
     email: 'test@example.com',
     full_name: 'Test User',
     is_active: true,
-    role: 'user',
+    is_verified: true,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
+    is_trial_active: true,
+    trial_days_remaining: 14,
+    onboarding_skipped: false,
+    needs_onboarding: false,
 };
 
 const mockLoginResponse = {

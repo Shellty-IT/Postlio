@@ -4,11 +4,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Sparkles, Rocket, Wand2, Calendar, Bot, ArrowRight, Loader2 } from 'lucide-react';
+import { Rocket, Wand2, Calendar, Bot, ArrowRight, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuthStore } from '@/store/auth-store';
+import { AppLogo } from '@/components/common/app-logo';
 
 interface OnboardingWelcomeProps {
     userName?: string;
@@ -54,9 +55,7 @@ export function OnboardingWelcome({ userName }: OnboardingWelcomeProps) {
         <Card className="w-full max-w-2xl bg-card/80 backdrop-blur-sm border-border/50 shadow-2xl mx-4">
             <CardContent className="p-6 xs:p-8 md:p-12">
                 <div className="flex items-center gap-2 xs:gap-3 mb-6 xs:mb-8">
-                    <div className="w-10 h-10 xs:w-12 xs:h-12 rounded-xl bg-gradient-to-br from-violet-500 to-primary flex items-center justify-center shadow-lg shadow-violet-500/25">
-                        <Sparkles className="w-5 h-5 xs:w-6 xs:h-6 text-white" />
-                    </div>
+                    <AppLogo className="h-10 w-10 xs:h-12 xs:w-12" />
                     <span className="text-xl xs:text-2xl font-bold bg-gradient-to-r from-violet-500 to-primary bg-clip-text text-transparent">
                         Postlio
                     </span>

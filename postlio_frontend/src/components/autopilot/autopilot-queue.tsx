@@ -140,12 +140,16 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
 
     if (!configId) {
         return (
-            <div className="text-center py-8 xs:py-12 text-muted-foreground">
-                <Calendar className="w-10 h-10 xs:w-12 xs:h-12 mx-auto mb-3 xs:mb-4 opacity-30" />
-                <h3 className="font-medium mb-1 text-sm xs:text-base">Wybierz konfigurację</h3>
-                <p className="text-xs xs:text-sm">
-                    Wybierz konfigurację aby zobaczyć kolejkę
-                </p>
+            <div className="empty-state-card">
+                <div className="w-[54px] h-[54px] rounded-2xl bg-gradient-to-br from-warning/[0.18] to-accent/[0.12] border border-warning/25 flex items-center justify-center text-warning shadow-glow-warning">
+                    <Calendar className="w-6 h-6" />
+                </div>
+                <div>
+                    <h3 className="font-semibold text-base">Wybierz konfigurację</h3>
+                    <p className="text-sm text-muted-foreground mt-1.5">
+                        Wybierz konfigurację aby zobaczyć kolejkę
+                    </p>
+                </div>
             </div>
         );
     }
@@ -159,7 +163,7 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
                         placeholder="Szukaj..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-10 xs:h-11"
+                        className="pl-10 h-10 xs:h-11 bg-white/[0.03] border-white/10"
                     />
                 </div>
 
@@ -167,7 +171,7 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
                     value={queueFilter}
                     onValueChange={(v) => setQueueFilter(v as BackendQueueStatus | 'all')}
                 >
-                    <SelectTrigger className="w-full xs:w-40 sm:w-48 h-10 xs:h-11">
+                    <SelectTrigger className="w-full xs:w-40 sm:w-48 h-10 xs:h-11 bg-white/[0.03] border-white/10">
                         <Filter className="w-4 h-4 mr-2 flex-shrink-0" />
                         <SelectValue placeholder="Filtruj" />
                     </SelectTrigger>
@@ -190,15 +194,19 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="text-center py-8 xs:py-12 text-muted-foreground"
+                                className="empty-state-card"
                             >
-                                <Calendar className="w-10 h-10 xs:w-12 xs:h-12 mx-auto mb-3 xs:mb-4 opacity-30" />
-                                <h3 className="font-medium mb-1 text-sm xs:text-base">Brak postów w kolejce</h3>
-                                <p className="text-xs xs:text-sm">
-                                    {queueFilter !== 'all'
-                                        ? 'Zmień filtr lub wygeneruj nowe posty'
-                                        : 'Uruchom Autopilota aby wygenerować posty'}
-                                </p>
+                                <div className="w-[54px] h-[54px] rounded-2xl bg-gradient-to-br from-warning/[0.18] to-accent/[0.12] border border-warning/25 flex items-center justify-center text-warning shadow-glow-warning">
+                                    <Calendar className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-base">Brak postów w kolejce</h3>
+                                    <p className="text-sm text-muted-foreground mt-1.5 max-w-[420px]">
+                                        {queueFilter !== 'all'
+                                            ? 'Zmień filtr lub wygeneruj nowe posty'
+                                            : 'Gdy skonfigurujesz Autopilota, AI zacznie samodzielnie generować pomysły, szkice i harmonogram publikacji.'}
+                                    </p>
+                                </div>
                             </motion.div>
                         ) : (
                             filteredPosts.map((post, index) => (
@@ -209,8 +217,8 @@ export function AutopilotQueue({ configId, queueItems }: AutopilotQueueProps) {
                                     exit={{ opacity: 0, x: -100 }}
                                     transition={{ delay: index * 0.05 }}
                                     className={cn(
-                                        "p-3 xs:p-4 rounded-xl border bg-card",
-                                        "hover:border-primary/30 transition-all"
+                                        "p-3 xs:p-4 glass-card",
+                                        "hover:border-primary/30 transition-colors"
                                     )}
                                 >
                                     <div className="flex items-start gap-2 xs:gap-4">

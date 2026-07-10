@@ -1,31 +1,19 @@
-﻿from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.database import async_session_maker
+from app.database import get_db  # noqa: F401 — re-exported for route imports
 from app.utils.security import decode_token
 from app.models.user import User
 
-# Security scheme
 security = HTTPBearer()
-
-
-async def get_db() -> AsyncSession:
-    """Database session dependency."""
-    async with async_session_maker() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
 
 
 async def get_current_user(
         credentials: HTTPAuthorizationCredentials = Depends(security),
         db: AsyncSession = Depends(get_db),
 ) -> User:
-    """Get current authenticated user."""
-
     token = credentials.credentials
     payload = decode_token(token)
 

@@ -3,6 +3,7 @@ import { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AppLogo } from '@/components/common/app-logo';
 
 export default function FeaturesLayout({ children }: { children: ReactNode }) {
     return (
@@ -18,9 +19,7 @@ export default function FeaturesLayout({ children }: { children: ReactNode }) {
                             </Button>
                         </Link>
                         <Link href="/" className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center">
-                                <span className="text-white font-bold text-sm">P</span>
-                            </div>
+                            <AppLogo className="h-8 w-8" />
                             <span className="font-bold text-xl bg-gradient-to-r from-blue-500 to-violet-500 bg-clip-text text-transparent">
                                 Postlio
                             </span>
@@ -50,9 +49,7 @@ export default function FeaturesLayout({ children }: { children: ReactNode }) {
                 <div className="container mx-auto px-4">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                         <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center">
-                                <span className="text-white font-bold text-sm">P</span>
-                            </div>
+                            <AppLogo className="h-8 w-8" />
                             <span className="font-bold text-xl">Postlio</span>
                         </div>
 

@@ -10,6 +10,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useUser } from '@/hooks';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
+import { AppLogo } from '@/components/common/app-logo';
 
 interface AuthProviderProps {
     children: React.ReactNode;
@@ -40,9 +41,7 @@ function AuthLoading() {
         <div className="min-h-screen flex items-center justify-center bg-background">
             <div className="flex flex-col items-center gap-4">
                 <div className="relative">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center">
-                        <span className="text-xl font-bold text-white">P</span>
-                    </div>
+                    <AppLogo className="h-12 w-12" />
                     <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary to-violet-500 animate-ping opacity-20" />
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">

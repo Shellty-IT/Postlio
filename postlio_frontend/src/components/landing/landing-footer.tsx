@@ -5,8 +5,8 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AppLogo } from '@/components/common/app-logo';
 import {
-    Sparkles,
     Facebook,
     Instagram,
     Linkedin,
@@ -72,10 +72,10 @@ export function LandingFooter() {
                     <div className="col-span-2 sm:col-span-2 lg:col-span-2">
                         <Link href="/" className="flex items-center gap-2 mb-4 sm:mb-6">
                             <motion.div
-                                className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center shadow-lg shadow-primary/25"
+                                className="flex h-8 w-8 items-center justify-center sm:h-10 sm:w-10"
                                 whileHover={{ scale: 1.05, rotate: 5 }}
                             >
-                                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                                <AppLogo className="h-8 w-8 sm:h-10 sm:w-10" />
                             </motion.div>
                             <span className="text-lg sm:text-xl font-bold">Postlio</span>
                         </Link>

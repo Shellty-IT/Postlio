@@ -1,0 +1,354 @@
+name: Production Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "postlio_backend/**"
+      - "postlio_frontend/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+    inputs:
+      deploy_backend:
+        description: "Deploy backend after all checks pass"
+        required: true
+        default: true
+        type: boolean
+      deploy_frontend:
+        description: "Deploy frontend after all checks pass"
+        required: true
+        default: true
+        type: boolean
+
+concurrency:
+  group: production-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  NEXT_TELEMETRY_DISABLED: "1"
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  changes:
+    name: Detect deploy targets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.detect.outputs.backend }}
+      frontend: ${{ steps.detect.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect changed services
+        id: detect
+        shell: bash
+        run: |
+          backend=false
+          frontend=false
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            backend=true
+            frontend=true
+          else
+            if git rev-parse "${{ github.event.before }}" >/dev/null 2>&1; then
+              files="$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}")"
+            else
+              files="$(git diff --name-only HEAD^ HEAD)"
+            fi
+
+            if printf '%s\n' "$files" | grep -Eq '^(postlio_backend/|\.github/workflows/deploy\.yml$)'; then
+              backend=true
+            fi
+
+            if printf '%s\n' "$files" | grep -Eq '^(postlio_frontend/|\.github/workflows/deploy\.yml$)'; then
+              frontend=true
+            fi
+          fi
+
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+
+  backend-lint:
+    name: Backend lint (ruff)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: postlio_backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: postlio_backend/requirements.txt
+
+      - name: Install ruff
+        run: pip install ruff==0.5.7
+
+      - name: Run ruff
+        run: ruff check app tests
+
+  backend-test:
+    name: Backend tests (pytest)
+    runs-on: ubuntu-latest
+    needs: backend-lint
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: postlio_backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postlio
+          POSTGRES_PASSWORD: postlio
+          POSTGRES_DB: postlio_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postlio"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TESTING: "true"
+      DATABASE_URL: postgresql+asyncpg://postlio:postlio@localhost:5432/postlio_test
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      TOKEN_ENCRYPTION_KEY: ${{ secrets.TOKEN_ENCRYPTION_KEY }}
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      POLLINATIONS_API_KEY: ${{ secrets.POLLINATIONS_API_KEY }}
+      HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
+      FACEBOOK_APP_ID: ${{ secrets.FACEBOOK_APP_ID }}
+      FACEBOOK_APP_SECRET: ${{ secrets.FACEBOOK_APP_SECRET }}
+      LINKEDIN_CLIENT_ID: ${{ secrets.LINKEDIN_CLIENT_ID }}
+      LINKEDIN_CLIENT_SECRET: ${{ secrets.LINKEDIN_CLIENT_SECRET }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      FRONTEND_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: postlio_backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Alembic migrations
+        run: alembic upgrade head
+
+      - name: Run pytest
+        run: |
+          pytest \
+            -m "unit or integration" \
+            --cov=app \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --junitxml=pytest-report.xml
+
+      - name: Upload backend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-backend-coverage
+          path: |
+            postlio_backend/coverage.xml
+            postlio_backend/pytest-report.xml
+          retention-days: 14
+
+  frontend-lint:
+    name: Frontend lint & type-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: postlio_frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: postlio_frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npm run lint
+
+  frontend-unit:
+    name: Frontend tests (Jest + RTL)
+    runs-on: ubuntu-latest
+    needs: frontend-lint
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: postlio_frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: postlio_frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Jest
+        run: npm run test:ci
+
+      - name: Upload frontend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-frontend-jest-coverage
+          path: postlio_frontend/coverage
+          retention-days: 14
+
+  frontend-build:
+    name: Frontend build (next build)
+    runs-on: ubuntu-latest
+    needs: frontend-lint
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: postlio_frontend
+    env:
+      NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:8000' }}
+      NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: postlio_frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-next-build
+          path: |
+            postlio_frontend/.next
+            !postlio_frontend/.next/cache
+          retention-days: 3
+
+  frontend-e2e:
+    name: Frontend E2E (Playwright)
+    runs-on: ubuntu-latest
+    needs: frontend-build
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: postlio_frontend
+    env:
+      NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:8000' }}
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: postlio_frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: production-next-build
+          path: postlio_frontend/.next
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright
+        run: npm run test:e2e:chromium
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-playwright-report
+          path: |
+            postlio_frontend/playwright-report
+            postlio_frontend/test-results
+          retention-days: 14
+
+  deploy-backend:
+    name: Deploy backend to Render
+    runs-on: ubuntu-latest
+    needs:
+      - changes
+      - backend-test
+      - frontend-unit
+      - frontend-e2e
+    timeout-minutes: 5
+    if: ${{ (github.event_name == 'push' && needs.changes.outputs.backend == 'true') || (github.event_name == 'workflow_dispatch' && inputs.deploy_backend) }}
+    env:
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+    steps:
+      - name: Require Render deploy hook
+        if: ${{ env.RENDER_DEPLOY_HOOK_URL == '' }}
+        run: |
+          echo "::error::Set RENDER_DEPLOY_HOOK_URL in GitHub Actions secrets."
+          exit 1
+
+      - name: Trigger Render deploy
+        run: curl -fsS -X POST "$RENDER_DEPLOY_HOOK_URL"
+
+  deploy-frontend:
+    name: Deploy frontend to Netlify
+    runs-on: ubuntu-latest
+    needs:
+      - changes
+      - backend-test
+      - frontend-unit
+      - frontend-e2e
+    timeout-minutes: 5
+    if: ${{ (github.event_name == 'push' && needs.changes.outputs.frontend == 'true') || (github.event_name == 'workflow_dispatch' && inputs.deploy_frontend) }}
+    env:
+      NETLIFY_DEPLOY_HOOK_URL: ${{ secrets.NETLIFY_DEPLOY_HOOK_URL }}
+    steps:
+      - name: Require Netlify deploy hook
+        if: ${{ env.NETLIFY_DEPLOY_HOOK_URL == '' }}
+        run: |
+          echo "::error::Set NETLIFY_DEPLOY_HOOK_URL in GitHub Actions secrets."
+          exit 1
+
+      - name: Trigger Netlify deploy
+        run: curl -fsS -X POST "$NETLIFY_DEPLOY_HOOK_URL"

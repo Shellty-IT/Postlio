@@ -48,14 +48,14 @@ export function AutopilotHeader({
         const isActive = config.is_active;
         const isPaused = config.is_paused;
 
-        let color = '#6B7280';
+        let colorClass = 'bg-muted-foreground text-muted-foreground';
         let label = 'Nieaktywny';
 
         if (isActive && !isPaused) {
-            color = '#10B981';
+            colorClass = 'bg-success text-success';
             label = 'Aktywny';
         } else if (isActive && isPaused) {
-            color = '#F59E0B';
+            colorClass = 'bg-warning text-warning';
             label = 'Wstrzymany';
         }
 
@@ -64,11 +64,11 @@ export function AutopilotHeader({
                 <div
                     className={cn(
                         "w-2 h-2 rounded-full flex-shrink-0",
+                        colorClass.split(' ')[0],
                         isActive && !isPaused && "animate-pulse"
                     )}
-                    style={{ backgroundColor: color }}
                 />
-                <span className="text-xs xs:text-sm hidden xs:inline" style={{ color }}>
+                <span className={cn("text-xs xs:text-sm hidden xs:inline", colorClass.split(' ')[1])}>
                     {label}
                 </span>
             </div>
@@ -90,11 +90,11 @@ export function AutopilotHeader({
     };
 
     return (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="glass-card p-3 xs:p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div className="flex items-center gap-2 xs:gap-4 flex-wrap">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="gap-2 min-w-0 xs:min-w-[180px] sm:min-w-[220px] justify-between h-10 xs:h-11">
+                        <Button variant="outline" className="gap-2 min-w-0 xs:min-w-[180px] sm:min-w-[220px] justify-between h-10 xs:h-11 bg-white/[0.03] border-white/10">
                             {selectedConfig ? (
                                 <>
                                     <span className="truncate max-w-[80px] xs:max-w-[120px]">
@@ -150,16 +150,16 @@ export function AutopilotHeader({
 
             <div className="flex items-center gap-2 xs:gap-3 overflow-x-auto pb-1 sm:pb-0">
                 {selectedConfig?.health_score !== undefined && (
-                    <div className="flex items-center gap-1.5 xs:gap-2 px-2 xs:px-3 py-1.5 rounded-lg bg-card border flex-shrink-0">
+                    <div className="flex items-center gap-1.5 xs:gap-2 px-2 xs:px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/10 flex-shrink-0">
                         <div
-                            className="w-2 h-2 rounded-full"
-                            style={{
-                                backgroundColor: selectedConfig.health_score >= 80
-                                    ? '#10B981'
+                            className={cn(
+                                "w-2 h-2 rounded-full",
+                                selectedConfig.health_score >= 80
+                                    ? "bg-success"
                                     : selectedConfig.health_score >= 50
-                                        ? '#F59E0B'
-                                        : '#EF4444'
-                            }}
+                                        ? "bg-warning"
+                                        : "bg-destructive"
+                            )}
                         />
                         <span className="text-xs xs:text-sm font-medium">
                             {selectedConfig.health_score}%
@@ -172,7 +172,7 @@ export function AutopilotHeader({
                     onClick={onGenerateNow}
                     disabled={!selectedConfig || isGenerating}
                     className={cn(
-                        "gap-1.5 xs:gap-2 h-10 xs:h-11 px-3 xs:px-4 flex-shrink-0",
+                        "gap-1.5 xs:gap-2 h-10 xs:h-11 px-3 xs:px-4 flex-shrink-0 bg-white/[0.03] border-white/10",
                         isGenerating && "cursor-wait"
                     )}
                 >
@@ -195,8 +195,8 @@ export function AutopilotHeader({
                     className={cn(
                         "gap-1.5 xs:gap-2 h-10 xs:h-11 px-3 xs:px-4 min-w-0 xs:min-w-[110px] sm:min-w-[140px] flex-shrink-0",
                         isRunning
-                            ? "bg-amber-500 hover:bg-amber-600"
-                            : "bg-green-500 hover:bg-green-600"
+                            ? "bg-warning text-warning-foreground hover:bg-warning/90"
+                            : "btn-gradient"
                     )}
                 >
                     {isRunning ? (

@@ -1,5 +1,6 @@
-﻿# postlio_backend/app/services/ai/video/pollinations.py
+# postlio_backend/app/services/ai/video/pollinations.py
 
+import logging
 from typing import Optional, Dict, Any
 import httpx
 import base64
@@ -7,6 +8,8 @@ import json
 from urllib.parse import quote
 from app.config import settings
 from app.services.ai.video.base import BaseVideoProvider
+
+logger = logging.getLogger(__name__)
 
 
 class PollinationsVideoProvider(BaseVideoProvider):
@@ -37,7 +40,7 @@ class PollinationsVideoProvider(BaseVideoProvider):
                 self._text_provider = GeminiProvider()
 
             if not self._text_provider.is_available:
-                print(f"⚠️ Video: Gemini unavailable, using original prompt")
+                logger.warning("Video: Gemini unavailable, using original prompt")
                 return text
 
             translation_prompt = f"""You are a video prompt engineer. Take this text and create an excellent English prompt for AI video generation.
@@ -59,14 +62,14 @@ Input text:
                     if enhanced.lower().startswith(prefix.lower()):
                         enhanced = enhanced[len(prefix):].strip()
 
-                print(f"✅ Video: Enhanced '{text[:50]}...' → '{enhanced[:80]}...'")
+                logger.debug("Video: enhanced '%.50s...' → '%.80s...'", text, enhanced)
                 return enhanced
 
-            print(f"⚠️ Video: Enhancement returned no text, using original")
+            logger.warning("Video: enhancement returned no text, using original")
             return text
 
         except Exception as e:
-            print(f"⚠️ Video: Enhancement failed: {e}, using original")
+            logger.warning("Video: enhancement failed: %s, using original", e)
             return text
 
     def _parse_error_message(self, response) -> str:
@@ -129,9 +132,8 @@ Input text:
 
         model_name = self.default_model
 
-        print(f"🎬 Video: Generating with model={model_name}")
-        print(f"🎬 Video: Original: {original_prompt[:80]}...")
-        print(f"🎬 Video: Final: {final_prompt[:80]}...")
+        logger.info("Video: generating model=%s", model_name)
+        logger.debug("Video: original=%.80s... final=%.80s...", original_prompt, final_prompt)
 
         try:
             encoded_prompt = quote(final_prompt)
@@ -147,7 +149,7 @@ Input text:
 
             timeout = 240.0
 
-            print(f"🎬 Video: GET text-to-video, timeout={timeout}s")
+            logger.debug("Video: GET text-to-video, timeout=%ss", timeout)
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.get(
@@ -168,7 +170,7 @@ Input text:
                 )
 
         except httpx.TimeoutException:
-            print(f"❌ Video: Timeout after 240s")
+            logger.error("Video: timeout after 240s")
             return {
                 "success": False,
                 "error": "Przekroczono limit czasu generowania wideo (4 min). Spróbuj krótszego promptu.",
@@ -177,7 +179,7 @@ Input text:
             }
 
         except httpx.ConnectError as e:
-            print(f"❌ Video: Connection error - {e}")
+            logger.error("Video: connection error: %s", e)
             return {
                 "success": False,
                 "error": "Nie można połączyć się z Pollinations. Sprawdź połączenie internetowe.",
@@ -185,7 +187,7 @@ Input text:
             }
 
         except Exception as e:
-            print(f"❌ Video: Unexpected error - {e}")
+            logger.exception("Video: unexpected error: %s", e)
             return {
                 "success": False,
                 "error": f"Nieoczekiwany błąd: {str(e)}",
@@ -205,13 +207,13 @@ Input text:
             has_reference: bool = False,
     ) -> Dict[str, Any]:
 
-        print(f"🎬 Video: Response status: {response.status_code}")
+        logger.debug("Video: response status=%s", response.status_code)
 
         if response.status_code == 200:
             content_type = response.headers.get("content-type", "")
             content_length = len(response.content)
 
-            print(f"🎬 Video: Content-Type: {content_type}, Size: {content_length} bytes")
+            logger.debug("Video: content-type=%s size=%d bytes", content_type, content_length)
 
             if ("video" in content_type or "octet-stream" in content_type) and content_length > 5000:
                 video_base64 = base64.b64encode(response.content).decode("utf-8")
@@ -223,7 +225,7 @@ Input text:
                 else:
                     mime_type = "video/mp4"
 
-                print(f"✅ Video: Success! Size: {content_length} bytes")
+                logger.info("Video: generated successfully, size=%d bytes", content_length)
 
                 return {
                     "success": True,
@@ -244,7 +246,7 @@ Input text:
                 }
             else:
                 error_msg = self._parse_error_message(response)
-                print(f"❌ Video: Not a video - {error_msg}")
+                logger.error("Video: not a video response: %s", error_msg)
                 return {
                     "success": False,
                     "error": error_msg,

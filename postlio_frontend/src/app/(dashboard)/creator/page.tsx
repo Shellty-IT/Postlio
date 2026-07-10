@@ -382,8 +382,7 @@ export default function CreatorPage() {
         setIsManualPublishOpen(true);
     }, [content, hashtags, imageUrl, videoUrl, selectedPlatforms, primaryPlatform, editingPostId, selectedBrand, createPostMutation, textProvider, getFullContent]);
 
-    const handlePlatformPublished = useCallback((postId?: number, platform?: Platform) => {
-        console.log(`Platform ${platform} marked as published for post ${postId}`);
+    const handlePlatformPublished = useCallback((_postId?: number, _platform?: Platform) => {
     }, []);
 
     const handleAllPublished = useCallback(() => {
@@ -453,8 +452,8 @@ export default function CreatorPage() {
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                 >
-                                    <Alert className="border-violet-500/30 bg-violet-500/5">
-                                        <Pencil className="h-4 w-4 text-violet-500" />
+                                    <Alert className="rounded-[14px] border-accent/25 bg-accent/[0.06]">
+                                        <Pencil className="h-4 w-4 text-accent" />
                                         <AlertDescription className="flex flex-col xs:flex-row xs:items-center justify-between gap-2">
                       <span className="text-sm">
                         <strong>Tryb edycji</strong> — Post #{editingPostId}
@@ -474,12 +473,12 @@ export default function CreatorPage() {
                             )}
 
                             {!editingPostId && (
-                                <Alert className="border-amber-500/30 bg-amber-500/5">
-                                    <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                                    <AlertDescription className="text-xs sm:text-sm">
-                                        <strong>Kreator</strong> służy do tworzenia postów z AI.
+                                <Alert className="rounded-[14px] border-warning/20 bg-warning/[0.06]">
+                                    <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0" />
+                                    <AlertDescription className="text-xs sm:text-sm text-[#d9c8a3]">
+                                        <strong className="text-[#f2d3a0]">Kreator</strong> służy do tworzenia postów z AI.
                                         <span className="hidden sm:inline">
-                      {' '}Publikacja na <strong>konta osobiste</strong> wymaga ręcznego skopiowania treści.
+                      {' '}Publikacja na <strong className="text-[#f2d3a0]">konta osobiste</strong> wymaga ręcznego skopiowania treści.
                     </span>
                                     </AlertDescription>
                                 </Alert>
@@ -497,8 +496,8 @@ export default function CreatorPage() {
                                     />
                                     <span>Tworzysz jako</span>
                                     <span className="font-medium text-foreground">{selectedBrand.name}</span>
-                                    <Sparkles className="w-3 h-3 text-violet-500" />
-                                    <span className="text-violet-500 hidden xs:inline">Brand Voice aktywny</span>
+                                    <Sparkles className="w-3 h-3 text-accent" />
+                                    <span className="text-accent hidden xs:inline">Brand Voice aktywny</span>
                                 </motion.div>
                             )}
 

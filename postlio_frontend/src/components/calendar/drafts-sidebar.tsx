@@ -18,6 +18,7 @@ import {
     Linkedin,
     Sparkles,
     Image as ImageIcon,
+    Copy,
     X,
 } from 'lucide-react';
 
@@ -82,8 +83,8 @@ function DraggableDraftCard({ draft }: DraggableDraftCardProps) {
         ? draft.platforms
         : (draft.platform ? [draft.platform] : ['facebook']);
 
-    const truncatedContent = draft.content && draft.content.length > 60
-        ? `${draft.content.slice(0, 60)}...`
+    const truncatedContent = draft.content && draft.content.length > 90
+        ? `${draft.content.slice(0, 90)}...`
         : (draft.content || '');
 
     return (
@@ -91,9 +92,8 @@ function DraggableDraftCard({ draft }: DraggableDraftCardProps) {
             ref={setNodeRef}
             style={style}
             className={cn(
-                'group relative rounded-lg border bg-card p-3 transition-all touch-none',
-                'hover:shadow-md hover:border-primary/30 active:shadow-lg',
-                isDragging && 'opacity-50 shadow-lg ring-2 ring-primary z-50'
+                'group glass-card-interactive relative p-3 touch-none',
+                isDragging && 'opacity-50 shadow-2xl ring-2 ring-primary z-50'
             )}
         >
             <div
@@ -101,7 +101,7 @@ function DraggableDraftCard({ draft }: DraggableDraftCardProps) {
                 {...attributes}
                 className={cn(
                     'absolute left-1 top-1/2 -translate-y-1/2 p-1.5 rounded cursor-grab',
-                    'text-muted-foreground hover:text-foreground hover:bg-muted',
+                    'text-muted-foreground hover:text-foreground hover:bg-white/[0.06]',
                     'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity',
                     isDragging && 'cursor-grabbing'
                 )}
@@ -110,7 +110,7 @@ function DraggableDraftCard({ draft }: DraggableDraftCardProps) {
             </div>
 
             <div className="pl-6 space-y-2">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1 flex-wrap">
                         {allPlatforms.map((platform) => {
                             const config = PLATFORM_CONFIG[platform as Platform];
@@ -132,22 +132,32 @@ function DraggableDraftCard({ draft }: DraggableDraftCardProps) {
                         })}
                     </div>
 
-                    <div className="flex items-center gap-1">
-                        {draft.image_url && (
-                            <ImageIcon className="h-3 w-3 text-muted-foreground" />
-                        )}
-                        {draft.ai_generated && (
-                            <Sparkles className="h-3 w-3 text-violet-500" />
-                        )}
-                    </div>
+                    {draft.ai_generated && (
+                        <span className="rounded-md bg-gradient-to-br from-primary/20 to-accent/20 px-1.5 py-0.5 text-[10px] font-semibold text-[#c3ccff]">
+                            AI
+                        </span>
+                    )}
+
+                    {draft.image_url && (
+                        <ImageIcon className="h-3 w-3 text-muted-foreground" />
+                    )}
+
+                    <span className="ml-auto text-[11px] text-muted-foreground">
+                        {format(new Date(draft.created_at), 'd MMM', { locale: pl })}
+                    </span>
                 </div>
 
-                <p className="text-xs text-muted-foreground line-clamp-2">
+                <p className="text-[13px] text-foreground/80 line-clamp-2">
                     {truncatedContent}
                 </p>
 
-                <div className="text-[10px] text-muted-foreground">
-                    {format(new Date(draft.created_at), 'd MMM', { locale: pl })}
+                <div className="flex gap-1.5 border-t border-white/[0.05] pt-2">
+                    <span className="flex-1 rounded-lg border border-[hsl(225_100%_78%/0.25)] py-1.5 text-center text-[11px] font-semibold text-[#aebcff]">
+                        Zaplanuj
+                    </span>
+                    <span className="flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-lg border border-white/[0.07] text-muted-foreground">
+                        <Copy className="h-3.5 w-3.5" />
+                    </span>
                 </div>
             </div>
         </div>
@@ -185,7 +195,7 @@ export function DraftsSidebar({
 
     if (isCollapsed && !isMobileSheet) {
         return (
-            <div className="w-12 border-l bg-card flex flex-col items-center py-4">
+            <div className="w-12 border-l border-white/[0.06] bg-white/[0.015] flex flex-col items-center py-4">
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -193,7 +203,7 @@ export function DraftsSidebar({
                                 variant="ghost"
                                 size="icon"
                                 onClick={onToggleCollapse}
-                                className="mb-4"
+                                className="mb-4 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
@@ -214,21 +224,22 @@ export function DraftsSidebar({
 
     const content = (
         <>
-            <div className={cn("p-3 sm:p-4", !isMobileSheet && "border-b")}>
+            <div className={cn("p-3 sm:p-4", !isMobileSheet && "border-b border-white/[0.06]")}>
                 {!isMobileSheet && (
                     <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-primary" />
-                            Szkice
-                            <Badge variant="secondary" className="text-xs">
-                                {filteredDrafts.length}
-                            </Badge>
+                        <h3 className="mono-label flex items-center gap-2 text-foreground/70">
+                            SZKICE
+                            {filteredDrafts.length > 0 && (
+                                <Badge className="rounded-md bg-warning/16 px-2 py-0 text-[11px] font-semibold text-warning hover:bg-warning/16">
+                                    {filteredDrafts.length}
+                                </Badge>
+                            )}
                         </h3>
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={onToggleCollapse}
-                            className="h-8 w-8"
+                            className="h-8 w-8 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
                         >
                             <ChevronRight className="h-4 w-4" />
                         </Button>
@@ -241,7 +252,7 @@ export function DraftsSidebar({
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Szukaj..."
-                        className="pl-8 h-9 text-sm"
+                        className="h-9 rounded-[11px] border-white/[0.06] bg-white/[0.03] pl-8 text-sm"
                     />
                     {search && (
                         <Button
@@ -255,32 +266,36 @@ export function DraftsSidebar({
                     )}
                 </div>
 
-                <div className="flex items-center gap-1 mt-2 overflow-x-auto no-scrollbar">
-                    <Button
-                        variant={platformFilter === null ? 'default' : 'ghost'}
-                        size="sm"
-                        className="h-8 px-2.5 text-xs flex-shrink-0"
+                <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto no-scrollbar">
+                    <button
+                        type="button"
                         onClick={() => setPlatformFilter(null)}
+                        className={cn(
+                            'flex-shrink-0 rounded-lg px-2.5 py-1.5 text-[11.5px] font-semibold transition-colors',
+                            platformFilter === null
+                                ? 'pill-active'
+                                : 'text-muted-foreground hover:bg-white/[0.05] hover:text-foreground'
+                        )}
                     >
                         Wszystkie
-                    </Button>
+                    </button>
                     {(Object.entries(PLATFORM_CONFIG) as [Platform, typeof PLATFORM_CONFIG.facebook][]).map(
                         ([platform, config]) => {
                             const Icon = config.icon;
+                            const isActive = platformFilter === platform;
                             return (
-                                <Button
+                                <button
                                     key={platform}
-                                    variant={platformFilter === platform ? 'default' : 'ghost'}
-                                    size="icon"
+                                    type="button"
+                                    onClick={() => setPlatformFilter(isActive ? null : platform)}
                                     className={cn(
-                                        'h-8 w-8 flex-shrink-0',
-                                        platformFilter === platform && 'text-white'
+                                        'flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg transition-colors',
+                                        !isActive && 'text-muted-foreground hover:bg-white/[0.05] hover:text-foreground'
                                     )}
-                                    style={platformFilter === platform ? { backgroundColor: config.color } : undefined}
-                                    onClick={() => setPlatformFilter(platformFilter === platform ? null : platform)}
+                                    style={isActive ? { backgroundColor: config.color, color: '#fff' } : undefined}
                                 >
                                     <Icon className="h-3.5 w-3.5" />
-                                </Button>
+                                </button>
                             );
                         }
                     )}
@@ -295,14 +310,14 @@ export function DraftsSidebar({
                             <span className="text-xs">Ładowanie...</span>
                         </div>
                     ) : filteredDrafts.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-8 text-center">
-                            <FileText className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                        <div className="empty-state-card py-8">
+                            <FileText className="h-8 w-8 text-muted-foreground/50" />
                             <p className="text-sm text-muted-foreground">
                                 {drafts.filter(d => d.status === 'draft').length === 0
                                     ? 'Brak szkiców'
                                     : 'Brak wyników'}
                             </p>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="text-xs text-muted-foreground -mt-2">
                                 {drafts.filter(d => d.status === 'draft').length === 0
                                     ? 'Utwórz post w Kreatorze AI'
                                     : 'Zmień filtry wyszukiwania'}
@@ -324,11 +339,30 @@ export function DraftsSidebar({
                         </AnimatePresence>
                     )}
                 </div>
+
+                {filteredDrafts.length > 0 && (
+                    <div className="px-3 pb-3">
+                        <div className="ai-card flex flex-col gap-2.5 p-3.5">
+                            <div className="flex items-center gap-2">
+                                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
+                                    <Sparkles className="h-3 w-3 text-white" />
+                                </span>
+                                <span className="text-[12.5px] font-semibold">Asystent AI</span>
+                            </div>
+                            <p className="text-xs leading-relaxed text-foreground/70">
+                                Mogę zaplanować {filteredDrafts.length === 1 ? 'ten szkic' : 'te szkice'} automatycznie w najlepszych terminach.
+                            </p>
+                            <span className="rounded-[9px] border border-[hsl(225_100%_78%/0.25)] bg-primary/10 py-2 text-center text-xs font-semibold text-[#c3ccff] cursor-pointer transition-colors hover:bg-primary/[0.16]">
+                                Zaplanuj szkice z AI
+                            </span>
+                        </div>
+                    </div>
+                )}
             </ScrollArea>
 
-            <div className="p-3 border-t bg-muted/30">
+            <div className="p-3 border-t border-white/[0.06]">
                 <p className="text-xs text-muted-foreground text-center">
-                    💡 Przeciągnij szkic na dzień w kalendarzu
+                    Przeciągnij szkic na dzień w kalendarzu
                 </p>
             </div>
         </>
@@ -339,7 +373,7 @@ export function DraftsSidebar({
     }
 
     return (
-        <div className="w-72 border-l bg-card flex flex-col">
+        <div className="w-72 border-l border-white/[0.06] bg-white/[0.012] flex flex-col">
             {content}
         </div>
     );

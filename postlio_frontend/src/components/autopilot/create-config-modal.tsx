@@ -187,12 +187,12 @@ export function CreateConfigModal({
                                     onClick={() => index <= currentStepIndex && setCurrentStep(step.id)}
                                     disabled={index > currentStepIndex}
                                     className={cn(
-                                        "flex items-center gap-1 xs:gap-2 px-2 xs:px-3 py-1 xs:py-1.5 rounded-full text-xs xs:text-sm transition-all",
+                                        "flex items-center gap-1 xs:gap-2 px-2 xs:px-3 py-1 xs:py-1.5 rounded-full text-xs xs:text-sm transition-colors",
                                         currentStep === step.id
-                                            ? "bg-primary text-primary-foreground"
+                                            ? "pill-active"
                                             : index < currentStepIndex
                                                 ? "bg-primary/20 text-primary cursor-pointer hover:bg-primary/30"
-                                                : "bg-muted text-muted-foreground cursor-not-allowed"
+                                                : "bg-white/[0.05] text-muted-foreground cursor-not-allowed"
                                     )}
                                 >
                                     {index < currentStepIndex ? (
@@ -229,11 +229,11 @@ export function CreateConfigModal({
                                                 key={brand.id}
                                                 onClick={() => setSelectedBrandId(Number(brand.id))}
                                                 className={cn(
-                                                    "p-3 xs:p-4 rounded-xl border-2 text-left transition-all",
+                                                    "p-3 xs:p-4 rounded-xl border text-left transition-colors",
                                                     "hover:border-primary/50",
                                                     selectedBrandId === Number(brand.id)
-                                                        ? "border-primary bg-primary/5"
-                                                        : "border-border bg-card"
+                                                        ? "border-primary/40 bg-primary/[0.08]"
+                                                        : "border-white/[0.07] bg-white/[0.022]"
                                                 )}
                                             >
                                                 <div className="flex items-center gap-2 xs:gap-3">
@@ -258,7 +258,7 @@ export function CreateConfigModal({
                                     </div>
 
                                     {brands.length === 0 && (
-                                        <div className="text-center py-6 xs:py-8 text-muted-foreground border-2 border-dashed border-border rounded-xl">
+                                        <div className="text-center py-6 xs:py-8 text-muted-foreground dashed-slot">
                                             <Building2 className="w-6 h-6 xs:w-8 xs:h-8 mx-auto mb-2 opacity-50" />
                                             <p className="text-xs xs:text-sm">Najpierw utwórz markę</p>
                                         </div>
@@ -285,11 +285,11 @@ export function CreateConfigModal({
                                                     key={platform.id}
                                                     onClick={() => togglePlatform(platform.id)}
                                                     className={cn(
-                                                        "relative p-3 xs:p-4 sm:p-6 rounded-xl border-2 text-center transition-all",
+                                                        "relative p-3 xs:p-4 sm:p-6 rounded-xl border text-center transition-all",
                                                         "hover:scale-105",
                                                         isSelected
-                                                            ? "border-primary bg-primary/5"
-                                                            : "border-border bg-card hover:border-primary/50"
+                                                            ? "border-primary/40 bg-primary/[0.08]"
+                                                            : "border-white/[0.07] bg-white/[0.022] hover:border-primary/50"
                                                     )}
                                                 >
                                                     <div
@@ -450,7 +450,7 @@ export function CreateConfigModal({
                     <Button
                         onClick={goNext}
                         disabled={!isStepValid() || isSubmitting}
-                        className="gap-1 xs:gap-2 h-9 xs:h-10"
+                        className="gap-1 xs:gap-2 h-9 xs:h-10 btn-gradient"
                     >
                         {isLastStep ? (
                             <>

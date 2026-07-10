@@ -4,7 +4,7 @@ Schematy Pydantic dla Brand i Voice DNA.
 """
 from datetime import datetime
 from typing import Optional, List, Literal
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 # ============================================================
@@ -108,12 +108,26 @@ class BrandResponse(BrandBase):
     voice_dna: VoiceDNABase
     is_active: bool
     is_default: bool
-    posts_count: int
+    posts_count: int = 0
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator('voice_dna', mode='before')
+    @classmethod
+    def coerce_voice_dna(cls, v):
+        return v or {}
+
+    @field_validator('posts_count', mode='before')
+    @classmethod
+    def coerce_posts_count(cls, v):
+        return v if v is not None else 0
+
+    @field_validator('primary_color', mode='before')
+    @classmethod
+    def coerce_primary_color(cls, v):
+        return v or "#8B5CF6"
 
 
 class BrandsListResponse(BaseModel):

@@ -49,7 +49,7 @@ export function DragOverlayContent({ draft }: DragOverlayContentProps) {
     return (
         <div
             className={cn(
-                'w-64 rounded-lg border-2 border-primary bg-card p-3 shadow-2xl',
+                'glass-card-strong w-64 border-2 border-primary p-3 shadow-2xl',
                 'rotate-3 scale-105'
             )}
         >
@@ -83,7 +83,7 @@ export function DragOverlayContent({ draft }: DragOverlayContentProps) {
                             <ImageIcon className="h-3 w-3 text-muted-foreground" />
                         )}
                         {draft.ai_generated && (
-                            <Sparkles className="h-3 w-3 text-violet-500" />
+                            <Sparkles className="h-3 w-3 text-accent" />
                         )}
                     </div>
                 </div>
@@ -95,7 +95,7 @@ export function DragOverlayContent({ draft }: DragOverlayContentProps) {
 
                 {/* Drop hint */}
                 <div
-                    className="text-[10px] font-medium text-center pt-1 border-t border-dashed"
+                    className="text-[10px] font-medium text-center pt-1 border-t border-dashed border-white/10"
                     style={{ color: primaryConfig?.color || '#3B82F6' }}
                 >
                     Upuść na dzień w kalendarzu

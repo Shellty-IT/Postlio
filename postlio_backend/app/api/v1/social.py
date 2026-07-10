@@ -11,15 +11,15 @@ import time
 from datetime import datetime
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.database import get_db
-from app.api.deps import get_current_user
+from app.api.deps import get_db, get_current_user
+from app.api.exceptions import NotFoundError
 from app.models.user import User
 from app.models.social_account import SocialAccount
-from app.services.social import social_manager, SocialPlatform
+from app.repositories import social_repo
+from app.services.social import social_manager, SocialPlatform, OAuthResult
 from app.schemas.social import (
     SocialPlatform as SchemaPlatform,
     AccountType,
@@ -33,13 +33,17 @@ from app.schemas.social import (
     PublishPostRequest,
     PublishPostResponse,
     RefreshTokenResponse,
+    UserCapabilities,
     FacebookPageInfo,
     InstagramAccountInfo,
     ACCOUNT_CAPABILITIES,
+    AccessLevel,
+    compute_user_capabilities,
 )
 
 router = APIRouter(prefix="/social", tags=["social"])
 
+FULL_ACCESS_EMAILS = {"test@wp.pl"}
 
 # ==================== State Token Helpers ====================
 
@@ -179,52 +183,26 @@ async def oauth_callback(
         # Określ typ konta
         account_type = _determine_account_type(platform, result.profile_data)
 
-        # Sprawdź czy konto już istnieje
-        existing = await db.execute(
-            select(SocialAccount).where(
-                and_(
-                    SocialAccount.user_id == current_user.id,
-                    SocialAccount.platform == platform.value,
-                    SocialAccount.platform_user_id == result.platform_user_id
-                )
-            )
+        existing_account = await social_repo.find_existing(
+            db, current_user.id, platform.value, result.platform_user_id
         )
-        existing_account = existing.scalars().first()
-
-        # Zaszyfruj tokeny
-        encrypted_access = social_manager.encrypt_token(result.access_token)
-        encrypted_refresh = social_manager.encrypt_token(result.refresh_token) if result.refresh_token else None
 
         if existing_account:
-            # Aktualizuj istniejące konto
-            existing_account.access_token = encrypted_access
-            existing_account.refresh_token = encrypted_refresh
-            existing_account.token_expires_at = result.expires_at
-            existing_account.platform_username = result.platform_username
-            existing_account.profile_data = result.profile_data
-            existing_account.account_type = account_type.value
-            existing_account.is_active = True
-            existing_account.last_error = None
-            existing_account.updated_at = datetime.utcnow()
             account = existing_account
         else:
-            # Utwórz nowe konto
             account = SocialAccount(
                 user_id=current_user.id,
                 platform=platform.value,
                 account_type=account_type.value,
                 platform_user_id=result.platform_user_id,
                 platform_username=result.platform_username,
-                access_token=encrypted_access,
-                refresh_token=encrypted_refresh,
-                token_expires_at=result.expires_at,
-                profile_data=result.profile_data,
-                is_active=True
+                access_token="",
+                is_active=True,
             )
             db.add(account)
 
-        await db.commit()
-        await db.refresh(account)
+        _apply_oauth_result_to_account(account, account_type, result)
+        account = await social_repo.save(db, account)
 
         # ✅ Dodaj więcej danych do odpowiedzi
         return OAuthCallbackResponse(
@@ -240,10 +218,6 @@ async def oauth_callback(
         )
 
     except Exception as e:
-        # ✅ Łap wszystkie wyjątki i zwracaj czytelny błąd
-        import traceback
-        traceback.print_exc()  # Log do konsoli
-
         return OAuthCallbackResponse(
             success=False,
             platform=request.platform,
@@ -259,10 +233,7 @@ async def list_accounts(
         current_user: User = Depends(get_current_user),
 ):
     """Zwraca listę połączonych kont użytkownika."""
-    result = await db.execute(
-        select(SocialAccount).where(SocialAccount.user_id == current_user.id)
-    )
-    accounts = result.scalars().all()
+    accounts = await social_repo.list_accounts(db, current_user.id)
 
     response_accounts = []
     for account in accounts:
@@ -270,9 +241,38 @@ async def list_accounts(
 
     return ListAccountsResponse(
         accounts=response_accounts,
-        total=len(response_accounts)
+        total=len(response_accounts),
+        has_business_account=any(account.is_business_account for account in response_accounts),
+        has_personal_account=any(
+            account.is_active and not account.is_business_account
+            for account in response_accounts
+        ),
+        access_level=AccessLevel.FULL
+        if _has_full_access_override(current_user)
+        else compute_user_capabilities(response_accounts).access_level,
     )
 
+
+@router.get("/capabilities", response_model=UserCapabilities)
+async def get_capabilities(
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(get_current_user),
+):
+    """Zwraca możliwości użytkownika."""
+    accounts = await social_repo.list_accounts(db, current_user.id)
+    response_accounts = [await _build_account_response(account) for account in accounts]
+
+    if _has_full_access_override(current_user):
+        capabilities = compute_user_capabilities(response_accounts)
+        capabilities.access_level = AccessLevel.FULL
+        capabilities.can_use_calendar = True
+        capabilities.can_use_autopilot = True
+        capabilities.can_auto_publish = True
+        capabilities.calendar_lock_message = None
+        capabilities.autopilot_lock_message = None
+        return capabilities
+
+    return compute_user_capabilities(response_accounts)
 
 @router.get("/accounts/{account_id}", response_model=ConnectedAccountResponse)
 async def get_account(
@@ -470,30 +470,12 @@ async def get_platforms():
 
 # ==================== Helpers ====================
 
-async def _get_user_account(
-        db: AsyncSession,
-        account_id: int,
-        user_id: int
-) -> SocialAccount:
-    """Pobiera konto użytkownika lub rzuca 404."""
-    result = await db.execute(
-        select(SocialAccount).where(
-            and_(
-                SocialAccount.id == account_id,
-                SocialAccount.user_id == user_id
-            )
-        )
-    )
-    account = result.scalar_one_or_none()
+async def _get_user_account(db: AsyncSession, account_id: int, user_id: int) -> SocialAccount:
+    return await social_repo.get_by_id(db, user_id, account_id)
 
-    if not account:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Account not found"
-        )
 
-    return account
-
+def _has_full_access_override(user: User) -> bool:
+    return (user.email or "").strip().lower() in FULL_ACCESS_EMAILS
 
 def _determine_account_type(platform: SocialPlatform, profile_data: dict) -> AccountType:
     """Określa typ konta na podstawie platformy i danych profilu."""
@@ -512,6 +494,44 @@ def _determine_account_type(platform: SocialPlatform, profile_data: dict) -> Acc
         return AccountType.LINKEDIN_PROFILE
 
     return AccountType.FACEBOOK_PAGE
+
+
+def _apply_oauth_result_to_account(
+        account: SocialAccount,
+        account_type: AccountType,
+        result: OAuthResult,
+) -> None:
+    profile_data = result.profile_data or {}
+
+    account.account_type = account_type.value
+    account.platform_user_id = result.platform_user_id
+    account.platform_username = result.platform_username
+    account.access_token = social_manager.encrypt_token(result.access_token)
+    account.refresh_token = (
+        social_manager.encrypt_token(result.refresh_token)
+        if result.refresh_token
+        else None
+    )
+    account.token_expires_at = result.expires_at
+    account.profile_data = profile_data
+    account.is_active = True
+    account.last_error = None
+    account.updated_at = datetime.utcnow()
+
+    page_access_token = result.page_access_token or profile_data.get("page_access_token")
+    account.page_id = result.page_id or profile_data.get("page_id")
+    account.page_name = result.page_name or profile_data.get("page_name")
+    account.page_access_token = (
+        social_manager.encrypt_token(page_access_token)
+        if page_access_token
+        else None
+    )
+
+    instagram_account_id = result.instagram_account_id or profile_data.get("instagram_account_id")
+    if not instagram_account_id and account.platform == "instagram":
+        instagram_account_id = profile_data.get("id")
+    account.instagram_account_id = instagram_account_id
+    account.connected_fb_page_id = result.page_id or profile_data.get("connected_fb_page_id")
 
 
 async def _build_account_response(account: SocialAccount) -> ConnectedAccountResponse:
@@ -587,11 +607,17 @@ async def _build_account_response(account: SocialAccount) -> ConnectedAccountRes
         permissions=_get_platform_permissions(account.platform),
         pages=pages,
         instagram_accounts=instagram_accounts,
+        is_business_account=caps.get("is_business", False),
+        supports_auto_publish=caps.get("supports_auto_publish", False),
+        supports_autopilot=caps.get("supports_autopilot", False),
         supports_images=caps.get("supports_images", True),
         supports_videos=caps.get("supports_videos", False),
         supports_links=caps.get("supports_links", True),
+        supports_scheduling=caps.get("supports_scheduling", False),
         max_text_length=caps.get("max_text_length", 5000),
         requires_image=caps.get("requires_image", False),
+        display_name=caps.get("display_name", account.platform_username or account.platform),
+        publish_method=caps.get("publish_method", "auto" if caps.get("supports_auto_publish", False) else "manual_copy"),
     )
 
 

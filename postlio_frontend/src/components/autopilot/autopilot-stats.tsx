@@ -26,10 +26,14 @@ interface AutopilotStatsProps {
 export function AutopilotStats({ configId, config, stats }: AutopilotStatsProps) {
     if (!configId || !config) {
         return (
-            <div className="text-center py-8 xs:py-12 text-muted-foreground">
-                <BarChart3 className="w-10 h-10 xs:w-12 xs:h-12 mx-auto mb-3 xs:mb-4 opacity-30" />
-                <h3 className="font-medium mb-1 text-sm xs:text-base">Brak statystyk</h3>
-                <p className="text-xs xs:text-sm">Wybierz konfigurację aby zobaczyć statystyki</p>
+            <div className="empty-state-card">
+                <div className="w-[54px] h-[54px] rounded-2xl bg-white/[0.05] flex items-center justify-center text-muted-foreground">
+                    <BarChart3 className="w-6 h-6" />
+                </div>
+                <div>
+                    <h3 className="font-semibold text-base">Brak statystyk</h3>
+                    <p className="text-sm text-muted-foreground mt-1.5">Wybierz konfigurację aby zobaczyć statystyki</p>
+                </div>
             </div>
         );
     }
@@ -84,7 +88,7 @@ export function AutopilotStats({ configId, config, stats }: AutopilotStatsProps)
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
                     >
-                        <Card>
+                        <Card className="glass-card shadow-none">
                             <CardContent className="p-3 xs:p-4">
                                 <div className="flex items-center justify-between">
                                     <div className="min-w-0">
@@ -102,7 +106,7 @@ export function AutopilotStats({ configId, config, stats }: AutopilotStatsProps)
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <Card>
+                <Card className="glass-card shadow-none">
                     <CardHeader className="pb-2 p-3 xs:p-4 sm:p-6 sm:pb-2">
                         <CardTitle className="text-xs xs:text-sm font-medium flex items-center gap-2">
                             <Target className="w-4 h-4 text-primary" />
@@ -151,7 +155,7 @@ export function AutopilotStats({ configId, config, stats }: AutopilotStatsProps)
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="glass-card shadow-none">
                     <CardHeader className="pb-2 p-3 xs:p-4 sm:p-6 sm:pb-2">
                         <CardTitle className="text-xs xs:text-sm font-medium flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-orange-500" />
@@ -176,7 +180,7 @@ export function AutopilotStats({ configId, config, stats }: AutopilotStatsProps)
                 </Card>
             </div>
 
-            <Card>
+            <Card className="glass-card shadow-none">
                 <CardHeader className="p-3 xs:p-4 sm:p-6">
                     <CardTitle className="text-xs xs:text-sm font-medium flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-primary" />
@@ -220,7 +224,7 @@ export function AutopilotStats({ configId, config, stats }: AutopilotStatsProps)
             </Card>
 
             {stats && (
-                <Card>
+                <Card className="glass-card shadow-none">
                     <CardHeader className="p-3 xs:p-4 sm:p-6">
                         <CardTitle className="text-xs xs:text-sm font-medium">Statystyki kolejki</CardTitle>
                     </CardHeader>
@@ -248,7 +252,7 @@ export function AutopilotStats({ configId, config, stats }: AutopilotStatsProps)
             )}
 
             {config.next_generation_at && (
-                <Card>
+                <Card className="glass-card shadow-none">
                     <CardContent className="p-3 xs:p-4">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 xs:gap-3 min-w-0">

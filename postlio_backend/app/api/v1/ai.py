@@ -23,7 +23,7 @@ from app.schemas.ai import (
     ProviderInfo,
 )
 
-router = APIRouter()
+router = APIRouter(prefix="/ai", tags=["AI Generation"])
 
 
 # === PROVIDERS ===

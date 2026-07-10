@@ -2,8 +2,11 @@
 """
 Konfiguracja aplikacji.
 """
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from typing import Optional
+
+ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -32,9 +35,6 @@ class Settings(BaseSettings):
     # AI Providers - Image
     HUGGINGFACE_API_KEY: Optional[str] = None
     POLLINATIONS_API_KEY: Optional[str] = None
-
-    # Legacy (nieużywane)
-    CLIPDROP_API_KEY: Optional[str] = None
 
     # AI Defaults
     DEFAULT_TEXT_PROVIDER: str = "gemini"
@@ -76,7 +76,7 @@ class Settings(BaseSettings):
         return f"{self.FRONTEND_URL}/api/auth/callback/google"
 
     class Config:
-        env_file = ".env"
+        env_file = ENV_FILE
         extra = "ignore"
 
 

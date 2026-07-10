@@ -1,51 +1,18 @@
 // src/providers/theme-provider.tsx
-'use client';
 
 /**
  * Theme Provider
  *
- * Zarządzanie dark/light mode z synchronizacją z systemem.
- * Integracja z UI Store.
+ * Postlio 2.0 jest aplikacją wyłącznie w ciemnym motywie — nie ma przełącznika.
  */
 
-import { useEffect, type ReactNode } from 'react';
-import { useUIStore } from '@/store/ui-store';
+import type { ReactNode } from 'react';
 
 interface ThemeProviderProps {
     children: ReactNode;
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-    const theme = useUIStore((state) => state.theme);
-
-    useEffect(() => {
-        const root = window.document.documentElement;
-
-        // Usuń poprzednie klasy
-        root.classList.remove('light', 'dark');
-
-        if (theme === 'system') {
-            // Sprawdź preferencje systemowe
-            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
-                .matches
-                ? 'dark'
-                : 'light';
-            root.classList.add(systemTheme);
-
-            // Nasłuchuj zmian w preferencjach systemowych
-            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-            const handleChange = (e: MediaQueryListEvent) => {
-                root.classList.remove('light', 'dark');
-                root.classList.add(e.matches ? 'dark' : 'light');
-            };
-
-            mediaQuery.addEventListener('change', handleChange);
-            return () => mediaQuery.removeEventListener('change', handleChange);
-        } else {
-            root.classList.add(theme);
-        }
-    }, [theme]);
-
     return <>{children}</>;
 }
 

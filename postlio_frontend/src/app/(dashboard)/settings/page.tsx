@@ -5,10 +5,8 @@ import { useEffect, Suspense, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { Loader2, Menu } from 'lucide-react';
+import { Loader2, ChevronRight } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
     SettingsHeader,
     SettingsNav,
@@ -24,15 +22,33 @@ import { handleOAuthCallback } from '@/lib/api/social';
 import { useQueryClient } from '@tanstack/react-query';
 import { socialKeys } from '@/hooks/useSocial';
 import type { SocialPlatform } from '@/lib/api/social';
+import { SETTINGS_SECTIONS, type SettingsSection } from '@/types/settings';
+import { cn } from '@/lib/utils';
+import {
+    User,
+    Sparkles,
+    Bell,
+    Palette,
+    Link as LinkIcon,
+    AlertTriangle,
+} from 'lucide-react';
+
+const MOBILE_ICONS: Record<string, React.ReactNode> = {
+    User: <User className="w-3.5 h-3.5" />,
+    Sparkles: <Sparkles className="w-3.5 h-3.5" />,
+    Bell: <Bell className="w-3.5 h-3.5" />,
+    Palette: <Palette className="w-3.5 h-3.5" />,
+    Link: <LinkIcon className="w-3.5 h-3.5" />,
+    AlertTriangle: <AlertTriangle className="w-3.5 h-3.5" />,
+};
 
 function SettingsContent() {
-    const { activeSection, setActiveSection } = useSettingsStore();
+    const { activeSection, setActiveSection, settings } = useSettingsStore();
     const searchParams = useSearchParams();
     const queryClient = useQueryClient();
 
     const [showOverlay, setShowOverlay] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
-    const [isNavOpen, setIsNavOpen] = useState(false);
 
     const processedRef = useRef(false);
 
@@ -121,20 +137,31 @@ function SettingsContent() {
         }
     };
 
-    const sectionTitles: Record<string, string> = {
-        profile: 'Profil',
-        ai: 'Preferencje AI',
-        notifications: 'Powiadomienia',
-        appearance: 'Wygląd',
-        accounts: 'Połączone konta',
-        danger: 'Strefa niebezpieczna',
+    const getInitials = (name: string) => {
+        return (name || '')
+            .split(' ')
+            .filter(Boolean)
+            .map((n) => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2) || 'T';
     };
 
+    const mobileSections = SETTINGS_SECTIONS.filter((s) => s.id !== 'danger');
+    const dangerSection = SETTINGS_SECTIONS.find((s) => s.id === 'danger');
+
+    const sectionCardClass =
+        activeSection === 'ai'
+            ? 'ai-card'
+            : activeSection === 'danger'
+                ? 'rounded-[20px] border border-destructive/20 bg-destructive/[0.04]'
+                : 'glass-card';
+
     return (
-        <div className="h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] -mx-3 xs:-mx-4 sm:-mx-6 lg:-mx-8 -mb-4 overflow-hidden">
+        <div className="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)] -mx-3 xs:-mx-4 sm:-mx-6 lg:-mx-8 -mb-4">
             {showOverlay && (
                 <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-                    <div className="bg-card border rounded-lg p-6 shadow-lg flex flex-col items-center gap-4">
+                    <div className="glass-card-strong p-6 shadow-lg flex flex-col items-center gap-4">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         <div className="text-center">
                             <p className="font-medium">Łączenie konta...</p>
@@ -144,71 +171,111 @@ function SettingsContent() {
                 </div>
             )}
 
-            <div className="flex h-full">
-                {isMobile ? (
-                    <>
-                        <div className="flex-1 flex flex-col overflow-hidden">
-                            <div className="flex items-center gap-3 p-4 border-b">
-                                <Sheet open={isNavOpen} onOpenChange={setIsNavOpen}>
-                                    <SheetTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-9 w-9">
-                                            <Menu className="h-5 w-5" />
-                                        </Button>
-                                    </SheetTrigger>
-                                    <SheetContent side="left" className="w-72 p-0">
-                                        <div className="p-4 border-b">
-                                            <h2 className="font-semibold">Ustawienia</h2>
-                                        </div>
-                                        <div onClick={() => setIsNavOpen(false)}>
-                                            <SettingsNav />
-                                        </div>
-                                    </SheetContent>
-                                </Sheet>
-                                <h1 className="text-lg font-semibold">
-                                    {sectionTitles[activeSection]}
-                                </h1>
-                            </div>
-                            <ScrollArea className="flex-1">
-                                <div className="p-4">
-                                    <motion.div
-                                        key={activeSection}
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ duration: 0.2 }}
-                                    >
-                                        {renderSection()}
-                                    </motion.div>
-                                </div>
-                            </ScrollArea>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <aside className="w-64 lg:w-72 flex-shrink-0 border-r bg-card/50">
-                            <div className="p-6">
-                                <SettingsHeader />
-                            </div>
-                            <SettingsNav />
-                        </aside>
+            {isMobile ? (
+                <div className="flex flex-col gap-4 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                        <h1 className="text-lg font-semibold">Ustawienia</h1>
+                        <SettingsHeader />
+                    </div>
 
-                        <main className="flex-1 overflow-hidden">
-                            <ScrollArea className="h-full">
-                                <div className="p-6 lg:p-8">
-                                    <motion.div
-                                        key={activeSection}
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="max-w-3xl"
+                    <div className="glass-card flex items-center gap-3 px-4 py-3.5">
+                        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-base font-semibold text-white">
+                            {getInitials(settings.profile.name)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="truncate text-[14.5px] font-semibold text-foreground">
+                                {settings.profile.name || 'Twój profil'}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                                {settings.profile.email}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="glass-card flex flex-col divide-y divide-white/[0.05] overflow-hidden !p-0">
+                        {mobileSections.map((section) => {
+                            const isActive = activeSection === section.id;
+                            return (
+                                <button
+                                    key={section.id}
+                                    onClick={() => setActiveSection(section.id as SettingsSection)}
+                                    className={cn(
+                                        'flex items-center gap-3 px-4 py-3.5 text-left transition-colors',
+                                        isActive ? 'bg-white/[0.04]' : 'hover:bg-white/[0.03]'
+                                    )}
+                                >
+                                    <span
+                                        className={cn(
+                                            'flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg',
+                                            isActive
+                                                ? 'bg-gradient-to-br from-primary to-accent text-white'
+                                                : 'bg-white/[0.06] text-muted-foreground'
+                                        )}
                                     >
-                                        {renderSection()}
-                                    </motion.div>
-                                </div>
-                            </ScrollArea>
-                        </main>
-                    </>
-                )}
-            </div>
+                                        {MOBILE_ICONS[section.icon]}
+                                    </span>
+                                    <span className="flex-1 text-[13.5px] text-foreground">{section.label}</span>
+                                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {dangerSection && (
+                        <button
+                            onClick={() => setActiveSection(dangerSection.id as SettingsSection)}
+                            className={cn(
+                                'glass-card flex items-center gap-3 border-destructive/20 bg-destructive/[0.04] px-4 py-3.5 text-left transition-colors hover:bg-destructive/[0.07]',
+                                activeSection === dangerSection.id && 'bg-destructive/[0.08]'
+                            )}
+                        >
+                            <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
+                                {MOBILE_ICONS[dangerSection.icon]}
+                            </span>
+                            <span className="flex-1 text-[13.5px] text-destructive/90">{dangerSection.label}</span>
+                            <ChevronRight className="h-3.5 w-3.5 text-destructive/50" />
+                        </button>
+                    )}
+
+                    <motion.div
+                        key={activeSection}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className={cn(sectionCardClass, 'p-4')}
+                    >
+                        {renderSection()}
+                    </motion.div>
+                </div>
+            ) : (
+                <ScrollArea className="h-full">
+                    <div className="flex flex-col gap-5 p-6 lg:p-8">
+                        <div className="flex items-end justify-between gap-6">
+                            <div>
+                                <h1 className="text-2xl lg:text-[30px] font-semibold tracking-tight text-foreground">
+                                    Ustawienia
+                                </h1>
+                                <p className="mt-2 text-[15px] text-muted-foreground">
+                                    Konfiguracja konta, AI i połączeń.
+                                </p>
+                            </div>
+                            <SettingsHeader />
+                        </div>
+
+                        <SettingsNav />
+
+                        <motion.div
+                            key={activeSection}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className={cn(sectionCardClass, 'p-6')}
+                        >
+                            {renderSection()}
+                        </motion.div>
+                    </div>
+                </ScrollArea>
+            )}
         </div>
     );
 }

@@ -1,9 +1,12 @@
-﻿# postlio_backend/app/services/ai/video/manager.py
+# postlio_backend/app/services/ai/video/manager.py
 
+import logging
 from typing import Dict, List, Optional, Any
 from app.config import settings
 from app.services.ai.video.base import BaseVideoProvider, VideoProvider
 from app.services.ai.video.pollinations import PollinationsVideoProvider
+
+logger = logging.getLogger(__name__)
 
 
 class VideoAIManager:
@@ -21,16 +24,16 @@ class VideoAIManager:
         name = provider_name or "pollinations"
 
         if name not in self._providers:
-            print(f"⚠️ Unknown video provider: {name}, falling back to pollinations")
+            logger.warning("Unknown video provider '%s', falling back to pollinations", name)
             return self._providers[VideoProvider.POLLINATIONS.value]
 
         provider = self._providers[name]
 
         if not provider.is_available:
-            print(f"⚠️ Video provider '{name}' not available, trying fallback...")
+            logger.warning("Video provider '%s' not available, trying fallback", name)
             for fallback_name, fallback_provider in self._providers.items():
                 if fallback_provider.is_available:
-                    print(f"✅ Using video fallback: {fallback_name}")
+                    logger.info("Using video fallback provider: %s", fallback_name)
                     return fallback_provider
             return provider
 
@@ -89,7 +92,7 @@ class VideoAIManager:
     ) -> Dict[str, Any]:
         provider_instance = self.get_provider(provider)
 
-        print(f"🎬 VideoAIManager: Using {provider_instance.name}, model={model}")
+        logger.info("Video generation: provider=%s model=%s", provider_instance.name, model)
 
         result = await provider_instance.generate_video(
             prompt=prompt,

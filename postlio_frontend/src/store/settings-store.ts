@@ -59,7 +59,6 @@ const defaultNotifications: NotificationPreferences = {
 };
 
 const defaultAppearance: AppearancePreferences = {
-    theme: 'system',
     accentColor: 'blue',
     reducedMotion: false,
     compactMode: false,
@@ -100,7 +99,6 @@ interface SettingsStore {
 
     // Appearance
     updateAppearance: (updates: Partial<AppearancePreferences>) => void;
-    setTheme: (theme: AppearancePreferences['theme']) => void;
 
     // Danger Zone
     exportData: () => Promise<void>;
@@ -204,30 +202,6 @@ export const useSettingsStore = create<SettingsStore>()(
                 }));
             },
 
-            setTheme: (theme) => {
-                set((state) => ({
-                    settings: {
-                        ...state.settings,
-                        appearance: { ...state.settings.appearance, theme },
-                    },
-                    hasUnsavedChanges: true,
-                }));
-
-                // Apply theme to document
-                if (typeof window !== 'undefined') {
-                    const root = document.documentElement;
-                    if (theme === 'dark') {
-                        root.classList.add('dark');
-                    } else if (theme === 'light') {
-                        root.classList.remove('dark');
-                    } else {
-                        // System
-                        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                        root.classList.toggle('dark', prefersDark);
-                    }
-                }
-            },
-
             // Danger Zone
             exportData: async () => {
                 set({ isSaving: true });
@@ -250,7 +224,6 @@ export const useSettingsStore = create<SettingsStore>()(
                 set({ isSaving: true });
                 // TODO: Implement actual account deletion via API
                 await new Promise((resolve) => setTimeout(resolve, 2000));
-                console.log('Account deletion requested');
                 set({ isSaving: false });
             },
 

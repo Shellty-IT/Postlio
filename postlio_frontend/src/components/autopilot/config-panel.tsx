@@ -230,11 +230,11 @@ export function ConfigPanel({
                                 transition={{ delay: index * 0.05 }}
                                 onClick={() => onSelectConfig(config.id)}
                                 className={cn(
-                                    "w-full p-3 xs:p-4 rounded-xl text-left transition-all",
-                                    "border-2",
+                                    "w-full p-3 xs:p-4 rounded-xl text-left transition-colors",
+                                    "border",
                                     selectedConfigId === config.id
-                                        ? "border-primary bg-primary/5"
-                                        : "border-border bg-card hover:border-primary/30"
+                                        ? "border-primary/40 bg-primary/[0.08]"
+                                        : "border-white/[0.07] bg-white/[0.022] hover:border-primary/30"
                                 )}
                             >
                                 <div className="flex items-start justify-between gap-2 mb-2">
@@ -368,16 +368,16 @@ export function ConfigPanel({
             </div>
 
             <Tabs defaultValue="schedule" className="flex-1">
-                <TabsList className="mb-4 xs:mb-6 w-full xs:w-auto grid grid-cols-3 xs:inline-flex">
-                    <TabsTrigger value="schedule" className="gap-1 xs:gap-2 text-xs xs:text-sm">
+                <TabsList className="mb-4 xs:mb-6 w-full xs:w-auto grid grid-cols-3 xs:inline-flex bg-white/[0.03] border border-white/[0.07] p-1 rounded-xl">
+                    <TabsTrigger value="schedule" className="gap-1 xs:gap-2 text-xs xs:text-sm rounded-lg data-[state=active]:pill-active data-[state=active]:shadow-none">
                         <Calendar className="w-3.5 h-3.5 xs:w-4 xs:h-4" />
                         <span className="hidden xs:inline">Harmonogram</span>
                     </TabsTrigger>
-                    <TabsTrigger value="categories" className="gap-1 xs:gap-2 text-xs xs:text-sm">
+                    <TabsTrigger value="categories" className="gap-1 xs:gap-2 text-xs xs:text-sm rounded-lg data-[state=active]:pill-active data-[state=active]:shadow-none">
                         <Layers className="w-3.5 h-3.5 xs:w-4 xs:h-4" />
                         <span className="hidden xs:inline">Kategorie</span>
                     </TabsTrigger>
-                    <TabsTrigger value="ai" className="gap-1 xs:gap-2 text-xs xs:text-sm">
+                    <TabsTrigger value="ai" className="gap-1 xs:gap-2 text-xs xs:text-sm rounded-lg data-[state=active]:pill-active data-[state=active]:shadow-none">
                         <Sparkles className="w-3.5 h-3.5 xs:w-4 xs:h-4" />
                         <span className="hidden xs:inline">AI</span>
                     </TabsTrigger>

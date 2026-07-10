@@ -331,7 +331,7 @@ def mock_ai_providers():
 @pytest.fixture
 def mock_social_manager():
     """Mock social manager."""
-    with patch("app.services.publish_service.social_manager") as mock:
+    with patch("app.services.publishers.business.social_manager") as mock:
         result = MagicMock()
         result.success = True
         result.post_id = "int_post_123"

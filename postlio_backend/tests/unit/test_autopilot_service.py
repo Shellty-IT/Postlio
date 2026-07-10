@@ -15,11 +15,8 @@ from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from freezegun import freeze_time
 
-from app.services.autopilot_service import (
-    AutopilotService,
-    CATEGORY_TOPICS,
-    CATEGORY_MAPPING,
-)
+from app.services.autopilot_service import AutopilotService
+from app.services.generation_service import GenerationService, CATEGORY_TOPICS, CATEGORY_MAPPING
 from app.models.autopilot import AutopilotConfig, AutopilotQueueItem
 from app.models.brand import Brand
 from app.schemas.autopilot import QueueStatsResponse
@@ -30,7 +27,7 @@ class TestSelectTopic:
 
     @pytest.fixture
     def service(self, db_session):
-        return AutopilotService(db_session)
+        return GenerationService(db_session)
 
     @pytest.mark.unit
     def test_selects_topic_from_config_categories(self, service, autopilot_config):
@@ -93,7 +90,7 @@ class TestMapCreativityToTemperature:
 
     @pytest.fixture
     def service(self, db_session):
-        return AutopilotService(db_session)
+        return GenerationService(db_session)
 
     @pytest.mark.unit
     @pytest.mark.parametrize("creativity,expected_temp", [
@@ -119,7 +116,7 @@ class TestMapPostLength:
 
     @pytest.fixture
     def service(self, db_session):
-        return AutopilotService(db_session)
+        return GenerationService(db_session)
 
     @pytest.mark.unit
     @pytest.mark.parametrize("length,expected_max", [
@@ -144,7 +141,7 @@ class TestBuildVoicePrompt:
 
     @pytest.fixture
     def service(self, db_session):
-        return AutopilotService(db_session)
+        return GenerationService(db_session)
 
     @pytest.mark.unit
     def test_includes_brand_name(self, service, test_brand):

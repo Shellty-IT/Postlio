@@ -83,8 +83,6 @@ export function usePWA() {
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
                 .then((registration) => {
-                    console.log('[PWA] SW registered');
-
                     registration.addEventListener('updatefound', () => {
                         const newWorker = registration.installing;
                         newWorker?.addEventListener('statechange', () => {

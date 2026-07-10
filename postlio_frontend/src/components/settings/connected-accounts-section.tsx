@@ -180,7 +180,7 @@ export function ConnectedAccountsSection() {
                     Połączone konta
                 </h2>
                 <p className="text-xs xs:text-sm text-muted-foreground mt-1">
-                    Zarządzaj połączeniami z social media
+                    Zarządzaj kontami social media.
                 </p>
             </div>
 
@@ -222,7 +222,7 @@ export function ConnectedAccountsSection() {
             )}
 
             {!isLoading && accounts.length > 0 && (
-                <div className="p-3 xs:p-4 rounded-xl bg-primary/5 border border-primary/20">
+                <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 xs:p-4">
                     <div className="flex items-center gap-2 xs:gap-3">
                         <div className="w-8 h-8 xs:w-10 xs:h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                             <Check className="w-4 h-4 xs:w-5 xs:h-5 text-primary" />
@@ -239,7 +239,7 @@ export function ConnectedAccountsSection() {
                 </div>
             )}
 
-            <div className="p-3 xs:p-4 rounded-xl bg-muted/50 border border-border">
+            <div className="glass-card p-3 xs:p-4">
                 <div className="flex items-start gap-2 xs:gap-3">
                     <ExternalLink className="w-4 h-4 xs:w-5 xs:h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
                     <div className="text-[10px] xs:text-xs sm:text-sm text-muted-foreground space-y-1.5 xs:space-y-2">
@@ -316,10 +316,10 @@ function PlatformCard({
         <motion.div
             layout
             className={cn(
-                "rounded-xl border-2 transition-all overflow-hidden",
+                "rounded-2xl border transition-all overflow-hidden",
                 connectedCount > 0
-                    ? "border-green-500/30 bg-green-500/5"
-                    : "border-border bg-card"
+                    ? "border-emerald-500/25 bg-emerald-500/[0.04]"
+                    : "border-white/[0.07] bg-white/[0.022]"
             )}
         >
             <div className="p-3 xs:p-4 sm:p-5">

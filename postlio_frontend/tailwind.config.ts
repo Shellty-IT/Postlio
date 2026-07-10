@@ -19,6 +19,10 @@ const config: Config = {
             '2xl': '1536px',    // Bardzo duży desktop
         },
         extend: {
+            fontFamily: {
+                sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
+                mono: ['var(--font-geist-mono)', 'ui-monospace', 'monospace'],
+            },
             colors: {
                 background: 'hsl(var(--background))',
                 foreground: 'hsl(var(--foreground))',
@@ -65,6 +69,12 @@ const config: Config = {
                 lg: 'var(--radius)',
                 md: 'calc(var(--radius) - 2px)',
                 sm: 'calc(var(--radius) - 4px)'
+            },
+            boxShadow: {
+                'glow-primary': '0 18px 40px -12px hsl(var(--primary) / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.12)',
+                'glow-accent': '0 24px 56px -30px hsl(var(--accent) / 0.6), inset 0 1px 0 rgb(255 255 255 / 0.06)',
+                'glow-warning': '0 0 32px -8px hsl(var(--warning) / 0.4)',
+                'panel': '0 50px 130px -40px rgb(0 0 0 / 0.85)',
             },
             // ✅ NOWE: Spacing dla mobile
             spacing: {

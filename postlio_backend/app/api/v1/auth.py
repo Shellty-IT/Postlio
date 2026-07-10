@@ -22,7 +22,7 @@ from app.utils.security import hash_password, verify_password, create_tokens, de
 from app.config import settings
 from app.services.social import social_manager, SocialPlatform
 
-router = APIRouter()
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 # ==================== Schemas ====================

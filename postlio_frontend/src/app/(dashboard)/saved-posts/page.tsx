@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Plus, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { SavedPostsList } from '@/components/saved-posts';
 import { ManualPublishModal } from '@/components/common';
 import { createManualPublishData } from '@/components/creator/manual-publish-utils';
@@ -113,8 +114,7 @@ export default function SavedPostsPage() {
         }
     }, []);
 
-    const handlePlatformPublished = useCallback((postId?: number, platform?: Platform) => {
-        console.log(`Platform ${platform} marked as published for post ${postId}`);
+    const handlePlatformPublished = useCallback((_postId?: number, _platform?: Platform) => {
     }, []);
 
     const handleAllPublished = useCallback(() => {
@@ -124,32 +124,54 @@ export default function SavedPostsPage() {
         setPublishModalPostId(null);
     }, []);
 
+    const stats = [
+        {
+            label: 'Wszystkie',
+            value: posts.length,
+            highlight: false,
+        },
+        {
+            label: 'Szkice',
+            value: posts.filter(p => p.status === 'draft').length,
+            highlight: true,
+        },
+        {
+            label: 'Zaplanowane',
+            value: posts.filter(p => p.status === 'scheduled').length,
+            highlight: false,
+        },
+        {
+            label: 'Opublikowane',
+            value: posts.filter(p => p.status === 'published').length,
+            highlight: false,
+        },
+    ];
+
     return (
         <div className="space-y-4 sm:space-y-6">
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col xs:flex-row xs:items-center justify-between gap-3"
+                className="flex flex-col xs:flex-row xs:items-end justify-between gap-3"
             >
                 <div>
-                    <h2 className="text-lg sm:text-xl font-semibold">Materiały</h2>
-                    <p className="text-sm text-muted-foreground hidden sm:block">
-                        Zarządzaj zapisanymi postami
+                    <h2 className="text-xl sm:text-[26px] font-semibold tracking-tight">Materiały</h2>
+                    <p className="text-sm text-muted-foreground mt-1.5 hidden sm:block">
+                        Zarządzaj zapisanymi postami i szkicami
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="gap-2">
+                    <Button variant="outline" size="sm" className="gap-2 rounded-[11px] border-white/10 bg-white/[0.03] hover:bg-white/[0.06]">
                         <Download className="h-4 w-4" />
                         <span className="hidden xs:inline">Eksportuj</span>
                     </Button>
-                    <Button
+                    <button
                         onClick={() => router.push('/creator')}
-                        size="sm"
-                        className="gap-2 bg-gradient-to-r from-primary to-violet-500"
+                        className="btn-gradient px-4 py-2.5 text-sm"
                     >
                         <Plus className="h-4 w-4" />
                         <span className="hidden xs:inline">Nowy post</span>
-                    </Button>
+                    </button>
                 </div>
             </motion.div>
 
@@ -157,36 +179,26 @@ export default function SavedPostsPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="grid grid-cols-2 gap-2 sm:gap-4 sm:grid-cols-4"
+                className="glass-card flex items-stretch gap-0 p-2"
             >
-                {[
-                    {
-                        label: 'Wszystkie',
-                        value: posts.length,
-                        color: 'bg-primary/10 text-primary'
-                    },
-                    {
-                        label: 'Szkice',
-                        value: posts.filter(p => p.status === 'draft').length,
-                        color: 'bg-muted text-muted-foreground'
-                    },
-                    {
-                        label: 'Zaplanowane',
-                        value: posts.filter(p => p.status === 'scheduled').length,
-                        color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                    },
-                    {
-                        label: 'Opublikowane',
-                        value: posts.filter(p => p.status === 'published').length,
-                        color: 'bg-green-500/10 text-green-600 dark:text-green-400'
-                    },
-                ].map((stat) => (
-                    <div
-                        key={stat.label}
-                        className={`rounded-lg sm:rounded-xl p-3 sm:p-4 ${stat.color}`}
-                    >
-                        <div className="text-xl sm:text-2xl font-bold">{stat.value}</div>
-                        <div className="text-xs sm:text-sm opacity-80">{stat.label}</div>
+                {stats.map((stat, index) => (
+                    <div key={stat.label} className="flex items-stretch">
+                        {index > 0 && (
+                            <div className="flex items-center px-0.5 xs:px-1">
+                                <div className="h-9 w-px bg-white/[0.07]" />
+                            </div>
+                        )}
+                        <div
+                            className={cn(
+                                'flex flex-1 flex-col gap-1 sm:gap-1.5 px-3 py-3 sm:px-5 sm:py-4',
+                                stat.highlight && 'rounded-[14px] bg-warning/[0.05]'
+                            )}
+                        >
+                            <span className={cn('text-[11px] sm:text-[12.5px] font-medium', stat.highlight ? 'text-warning' : 'text-muted-foreground')}>
+                                {stat.label}
+                            </span>
+                            <span className="text-lg sm:text-[28px] font-semibold tracking-tight">{stat.value}</span>
+                        </div>
                     </div>
                 ))}
             </motion.div>

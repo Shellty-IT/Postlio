@@ -1,13 +1,9 @@
 // src/app/layout.tsx
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
 import { Providers } from '@/providers';
 import './globals.css';
-
-const inter = Inter({
-    subsets: ['latin', 'latin-ext'],
-    variable: '--font-inter',
-});
 
 export const metadata: Metadata = {
     metadataBase: new URL('https://postlio.netlify.app'),
@@ -26,10 +22,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
     width: 'device-width',
     initialScale: 1,
-    themeColor: [
-        { media: '(prefers-color-scheme: light)', color: '#F8FAFC' },
-        { media: '(prefers-color-scheme: dark)', color: '#0A0F1C' },
-    ],
+    themeColor: '#070709',
 };
 
 export default function RootLayout({
@@ -38,11 +31,11 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="pl" suppressHydrationWarning>
+        <html lang="pl" className={`dark ${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
         <head>
             <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         </head>
-        <body className={`${inter.variable} font-sans`}>
+        <body className="font-sans">
         <Providers>{children}</Providers>
         </body>
         </html>

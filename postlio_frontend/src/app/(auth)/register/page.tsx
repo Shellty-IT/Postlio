@@ -7,11 +7,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, User, Sparkles, Check } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Check } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AppLogo } from '@/components/common/app-logo';
 import { useRegister } from '@/hooks';
 
 const registerSchema = z.object({
@@ -111,9 +112,7 @@ export default function RegisterPage() {
                         transition={{ duration: 0.6 }}
                     >
                         <Link href="/" className="flex items-center gap-3 mb-8">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-primary flex items-center justify-center shadow-lg shadow-violet-500/25">
-                                <Sparkles className="w-6 h-6 text-white" />
-                            </div>
+                            <AppLogo className="h-12 w-12" />
                             <span className="text-3xl font-bold bg-gradient-to-r from-violet-500 to-primary bg-clip-text text-transparent">
                                 Postlio
                             </span>
@@ -158,9 +157,7 @@ export default function RegisterPage() {
                 >
                     <div className="lg:hidden flex items-center gap-2 xs:gap-3 mb-6 xs:mb-8 justify-center">
                         <Link href="/" className="flex items-center gap-2 xs:gap-3">
-                            <div className="w-9 h-9 xs:w-10 xs:h-10 rounded-xl bg-gradient-to-br from-violet-500 to-primary flex items-center justify-center">
-                                <Sparkles className="w-4 h-4 xs:w-5 xs:h-5 text-white" />
-                            </div>
+                            <AppLogo className="h-9 w-9 xs:h-10 xs:w-10" />
                             <span className="text-xl xs:text-2xl font-bold bg-gradient-to-r from-violet-500 to-primary bg-clip-text text-transparent">
                                 Postlio
                             </span>

@@ -13,7 +13,12 @@ import { persist } from 'zustand/middleware';
 // TYPY
 // ============================================================
 
-type Theme = 'light' | 'dark' | 'system';
+export type DockMode = 'left' | 'right' | 'bottom' | 'floating';
+
+interface DockPosition {
+    x: number;
+    y: number;
+}
 
 type ModalType =
     | 'create-post'
@@ -31,16 +36,17 @@ interface ModalData {
 }
 
 interface UIState {
-    // Theme
-    theme: Theme;
-    setTheme: (theme: Theme) => void;
-
     // Sidebar
     sidebarOpen: boolean;
     sidebarCollapsed: boolean;
     toggleSidebar: () => void;
     setSidebarOpen: (open: boolean) => void;
     setSidebarCollapsed: (collapsed: boolean) => void;
+
+    dockMode: DockMode;
+    dockPosition: DockPosition;
+    setDockMode: (mode: DockMode) => void;
+    setDockPosition: (position: DockPosition) => void;
 
     // Mobile menu
     mobileMenuOpen: boolean;
@@ -75,28 +81,6 @@ interface UIState {
 export const useUIStore = create<UIState>()(
     persist(
         (set, get) => ({
-            // ==================== THEME ====================
-            theme: 'system',
-
-            setTheme: (theme: Theme) => {
-                set({ theme });
-
-                // Aplikuj theme do dokumentu
-                if (typeof window !== 'undefined') {
-                    const root = window.document.documentElement;
-                    root.classList.remove('light', 'dark');
-
-                    if (theme === 'system') {
-                        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-                            ? 'dark'
-                            : 'light';
-                        root.classList.add(systemTheme);
-                    } else {
-                        root.classList.add(theme);
-                    }
-                }
-            },
-
             // ==================== SIDEBAR ====================
             sidebarOpen: true,
             sidebarCollapsed: false,
@@ -112,6 +96,17 @@ export const useUIStore = create<UIState>()(
 
             setSidebarCollapsed: (collapsed: boolean) => {
                 set({ sidebarCollapsed: collapsed });
+            },
+
+            dockMode: 'left',
+            dockPosition: { x: 24, y: 96 },
+
+            setDockMode: (mode: DockMode) => {
+                set({ dockMode: mode });
+            },
+
+            setDockPosition: (position: DockPosition) => {
+                set({ dockPosition: position });
             },
 
             // ==================== MOBILE MENU ====================
@@ -183,8 +178,9 @@ export const useUIStore = create<UIState>()(
             name: 'postlio-ui',
             // Zapisuj tylko wybrane pola w localStorage
             partialize: (state) => ({
-                theme: state.theme,
                 sidebarCollapsed: state.sidebarCollapsed,
+                dockMode: state.dockMode,
+                dockPosition: state.dockPosition,
             }),
         }
     )
@@ -193,16 +189,6 @@ export const useUIStore = create<UIState>()(
 // ============================================================
 // HOOKI POMOCNICZE
 // ============================================================
-
-/**
- * Hook do zarządzania theme
- */
-export function useTheme() {
-    const theme = useUIStore((state) => state.theme);
-    const setTheme = useUIStore((state) => state.setTheme);
-
-    return { theme, setTheme };
-}
 
 /**
  * Hook do zarządzania sidebar
@@ -220,6 +206,23 @@ export function useSidebar() {
         toggle: toggleSidebar,
         setOpen: setSidebarOpen,
         setCollapsed: setSidebarCollapsed,
+    };
+}
+
+/**
+ * Hook do zarządzania pływającym dockiem nawigacji
+ */
+export function useDock() {
+    const dockMode = useUIStore((state) => state.dockMode);
+    const dockPosition = useUIStore((state) => state.dockPosition);
+    const setDockMode = useUIStore((state) => state.setDockMode);
+    const setDockPosition = useUIStore((state) => state.setDockPosition);
+
+    return {
+        mode: dockMode,
+        position: dockPosition,
+        setMode: setDockMode,
+        setPosition: setDockPosition,
     };
 }
 

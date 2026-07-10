@@ -14,6 +14,10 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool  # ✅ ZMIANA: StaticPool zamiast NullPool
 
+from sqlalchemy.dialects.sqlite.base import SQLiteTypeCompiler
+
+SQLiteTypeCompiler.visit_JSONB = SQLiteTypeCompiler.visit_JSON
+
 from app.database import Base
 from app.models.user import User
 from app.models.brand import Brand
@@ -401,7 +405,7 @@ async def queue_item_with_image(
 @pytest.fixture
 def mock_social_manager():
     """Mock social manager."""
-    with patch("app.services.publish_service.social_manager") as mock:
+    with patch("app.services.publishers.business.social_manager") as mock:
         mock.publish_post = AsyncMock()
         yield mock
 
@@ -409,7 +413,7 @@ def mock_social_manager():
 @pytest.fixture
 def mock_text_ai_manager():
     """Mock text AI manager."""
-    with patch("app.services.autopilot_service.text_ai_manager") as mock:
+    with patch("app.services.generation_service.text_ai_manager") as mock:
         provider = MagicMock()
         provider.generate_post = AsyncMock(return_value={
             "success": True,
@@ -423,7 +427,7 @@ def mock_text_ai_manager():
 @pytest.fixture
 def mock_image_ai_manager():
     """Mock image AI manager."""
-    with patch("app.services.autopilot_service.image_ai_manager") as mock:
+    with patch("app.services.generation_service.image_ai_manager") as mock:
         mock.generate_image = AsyncMock(return_value={
             "success": True,
             "image_url": "https://test.com/image.jpg",

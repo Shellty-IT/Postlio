@@ -142,10 +142,10 @@ function ProviderCard({
             onClick={onSelect}
             disabled={!isAvailable}
             className={cn(
-                "relative w-full p-3 rounded-xl border-2 text-left transition-all duration-200",
+                "relative w-full p-3 rounded-[14px] border text-left transition-all duration-200",
                 isSelected
-                    ? "border-primary bg-primary/5 shadow-md"
-                    : "border-border/50 hover:border-border bg-card/50",
+                    ? "border-primary/40 bg-primary/[0.06] shadow-md"
+                    : "border-white/[0.07] hover:bg-white/[0.04] bg-white/[0.02]",
                 !isAvailable && "opacity-50 cursor-not-allowed"
             )}
         >
@@ -304,16 +304,11 @@ export function AIProviderSelector({
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className={cn("gap-2 h-8", className)}
+                                    className={cn("gap-2 h-9 rounded-[11px] border-white/[0.09] bg-white/[0.03] hover:bg-white/[0.05] px-3.5", className)}
                                     disabled={isLoading}
                                 >
-                                    <div className={cn(
-                                        "w-4 h-4 rounded bg-gradient-to-br flex items-center justify-center",
-                                        selectedProvider.color
-                                    )}>
-                                        <Icon className="w-2.5 h-2.5 text-white" />
-                                    </div>
-                                    <span className="text-xs max-w-[100px] truncate">
+                                    <Icon className="w-3.5 h-3.5 text-[#aebcff]" />
+                                    <span className="text-xs max-w-[100px] truncate text-[#c7cad2]">
                     {selectedProvider.name}
                   </span>
                                     <ChevronDown className="w-3 h-3 text-muted-foreground" />
@@ -355,7 +350,7 @@ export function AIProviderSelector({
         <div className={cn("space-y-3", className)}>
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm font-medium">
-                    <TypeIcon className="w-4 h-4 text-violet-500" />
+                    <TypeIcon className="w-4 h-4 text-accent" />
                     <span>Model AI dla {getTypeLabel()}</span>
                 </div>
 
@@ -418,7 +413,7 @@ export function InlineProviderSelector({
                                        }: InlineProviderSelectorProps) {
     return (
         <div className={cn("flex items-center gap-2", className)}>
-            <span className="text-xs text-muted-foreground">AI:</span>
+            <span className="mono-label">AI:</span>
             <AIProviderSelector
                 type="text"
                 value={textProvider}

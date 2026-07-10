@@ -283,10 +283,10 @@ export function PostPreview({ content, platforms, imageUrl, videoUrl, brandName,
 
     return (
         <div className="space-y-3 sm:space-y-4">
-            <h3 className="text-xs sm:text-sm font-medium">Podgląd</h3>
+            <h3 className="mono-label">Podgląd</h3>
 
             <Tabs defaultValue={platforms[0]} className="w-full">
-                <TabsList className="w-full justify-start bg-muted/50">
+                <TabsList className="w-full justify-start bg-white/[0.03] border border-white/[0.06]">
                     {platforms.map((platform) => (
                         <TabsTrigger
                             key={platform}

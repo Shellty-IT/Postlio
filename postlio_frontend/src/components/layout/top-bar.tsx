@@ -7,7 +7,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
     Search,
-    Menu,
     Command,
     Plus,
     LayoutDashboard,
@@ -30,16 +29,9 @@ import {
 import { UserMenu } from './user-menu';
 import { SearchCommand } from './search-command';
 import { NotificationsDropdown } from './notifications-dropdown';
+import { MobileNav } from './mobile-nav';
 import { useBrandsStore } from '@/store/brands-store';
 import { cn } from '@/lib/utils';
-
-// ============================================================
-// TYPY
-// ============================================================
-
-interface TopBarProps {
-    onMenuClick?: () => void;
-}
 
 // ============================================================
 // PAGE CONFIG
@@ -176,7 +168,7 @@ function PageTitle({ config }: PageTitleProps) {
 // KOMPONENT GŁÓWNY
 // ============================================================
 
-export function TopBar({ onMenuClick }: TopBarProps) {
+export function TopBar() {
     const pathname = usePathname();
     const router = useRouter();
     const { selectedBrand } = useBrandsStore();
@@ -192,18 +184,10 @@ export function TopBar({ onMenuClick }: TopBarProps) {
 
     return (
         <>
-            <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl">
+            <header className="sticky top-0 z-40 w-full border-b border-white/[0.06] bg-background/80 backdrop-blur-xl">
                 <div className="flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-3 sm:px-4 md:px-6">
-                    {/* Mobile menu button */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="lg:hidden flex-shrink-0 h-9 w-9 sm:h-10 sm:w-10"
-                        onClick={onMenuClick}
-                        aria-label="Otwórz menu"
-                    >
-                        <Menu className="h-5 w-5" />
-                    </Button>
+                    {/* Mobile: hamburger + app icon */}
+                    <MobileNav />
 
                     {/* Page title - z flex-1 i min-w-0 dla truncate */}
                     <div className="flex-1 min-w-0">
@@ -251,12 +235,12 @@ export function TopBar({ onMenuClick }: TopBarProps) {
                             <TooltipTrigger asChild>
                                 <Button
                                     variant="outline"
-                                    className="hidden sm:flex items-center gap-2 text-muted-foreground flex-shrink-0 h-9 sm:h-10"
+                                    className="hidden sm:flex items-center gap-2 text-muted-foreground flex-shrink-0 h-9 sm:h-10 rounded-xl border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.06] hover:text-foreground"
                                     onClick={() => setSearchOpen(true)}
                                 >
                                     <Search className="h-4 w-4" />
                                     <span className="hidden md:inline">Szukaj...</span>
-                                    <kbd className="hidden lg:inline-flex pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                                    <kbd className="hidden lg:inline-flex pointer-events-none h-5 select-none items-center gap-1 rounded-md border border-white/[0.08] bg-transparent px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
                                         <Command className="h-3 w-3" />K
                                     </kbd>
                                 </Button>
@@ -274,9 +258,9 @@ export function TopBar({ onMenuClick }: TopBarProps) {
                                 <Button
                                     size="icon"
                                     className={cn(
-                                        "flex-shrink-0 h-9 w-9 sm:h-10 sm:w-auto sm:px-3",
-                                        "bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90",
-                                        "shadow-lg shadow-primary/25"
+                                        "flex-shrink-0 h-9 w-9 sm:h-10 sm:w-auto sm:px-3 rounded-xl",
+                                        "bg-gradient-to-br from-primary to-accent hover:brightness-110",
+                                        "shadow-glow-primary"
                                     )}
                                     onClick={() => router.push('/creator')}
                                     aria-label="Utwórz nowy post"

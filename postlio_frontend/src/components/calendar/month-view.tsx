@@ -63,22 +63,19 @@ export function MonthView({ posts, onPostMove, enableDroppable = false }: MonthV
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="border rounded-xl overflow-hidden bg-card"
+            className="flex flex-col gap-2"
         >
             {/* Weekday headers */}
-            <div className="grid grid-cols-7 bg-muted/50">
+            <div className="grid grid-cols-7 gap-2 px-0.5">
                 {WEEKDAYS.map((day) => (
-                    <div
-                        key={day}
-                        className="py-3 text-center text-sm font-medium text-muted-foreground border-b border-r last:border-r-0"
-                    >
+                    <div key={day} className="mono-label text-center">
                         {day}
                     </div>
                 ))}
             </div>
 
             {/* Calendar grid */}
-            <div className="grid grid-cols-7">
+            <div className="grid grid-cols-7 gap-2">
                 {calendarDays.map((day) => {
                     const dayContent = (
                         <DayCell
