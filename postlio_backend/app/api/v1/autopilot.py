@@ -322,9 +322,9 @@ async def generate_posts(
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Generation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+    except Exception:
+        logger.exception("Generation failed for config %s", config_id)
+        raise HTTPException(status_code=500, detail="Post generation failed. Please try again.")
 
 
 # === QUEUE ENDPOINTS ===

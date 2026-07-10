@@ -7,6 +7,7 @@ import hmac
 import hashlib
 import base64
 import json
+import logging
 import time
 from datetime import datetime
 from typing import List
@@ -40,6 +41,8 @@ from app.schemas.social import (
     AccessLevel,
     compute_user_capabilities,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/social", tags=["social"])
 
@@ -217,12 +220,13 @@ async def oauth_callback(
             supports_autopilot=getattr(result, 'supports_autopilot', False),
         )
 
-    except Exception as e:
+    except Exception:
+        logger.exception("OAuth callback failed for platform %s", request.platform)
         return OAuthCallbackResponse(
             success=False,
             platform=request.platform,
             error="server_error",
-            error_description=str(e)
+            error_description="An unexpected error occurred while connecting the account. Please try again."
         )
 
 # ==================== Account Management ====================
