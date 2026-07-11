@@ -1,7 +1,7 @@
 // playwright.config.ts
 import { defineConfig, devices } from '@playwright/test';
 
-const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3001';
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
 
 export default defineConfig({
     testDir: './e2e',
@@ -49,4 +49,11 @@ export default defineConfig({
     ],
 
     outputDir: 'test-results/',
+
+    webServer: {
+        command: 'npm run start -- -p 3000',
+        url: BASE_URL,
+        reuseExistingServer: !process.env.CI,
+        timeout: 30 * 1000,
+    },
 });

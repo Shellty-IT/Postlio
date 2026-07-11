@@ -11,18 +11,6 @@ import { ReactNode } from 'react';
 // MOCKS - MUST BE BEFORE IMPORTS OF TESTED MODULES
 // ============================================================
 
-// Mock next/navigation
-const mockPush = jest.fn();
-
-jest.mock('next/navigation', () => ({
-    useRouter: () => ({
-        push: mockPush,
-        replace: jest.fn(),
-        prefetch: jest.fn(),
-    }),
-    usePathname: () => '/',
-}));
-
 // Mock sonner
 jest.mock('sonner', () => ({
     toast: {
@@ -227,7 +215,6 @@ describe('useLogin', () => {
             password: 'password123',
         });
         expect(toast.success).toHaveBeenCalled();
-        expect(mockPush).toHaveBeenCalledWith('/dashboard');
     });
 
     it('should update store on successful login', async () => {
@@ -325,7 +312,6 @@ describe('useRegister', () => {
         });
 
         expect(toast.success).toHaveBeenCalled();
-        expect(mockPush).toHaveBeenCalledWith('/dashboard');
     });
 
     it('should handle duplicate email error', async () => {

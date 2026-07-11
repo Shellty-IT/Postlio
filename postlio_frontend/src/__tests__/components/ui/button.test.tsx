@@ -20,7 +20,8 @@ describe('Button', () => {
 
             const button = screen.getByRole('button');
             expect(button).toHaveClass('bg-primary');
-            expect(button).toHaveClass('h-9');
+            expect(button).toHaveClass('h-10');
+            expect(button).toHaveClass('sm:h-9');
         });
 
         it('should forward ref correctly', () => {
@@ -89,7 +90,8 @@ describe('Button', () => {
             render(<Button size="default">Default Size</Button>);
 
             const button = screen.getByRole('button');
-            expect(button).toHaveClass('h-9');
+            expect(button).toHaveClass('h-10');
+            expect(button).toHaveClass('sm:h-9');
             expect(button).toHaveClass('px-4');
         });
 
@@ -97,7 +99,8 @@ describe('Button', () => {
             render(<Button size="sm">Small</Button>);
 
             const button = screen.getByRole('button');
-            expect(button).toHaveClass('h-8');
+            expect(button).toHaveClass('h-9');
+            expect(button).toHaveClass('sm:h-8');
             expect(button).toHaveClass('px-3');
             expect(button).toHaveClass('text-xs');
         });
@@ -106,7 +109,8 @@ describe('Button', () => {
             render(<Button size="lg">Large</Button>);
 
             const button = screen.getByRole('button');
-            expect(button).toHaveClass('h-10');
+            expect(button).toHaveClass('h-11');
+            expect(button).toHaveClass('sm:h-10');
             expect(button).toHaveClass('px-8');
         });
 
@@ -114,8 +118,10 @@ describe('Button', () => {
             render(<Button size="icon">🔥</Button>);
 
             const button = screen.getByRole('button');
-            expect(button).toHaveClass('h-9');
-            expect(button).toHaveClass('w-9');
+            expect(button).toHaveClass('h-10');
+            expect(button).toHaveClass('w-10');
+            expect(button).toHaveClass('sm:h-9');
+            expect(button).toHaveClass('sm:w-9');
         });
     });
 
@@ -302,7 +308,8 @@ describe('buttonVariants', () => {
         const classes = buttonVariants({ variant: 'default', size: 'default' });
 
         expect(classes).toContain('bg-primary');
-        expect(classes).toContain('h-9');
+        expect(classes).toContain('h-10');
+        expect(classes).toContain('sm:h-9');
     });
 
     it('should generate correct classes for all variants', () => {
