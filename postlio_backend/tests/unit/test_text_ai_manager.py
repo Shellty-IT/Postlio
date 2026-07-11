@@ -9,7 +9,7 @@ Tests cover:
 - Error handling for unknown providers
 """
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from app.services.ai.text.manager import TextAIManager
 from app.services.ai.text.base import BaseTextProvider, TextProvider

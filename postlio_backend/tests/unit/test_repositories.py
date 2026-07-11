@@ -16,7 +16,6 @@ from app.repositories.social_repo import SocialRepository
 from app.repositories.autopilot_repo import AutopilotRepository
 from app.models.brand import Brand
 from app.models.post import Post
-from app.models.social_account import SocialAccount
 from app.models.autopilot import AutopilotQueueItem
 from app.api.exceptions import NotFoundError
 
@@ -85,7 +84,7 @@ class TestBrandRepository:
         await repo.clear_default(db_session, test_user.id)
         await db_session.flush()
 
-        from sqlalchemy import select, text
+        from sqlalchemy import select
         result = await db_session.execute(
             select(Brand).where(Brand.user_id == test_user.id, Brand.is_default).execution_options(populate_existing=True)
         )

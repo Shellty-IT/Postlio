@@ -8,11 +8,11 @@ Tests cover:
 - ManualAssistPublisher.prepare_data returns correct ManualPublishData
 """
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 from app.services.publishers.business import BusinessPublisher
 from app.services.publishers.manual import ManualAssistPublisher
-from app.services.publishers.types import PublishResult, ManualPublishData
+from app.services.publishers.types import ManualPublishData
 from app.models.social_account import SocialAccount
 
 
