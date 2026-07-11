@@ -62,7 +62,12 @@ async def setup_test_db():
 
     yield
 
-    # Cleanup - tables will be dropped, but engine stays alive for next test
+    # Dispose the pooled connection now, while its owning event loop is
+    # still alive. Each test runs on a fresh event loop; leaving the
+    # single StaticPool connection open past teardown means a later
+    # garbage-collect/interpreter-exit tries to close it against a loop
+    # that no longer exists, hanging the process indefinitely.
+    await engine.dispose()
 
 
 @pytest_asyncio.fixture(scope="function")

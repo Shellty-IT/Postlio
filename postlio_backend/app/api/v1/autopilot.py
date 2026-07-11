@@ -510,7 +510,7 @@ async def publish_queue_item(
         platform_post_url=result.post_url,
         error=result.error,
         published_at=item.published_at if result.success else None,
-        requires_manual = result.requires_manual
+        requires_manual=result.requires_manual_publish,
     )
 
 

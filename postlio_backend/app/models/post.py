@@ -9,10 +9,12 @@ NAPRAWIONE:
 from datetime import datetime
 from enum import Enum
 from typing import List, Dict, Any, Optional
-from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, Boolean
+from sqlalchemy import JSON, String, Text, Integer, DateTime, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
+
+_JSONB = JSON().with_variant(JSONB, "postgresql")
 
 
 class PostStatus(str, Enum):
@@ -44,15 +46,15 @@ class Post(Base):
     platform_post_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(50), default=PostStatus.DRAFT.value)
 
-    platforms: Mapped[List[str]] = mapped_column(JSONB, default=list)
-    platform_statuses: Mapped[Dict[str, Any]] = mapped_column(JSONB, default=dict)
+    platforms: Mapped[List[str]] = mapped_column(_JSONB, default=list)
+    platform_statuses: Mapped[Dict[str, Any]] = mapped_column(_JSONB, default=dict)
 
     scheduled_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     published_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     ai_generated: Mapped[bool] = mapped_column(Boolean, default=False)
     ai_model: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    generation_params: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    generation_params: Mapped[Optional[dict]] = mapped_column(_JSONB, nullable=True)
 
     likes: Mapped[int] = mapped_column(Integer, default=0)
     comments: Mapped[int] = mapped_column(Integer, default=0)
