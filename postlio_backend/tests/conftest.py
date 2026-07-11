@@ -11,19 +11,17 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
+from sqlalchemy.dialects.sqlite.base import SQLiteTypeCompiler
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool  # ✅ ZMIANA: StaticPool zamiast NullPool
-
-from sqlalchemy.dialects.sqlite.base import SQLiteTypeCompiler
-
-SQLiteTypeCompiler.visit_JSONB = SQLiteTypeCompiler.visit_JSON
 
 from app.database import Base
 from app.models.user import User
 from app.models.brand import Brand
-from app.models.post import Post
 from app.models.social_account import SocialAccount
 from app.models.autopilot import AutopilotConfig, AutopilotQueueItem
+
+SQLiteTypeCompiler.visit_JSONB = SQLiteTypeCompiler.visit_JSON
 
 
 # ============================================================
