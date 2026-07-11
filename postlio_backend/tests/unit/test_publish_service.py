@@ -10,12 +10,11 @@ Tests cover:
 """
 import pytest
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
-from app.services.publish_service import PublishService, PublishResult, AUTO_PUBLISH_ACCOUNT_TYPES
+from app.services.publish_service import PublishService
 from app.services.publishers import ManualAssistPublisher
 from app.models.social_account import SocialAccount
-from app.models.autopilot import AutopilotConfig, AutopilotQueueItem
 
 
 class TestCanAutoPublish:

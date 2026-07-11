@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit tests for AutopilotService.
 
 Tests cover:
@@ -12,13 +12,11 @@ Tests cover:
 """
 import pytest
 from datetime import datetime, timedelta
-from unittest.mock import patch
 from freezegun import freeze_time
 
 from app.services.autopilot_service import AutopilotService
 from app.services.generation_service import GenerationService, CATEGORY_TOPICS, CATEGORY_MAPPING
-from app.models.autopilot import AutopilotConfig, AutopilotQueueItem
-from app.models.brand import Brand
+from app.models.autopilot import AutopilotQueueItem
 from app.schemas.autopilot import QueueStatsResponse
 
 

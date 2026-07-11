@@ -261,6 +261,7 @@ jobs:
           path: |
             postlio_frontend/.next
             !postlio_frontend/.next/cache
+          include-hidden-files: true
           retention-days: 3
 
   frontend-e2e:
