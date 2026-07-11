@@ -4,7 +4,6 @@ Alembic environment configuration for async SQLAlchemy with PostgreSQL (Neon).
 """
 import asyncio
 import os
-import ssl
 from logging.config import fileConfig
 from urllib.parse import urlparse, urlunparse
 
@@ -65,12 +64,6 @@ def clean_database_url(url: str) -> str:
 # Oczyszczony URL (bez ?sslmode=require&channel_binding=require)
 CLEAN_DATABASE_URL = clean_database_url(DATABASE_URL)
 
-# Debug
-print(f"✅ Łączę z PostgreSQL...")
-print(f"   Original: {DATABASE_URL[:60]}...")
-print(f"   Clean: {CLEAN_DATABASE_URL[:60]}...")
-
-
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
     context.configure(
@@ -97,17 +90,19 @@ def do_run_migrations(connection: Connection) -> None:
 
 async def run_async_migrations() -> None:
     """Run migrations in 'online' mode with async engine."""
+    connect_args = {}
+    if "neon.tech" in DATABASE_URL or "sslmode=" in DATABASE_URL:
+        import ssl
 
-    # SSL context dla Neon
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        connect_args = {"ssl": ssl_context}
 
-    # Tworzymy async engine z oczyszczonym URL i SSL
     connectable = create_async_engine(
         CLEAN_DATABASE_URL,
         poolclass=pool.NullPool,
-        connect_args={"ssl": ssl_context},
+        connect_args=connect_args,
     )
 
     async with connectable.connect() as connection:
