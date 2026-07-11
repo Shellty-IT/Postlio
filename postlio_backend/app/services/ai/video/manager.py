@@ -2,7 +2,6 @@
 
 import logging
 from typing import Dict, List, Optional, Any
-from app.config import settings
 from app.services.ai.video.base import BaseVideoProvider, VideoProvider
 from app.services.ai.video.pollinations import PollinationsVideoProvider
 

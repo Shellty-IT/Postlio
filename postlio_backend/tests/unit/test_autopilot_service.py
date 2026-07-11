@@ -12,7 +12,7 @@ Tests cover:
 """
 import pytest
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 from freezegun import freeze_time
 
 from app.services.autopilot_service import AutopilotService

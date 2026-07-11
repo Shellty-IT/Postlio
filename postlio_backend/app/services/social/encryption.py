@@ -8,7 +8,7 @@ import base64
 import hashlib
 from typing import Optional
 from cryptography.fernet import Fernet, InvalidToken
-from app.config import settings
+from app.config import settings, TESTING
 import logging
 
 logger = logging.getLogger(__name__)
@@ -42,8 +42,8 @@ class TokenEncryption:
             except Exception as e:
                 logger.error(f"Failed to initialize token encryption: {e}")
                 self._fernet = None
-        else:
-            # Fallback: generuj klucz z SECRET_KEY (mniej bezpieczne, ale działa w dev)
+        elif settings.DEBUG or TESTING:
+            # Fallback: generuj klucz z SECRET_KEY (mniej bezpieczne, tylko dev/testy)
             logger.warning(
                 "TOKEN_ENCRYPTION_KEY not set! Using derived key from SECRET_KEY. "
                 "Set TOKEN_ENCRYPTION_KEY in production!"
@@ -51,6 +51,13 @@ class TokenEncryption:
             # Generuj klucz 32-bajtowy z SECRET_KEY
             key = hashlib.sha256(settings.SECRET_KEY.encode()).digest()
             self._fernet = Fernet(base64.urlsafe_b64encode(key))
+        else:
+            # config.py blokuje start w tej sytuacji; ten branch to dodatkowa
+            # bariera na wypadek, gdyby Settings zostały skonstruowane inaczej.
+            raise RuntimeError(
+                "TOKEN_ENCRYPTION_KEY must be set when DEBUG=false. "
+                "Refusing to derive an encryption key from SECRET_KEY in production."
+            )
 
     def encrypt(self, plaintext: str) -> str:
         """

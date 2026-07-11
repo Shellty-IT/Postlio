@@ -20,7 +20,6 @@ from .base import (
     OAuthResult,
     PublishResult,
     AccountInfo,
-    MediaUploadResult,
 )
 
 

@@ -20,7 +20,6 @@ export interface RegisterRequest {
 
 export interface AuthTokens {
     access_token: string;
-    refresh_token: string;
     token_type: string;
 }
 
@@ -47,7 +46,6 @@ export interface OAuthLoginCallbackRequest {
 export interface OAuthLoginResponse {
     success: boolean;
     access_token?: string;
-    refresh_token?: string;
     user?: User;
     is_new_user?: boolean;
     error?: string;
@@ -69,7 +67,7 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
         skipAuth: true,
     });
 
-    TokenManager.setTokens(tokens.access_token, tokens.refresh_token);
+    TokenManager.setAccessToken(tokens.access_token);
     const user = await getMe();
 
     return {
@@ -95,8 +93,14 @@ export async function register(data: RegisterRequest): Promise<AuthResponse> {
 /**
  * Wylogowanie użytkownika
  */
-export function logout(): void {
-    TokenManager.clearTokens();
+export async function logout(): Promise<void> {
+    try {
+        await apiClient.post('/auth/logout', undefined, { skipAuth: true });
+    } catch {
+        // Best-effort - i tak czyścimy stan lokalnie i przekierowujemy
+    }
+
+    TokenManager.clearAccessToken();
 
     if (typeof window !== 'undefined') {
         window.location.href = '/login';
@@ -111,50 +115,43 @@ export async function getMe(): Promise<User> {
 }
 
 /**
- * Sprawdzenie czy użytkownik jest zalogowany
+ * Sprawdzenie czy w pamięci jest access token.
+ * Uwaga: to NIE oznacza braku sesji - refresh token (httpOnly cookie)
+ * może wciąż być ważny mimo braku access tokenu w pamięci (np. po
+ * przeładowaniu strony). Do faktycznej weryfikacji użyj verifySession().
  */
 export function isAuthenticated(): boolean {
-    return TokenManager.hasTokens();
+    return TokenManager.hasAccessToken();
 }
 
 /**
- * Weryfikacja sesji z backendem
+ * Weryfikacja sesji z backendem.
+ * Zawsze próbuje - jeśli nie ma access tokenu w pamięci, request 401-uje
+ * i interceptor spróbuje cichego odświeżenia przez httpOnly cookie.
  */
 export async function verifySession(): Promise<User | null> {
-    if (!TokenManager.hasTokens()) {
-        return null;
-    }
-
     try {
-        const user = await getMe();
-        return user;
+        return await apiClient.get<User>('/auth/me', { silentAuth: true });
     } catch {
-        TokenManager.clearTokens();
         return null;
     }
 }
 
 /**
- * Odświeżenie tokenu
+ * Ręczne odświeżenie tokenu (przez httpOnly refresh cookie)
  */
 export async function refreshToken(): Promise<AuthTokens | null> {
-    const refreshTokenValue = TokenManager.getRefreshToken();
-
-    if (!refreshTokenValue) {
-        return null;
-    }
-
     try {
         const tokens = await apiClient.post<AuthTokens>(
             '/auth/refresh',
-            { refresh_token: refreshTokenValue },
-            { skipAuth: true }
+            undefined,
+            { skipAuth: true, silentAuth: true }
         );
 
-        TokenManager.setTokens(tokens.access_token, tokens.refresh_token);
+        TokenManager.setAccessToken(tokens.access_token);
         return tokens;
     } catch {
-        TokenManager.clearTokens();
+        TokenManager.clearAccessToken();
         return null;
     }
 }

@@ -14,10 +14,10 @@ from .base import (
     PublishResult,
     AccountInfo,
 )
-from .facebook import FacebookService, facebook_service
-from .instagram import InstagramService, instagram_service
-from .linkedin import LinkedInService, linkedin_service
-from .google import GoogleService, google_service
+from .facebook import facebook_service
+from .instagram import instagram_service
+from .linkedin import linkedin_service
+from .google import google_service
 from .encryption import token_encryption
 
 logger = logging.getLogger(__name__)

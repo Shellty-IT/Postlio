@@ -6,7 +6,9 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-ALLOWED_ORIGINS = {settings.FRONTEND_URL, "http://localhost:3000"}
+ALLOWED_ORIGINS = {settings.FRONTEND_URL}
+if settings.DEBUG:
+    ALLOWED_ORIGINS.add("http://localhost:3000")
 
 
 class NotFoundError(Exception):

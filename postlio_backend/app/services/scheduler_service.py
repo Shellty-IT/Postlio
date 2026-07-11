@@ -7,7 +7,6 @@ Dwa główne zadania:
 1. Generowanie postów według harmonogramu
 2. Publikowanie zatwierdzonych postów w ich scheduled_for czasie
 """
-import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
@@ -19,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import async_session_maker
-from app.models.autopilot import AutopilotConfig, AutopilotQueueItem
+from app.models.autopilot import AutopilotConfig
 from app.services.autopilot_service import AutopilotService
 from app.services.publish_service import PublishService
 
@@ -90,8 +89,8 @@ class SchedulerService:
             async with async_session_maker() as db:
                 result = await db.execute(
                     select(AutopilotConfig)
-                    .where(AutopilotConfig.is_active == True)
-                    .where(AutopilotConfig.is_paused == False)
+                    .where(AutopilotConfig.is_active)
+                    .where(~AutopilotConfig.is_paused)
                 )
                 configs = list(result.scalars().all())
 
@@ -117,7 +116,7 @@ class SchedulerService:
 
         try:
             tz = pytz.timezone(config.timezone or "Europe/Warsaw")
-        except:
+        except Exception:
             tz = pytz.timezone("Europe/Warsaw")
 
         local_now = now.replace(tzinfo=pytz.UTC).astimezone(tz)
@@ -130,7 +129,7 @@ class SchedulerService:
         schedule_time = config.schedule_time or "10:00"
         try:
             schedule_hour, schedule_minute = map(int, schedule_time.split(":"))
-        except:
+        except Exception:
             schedule_hour, schedule_minute = 10, 0
 
         current_minutes = local_now.hour * 60 + local_now.minute

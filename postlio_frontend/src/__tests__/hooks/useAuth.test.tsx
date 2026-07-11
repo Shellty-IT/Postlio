@@ -63,8 +63,10 @@ jest.mock('@/lib/api', () => {
 // Mock TokenManager
 jest.mock('@/lib/api/client', () => ({
     TokenManager: {
-        clearTokens: jest.fn(),
-        hasTokens: jest.fn(() => false),
+        clearAccessToken: jest.fn(),
+        hasAccessToken: jest.fn(() => false),
+        getAccessToken: jest.fn(() => null),
+        setAccessToken: jest.fn(),
     },
 }));
 

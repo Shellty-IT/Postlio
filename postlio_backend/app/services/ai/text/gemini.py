@@ -115,7 +115,7 @@ class GeminiProvider(BaseTextProvider):
         try:
             if hasattr(response, 'usage_metadata'):
                 return response.usage_metadata.total_token_count
-        except:
+        except Exception:
             pass
         return None
 

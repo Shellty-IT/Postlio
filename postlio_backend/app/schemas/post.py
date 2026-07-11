@@ -1,6 +1,6 @@
 ﻿from pydantic import BaseModel, Field, model_validator
 from datetime import datetime
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any
 from enum import Enum
 
 

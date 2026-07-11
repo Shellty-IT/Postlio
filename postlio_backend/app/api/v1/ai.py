@@ -1,7 +1,8 @@
 ﻿# postlio_backend/app/api/v1/ai.py
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from app.api.deps import get_current_user
+from app.api.rate_limit import limiter
 from app.models.user import User
 from app.services.ai import text_ai_manager, image_ai_manager, video_ai_manager
 from app.schemas.ai import (
@@ -46,24 +47,26 @@ async def list_providers(
 # === TEXT GENERATION ===
 
 @router.post("/generate/text", response_model=GenerateTextResponse)
+@limiter.limit("20/minute")
 async def generate_text(
-        request: GenerateTextRequest,
+        request: Request,
+        payload: GenerateTextRequest,
         current_user: User = Depends(get_current_user),
 ):
     provider = text_ai_manager.get_provider(
-        request.provider.value if request.provider else None
+        payload.provider.value if payload.provider else None
     )
 
     result = await provider.generate_post(
-        topic=request.topic,
-        platform=request.platform.value,
-        tone=request.tone.value,
-        category=request.category.value if request.category else None,
-        language=request.language,
-        include_hashtags=request.include_hashtags,
-        include_emoji=request.include_emoji,
-        max_length=request.max_length,
-        model=request.model,
+        topic=payload.topic,
+        platform=payload.platform.value,
+        tone=payload.tone.value,
+        category=payload.category.value if payload.category else None,
+        language=payload.language,
+        include_hashtags=payload.include_hashtags,
+        include_emoji=payload.include_emoji,
+        max_length=payload.max_length,
+        model=payload.model,
     )
 
     if not result.get("success"):
@@ -73,7 +76,7 @@ async def generate_text(
         success=True,
         data=GeneratedTextContent(
             content=result["content"],
-            platform=request.platform.value,
+            platform=payload.platform.value,
             provider=result.get("provider", "unknown"),
             model=result.get("model"),
             hashtags=result.get("hashtags"),
@@ -83,19 +86,21 @@ async def generate_text(
 
 
 @router.post("/generate/variations", response_model=GenerateVariationsResponse)
+@limiter.limit("20/minute")
 async def generate_variations(
-        request: GenerateVariationsRequest,
+        request: Request,
+        payload: GenerateVariationsRequest,
         current_user: User = Depends(get_current_user),
 ):
     provider = text_ai_manager.get_provider(
-        request.provider.value if request.provider else None
+        payload.provider.value if payload.provider else None
     )
 
     result = await provider.generate_variations(
-        original_content=request.content,
-        platform=request.platform.value,
-        count=request.variations_count,
-        model=request.model,
+        original_content=payload.content,
+        platform=payload.platform.value,
+        count=payload.variations_count,
+        model=payload.model,
     )
 
     if not result.get("success"):
@@ -109,19 +114,21 @@ async def generate_variations(
 
 
 @router.post("/improve")
+@limiter.limit("20/minute")
 async def improve_text(
-        request: ImproveTextRequest,
+        request: Request,
+        payload: ImproveTextRequest,
         current_user: User = Depends(get_current_user),
 ):
     provider = text_ai_manager.get_provider(
-        request.provider.value if request.provider else None
+        payload.provider.value if payload.provider else None
     )
 
     result = await provider.improve_text(
-        content=request.content,
-        platform=request.platform.value,
-        instructions=request.instructions,
-        model=request.model,
+        content=payload.content,
+        platform=payload.platform.value,
+        instructions=payload.instructions,
+        model=payload.model,
     )
 
     if not result.get("success"):
@@ -135,21 +142,23 @@ async def improve_text(
 
 
 @router.post("/chat", response_model=AIChatResponse)
+@limiter.limit("20/minute")
 async def ai_chat(
-        request: AIChatRequest,
+        request: Request,
+        payload: AIChatRequest,
         current_user: User = Depends(get_current_user),
 ):
     provider = text_ai_manager.get_provider(
-        request.provider.value if request.provider else None
+        payload.provider.value if payload.provider else None
     )
 
-    messages = [{"role": m.role, "content": m.content} for m in request.messages]
+    messages = [{"role": m.role, "content": m.content} for m in payload.messages]
 
     result = await provider.chat(
         messages=messages,
-        category=request.category.value if request.category else None,
-        platform=request.platform.value if request.platform else None,
-        model=request.model,
+        category=payload.category.value if payload.category else None,
+        platform=payload.platform.value if payload.platform else None,
+        model=payload.model,
     )
 
     if not result.get("success"):
@@ -165,20 +174,22 @@ async def ai_chat(
 # === IMAGE GENERATION ===
 
 @router.post("/generate/image", response_model=GenerateImageResponse)
+@limiter.limit("10/minute")
 async def generate_image(
-        request: GenerateImageRequest,
+        request: Request,
+        payload: GenerateImageRequest,
         current_user: User = Depends(get_current_user),
 ):
     provider = image_ai_manager.get_provider(
-        request.provider.value if request.provider else None
+        payload.provider.value if payload.provider else None
     )
 
     result = await provider.generate_image(
-        prompt=request.prompt,
-        style=request.style.value if request.style else None,
-        width=request.width,
-        height=request.height,
-        model=request.model,
+        prompt=payload.prompt,
+        style=payload.style.value if payload.style else None,
+        width=payload.width,
+        height=payload.height,
+        model=payload.model,
     )
 
     if not result.get("success"):
@@ -192,7 +203,7 @@ async def generate_image(
         data=GeneratedImageContent(
             image_url=result.get("image_url"),
             image_data=result.get("image_data"),
-            prompt=result.get("prompt", request.prompt),
+            prompt=result.get("prompt", payload.prompt),
             provider=result.get("provider", "unknown"),
             model=result.get("model"),
             width=result.get("width"),
@@ -204,18 +215,20 @@ async def generate_image(
 # === VIDEO GENERATION ===
 
 @router.post("/generate/video", response_model=GenerateVideoResponse)
+@limiter.limit("10/minute")
 async def generate_video(
-        request: GenerateVideoRequest,
+        request: Request,
+        payload: GenerateVideoRequest,
         current_user: User = Depends(get_current_user),
 ):
     result = await video_ai_manager.generate_video(
-        prompt=request.prompt,
-        provider=request.provider.value if request.provider else None,
-        model=request.model,
-        width=request.width,
-        height=request.height,
-        duration=request.duration,
-        reference_image=request.reference_image,
+        prompt=payload.prompt,
+        provider=payload.provider.value if payload.provider else None,
+        model=payload.model,
+        width=payload.width,
+        height=payload.height,
+        duration=payload.duration,
+        reference_image=payload.reference_image,
     )
 
     if not result.get("success"):
@@ -229,7 +242,7 @@ async def generate_video(
         data=GeneratedVideoContent(
             video_data=result.get("video_data"),
             mime_type=result.get("mime_type"),
-            prompt=result.get("prompt", request.prompt),
+            prompt=result.get("prompt", payload.prompt),
             prompt_translated=result.get("prompt_translated"),
             provider=result.get("provider", "unknown"),
             model=result.get("model"),

@@ -87,7 +87,7 @@ class TestBrandRepository:
 
         from sqlalchemy import select, text
         result = await db_session.execute(
-            select(Brand).where(Brand.user_id == test_user.id, Brand.is_default == True).execution_options(populate_existing=True)
+            select(Brand).where(Brand.user_id == test_user.id, Brand.is_default).execution_options(populate_existing=True)
         )
         assert result.scalars().first() is None
 

@@ -1,11 +1,11 @@
 ﻿"""
 API endpoints dla Autopilota.
 """
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Optional
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_current_user
@@ -322,9 +322,9 @@ async def generate_posts(
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Generation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+    except Exception:
+        logger.exception("Generation failed for config %s", config_id)
+        raise HTTPException(status_code=500, detail="Post generation failed. Please try again.")
 
 
 # === QUEUE ENDPOINTS ===

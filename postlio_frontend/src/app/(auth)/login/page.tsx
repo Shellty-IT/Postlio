@@ -75,8 +75,8 @@ export default function LoginPage() {
                 try {
                     const result = await authApi.handleOAuthLoginCallback(platform, oauthCode, oauthState);
 
-                    if (result.success && result.access_token && result.refresh_token && result.user) {
-                        TokenManager.setTokens(result.access_token, result.refresh_token);
+                    if (result.success && result.access_token && result.user) {
+                        TokenManager.setAccessToken(result.access_token);
                         authLogin(result.user);
 
                         toast.success(result.is_new_user ? 'Konto utworzone!' : 'Zalogowano!', {

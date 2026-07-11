@@ -596,7 +596,7 @@ class LinkedInService(BaseSocialService):
         else:
             try:
                 error_data = response.json()
-            except:
+            except Exception:
                 error_data = {"message": response.text}
 
             return PublishResult(

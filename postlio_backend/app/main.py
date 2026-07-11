@@ -5,8 +5,13 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 import asyncio
 
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
 from app.config import settings
 from app.database import init_db, close_db
+from app.api.rate_limit import limiter
 from app.api.v1 import auth, posts, brands, ai, autopilot, social
 from app.api.exceptions import register_exception_handlers
 from app.services.scheduler_service import start_scheduler, stop_scheduler
@@ -72,9 +77,17 @@ app = FastAPI(
 
 register_exception_handlers(app)
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
+_cors_origins = [settings.FRONTEND_URL]
+if settings.DEBUG:
+    _cors_origins.append("http://localhost:3000")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL, "http://localhost:3000"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

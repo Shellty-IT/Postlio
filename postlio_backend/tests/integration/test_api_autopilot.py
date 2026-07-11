@@ -10,7 +10,6 @@ Tests cover:
 - Statistics
 """
 import pytest
-from datetime import datetime, timedelta
 from httpx import AsyncClient
 
 

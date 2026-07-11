@@ -7,22 +7,50 @@ import hmac
 import hashlib
 import base64
 import json
+import logging
 import time
 import secrets
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel
 from typing import Optional
 
 from app.api.deps import get_db, get_current_user
+from app.api.rate_limit import limiter
 from app.models.user import User
-from app.schemas.user import UserRegister, UserLogin, UserResponse, Token, OnboardingComplete
+from app.schemas.user import UserRegister, UserLogin, UserResponse, AccessTokenResponse, OnboardingComplete
 from app.utils.security import hash_password, verify_password, create_tokens, decode_token
 from app.config import settings
 from app.services.social import social_manager, SocialPlatform
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+REFRESH_COOKIE_NAME = "refresh_token"
+REFRESH_COOKIE_PATH = f"{settings.API_V1_PREFIX}/auth"
+
+
+def _set_refresh_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite="none" if not settings.DEBUG else "lax",
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        path=REFRESH_COOKIE_PATH,
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        path=REFRESH_COOKIE_PATH,
+        secure=not settings.DEBUG,
+        samesite="none" if not settings.DEBUG else "lax",
+    )
 
 
 # ==================== Schemas ====================
@@ -46,10 +74,9 @@ class OAuthLoginCallbackRequest(BaseModel):
 
 
 class OAuthLoginResponse(BaseModel):
-    """Response po OAuth login."""
+    """Response po OAuth login. Refresh token jest ustawiany jako httpOnly cookie."""
     success: bool
     access_token: Optional[str] = None
-    refresh_token: Optional[str] = None
     user: Optional[UserResponse] = None
     is_new_user: bool = False
     error: Optional[str] = None
@@ -116,7 +143,9 @@ def verify_login_state_token(state: str) -> Optional[dict]:
 # ==================== Standard Auth Endpoints ====================
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def register(
+        request: Request,
         user_data: UserRegister,
         db: AsyncSession = Depends(get_db),
 ):
@@ -141,12 +170,15 @@ async def register(
     return user
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=AccessTokenResponse)
+@limiter.limit("10/minute")
 async def login(
+        request: Request,
+        response: Response,
         user_data: UserLogin,
         db: AsyncSession = Depends(get_db),
 ):
-    """Login and get access token."""
+    """Login and get access token. Refresh token is set as an httpOnly cookie."""
     result = await db.execute(select(User).where(User.email == user_data.email))
     user = result.scalar_one_or_none()
 
@@ -163,19 +195,24 @@ async def login(
         )
 
     access_token, refresh_token = create_tokens(user.id)
+    _set_refresh_cookie(response, refresh_token)
 
-    return Token(
-        access_token=access_token,
-        refresh_token=refresh_token,
-    )
+    return AccessTokenResponse(access_token=access_token)
 
 
-@router.post("/refresh", response_model=Token)
+@router.post("/refresh", response_model=AccessTokenResponse)
 async def refresh_token(
-        refresh_token: str,
+        response: Response,
         db: AsyncSession = Depends(get_db),
+        refresh_token: Optional[str] = Cookie(None, alias=REFRESH_COOKIE_NAME),
 ):
-    """Refresh access token."""
+    """Refresh access token using the httpOnly refresh cookie."""
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No refresh token provided",
+        )
+
     payload = decode_token(refresh_token)
 
     if not payload or payload.get("type") != "refresh":
@@ -196,11 +233,16 @@ async def refresh_token(
         )
 
     new_access_token, new_refresh_token = create_tokens(user.id)
+    _set_refresh_cookie(response, new_refresh_token)
 
-    return Token(
-        access_token=new_access_token,
-        refresh_token=new_refresh_token,
-    )
+    return AccessTokenResponse(access_token=new_access_token)
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    """Clear the refresh token cookie."""
+    _clear_refresh_cookie(response)
+    return {"success": True}
 
 
 @router.get("/me", response_model=UserResponse)
@@ -266,6 +308,7 @@ async def init_oauth_login(
 async def oauth_login_callback(
         platform: str,
         request: OAuthLoginCallbackRequest,
+        response: Response,
         db: AsyncSession = Depends(get_db),
 ):
     """
@@ -367,21 +410,20 @@ async def oauth_login_callback(
 
         # Utwórz tokeny JWT
         access_token, refresh_token = create_tokens(user.id)
+        _set_refresh_cookie(response, refresh_token)
 
         return OAuthLoginResponse(
             success=True,
             access_token=access_token,
-            refresh_token=refresh_token,
             user=UserResponse.model_validate(user),
             is_new_user=is_new_user,
         )
 
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
+    except Exception:
+        logger.exception("OAuth login callback failed for platform %s", platform)
 
         return OAuthLoginResponse(
             success=False,
             error="server_error",
-            error_description=str(e)
+            error_description="An unexpected error occurred during login. Please try again."
         )
