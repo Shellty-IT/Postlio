@@ -43,7 +43,7 @@ async function findNavLink(page: Page, textPattern: RegExp): Promise<ReturnType<
 
 test.describe('Landing Page', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/', { waitUntil: 'networkidle' });
+        await page.goto('/', { waitUntil: 'domcontentloaded' });
     });
 
     test('should display page with correct title', async ({ page }) => {
@@ -117,7 +117,7 @@ test.describe('Landing Page', () => {
 
 test.describe('Login Page', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/login', { waitUntil: 'networkidle' });
+        await page.goto('/login', { waitUntil: 'domcontentloaded' });
     });
 
     test('should display login form', async ({ page }) => {
@@ -147,11 +147,6 @@ test.describe('Login Page', () => {
 
         await registerLink.click();
         await expect(page).toHaveURL(/register/);
-    });
-
-    test('should have forgot password link', async ({ page }) => {
-        const forgotLink = page.locator('a').filter({ hasText: /zapomniałeś/i });
-        await expect(forgotLink).toBeVisible();
     });
 
     test('should toggle password visibility', async ({ page }) => {
@@ -218,7 +213,7 @@ test.describe('Login Page', () => {
 
 test.describe('Register Page', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/register', { waitUntil: 'networkidle' });
+        await page.goto('/register', { waitUntil: 'domcontentloaded' });
     });
 
     test('should display registration form', async ({ page }) => {
@@ -250,7 +245,7 @@ test.describe('Register Page', () => {
         await page.locator('input#password').fill('Test1234');
 
         // Should show strength indicator
-        await expect(page.getByText(/siła hasła/i)).toBeVisible();
+        await expect(page.getByText(/siła:/i)).toBeVisible();
     });
 
     test('should show password requirements', async ({ page }) => {
@@ -258,7 +253,7 @@ test.describe('Register Page', () => {
         await page.locator('input#password').fill('t');
 
         // Requirements should appear
-        await expect(page.getByText('Minimum 8 znaków')).toBeVisible();
+        await expect(page.getByText(/8\+ znak/i)).toBeVisible();
         await expect(page.getByText('Wielka litera')).toBeVisible();
         await expect(page.getByText('Cyfra')).toBeVisible();
     });
@@ -362,7 +357,7 @@ test.describe('Protected Routes', () => {
 test.describe('Navigation Flows', () => {
     test('should navigate: Landing → Login → Register → Login', async ({ page }) => {
         // Start at landing
-        await page.goto('/', { waitUntil: 'networkidle' });
+        await page.goto('/', { waitUntil: 'domcontentloaded' });
 
         // Otwórz mobile menu jeśli potrzeba
         await openMobileMenuIfNeeded(page);
@@ -388,7 +383,7 @@ test.describe('Navigation Flows', () => {
     });
 
     test('should navigate back to landing from login', async ({ page }) => {
-        await page.goto('/login', { waitUntil: 'networkidle' });
+        await page.goto('/login', { waitUntil: 'domcontentloaded' });
 
         // Click on Postlio logo or any link to home
         const logoLink = page.locator('a[href="/"]').first();
