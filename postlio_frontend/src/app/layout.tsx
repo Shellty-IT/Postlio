@@ -8,10 +8,32 @@ import './globals.css';
 export const metadata: Metadata = {
     metadataBase: new URL('https://postlio.netlify.app'),
     title: {
-        default: 'Postlio - AI Social Media Manager',
+        default: 'Postlio \u2014 AI do social medi\u00f3w',
         template: '%s | Postlio',
     },
-    description: 'Automatyzuj tworzenie postów na social media z pomocą AI.',
+    description: 'Tw\u00f3rz, planuj i publikuj tre\u015bci na Facebooku, Instagramie i LinkedInie. Postlio \u0142\u0105czy kreator AI, g\u0142os marki i Autopilot w jednym miejscu.',
+    openGraph: {
+        type: 'website',
+        locale: 'pl_PL',
+        url: '/',
+        siteName: 'Postlio',
+        title: 'Postlio \u2014 AI do social medi\u00f3w',
+        description: 'Tw\u00f3rz, planuj i publikuj tre\u015bci na Facebooku, Instagramie i LinkedInie. Kreator AI, g\u0142os marki i Autopilot w jednym miejscu.',
+        images: [
+            {
+                url: '/og-image.jpg',
+                width: 1200,
+                height: 630,
+                alt: 'Postlio \u2014 Autopilot AI do social medi\u00f3w',
+            },
+        ],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Postlio \u2014 AI do social medi\u00f3w',
+        description: 'Tw\u00f3rz, planuj i publikuj tre\u015bci na Facebooku, Instagramie i LinkedInie. Kreator AI, g\u0142os marki i Autopilot w jednym miejscu.',
+        images: ['/og-image.jpg'],
+    },
     manifest: '/manifest.json',
     icons: {
         icon: '/favicon.svg',
