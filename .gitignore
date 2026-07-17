@@ -150,3 +150,6 @@ $RECYCLE.BIN/
 .claude/
 CLAUDE.md
 AGENTS.md
+
+# Accidental root-level file
+/P
