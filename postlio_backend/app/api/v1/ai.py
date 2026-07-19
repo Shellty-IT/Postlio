@@ -180,12 +180,9 @@ async def generate_image(
         payload: GenerateImageRequest,
         current_user: User = Depends(get_current_user),
 ):
-    provider = image_ai_manager.get_provider(
-        payload.provider.value if payload.provider else None
-    )
-
-    result = await provider.generate_image(
+    result = await image_ai_manager.generate_image(
         prompt=payload.prompt,
+        provider=payload.provider.value if payload.provider else None,
         style=payload.style.value if payload.style else None,
         width=payload.width,
         height=payload.height,

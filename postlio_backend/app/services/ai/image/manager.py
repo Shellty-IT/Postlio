@@ -1,11 +1,13 @@
 # postlio_backend/app/services/ai/image/manager.py
 
+import base64
 import logging
 from typing import Dict, List, Optional, Any
 from app.config import settings
 from app.services.ai.image.base import BaseImageProvider, ImageProvider
 from app.services.ai.image.pollinations import PollinationsProvider
 from app.services.ai.image.huggingface import HuggingFaceProvider
+from app.services.storage import r2_storage
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +113,39 @@ class ImageAIManager:
             height=height,
             model=model,
         )
+
+        if result.get("success"):
+            result = await self._persist_to_r2(result)
+
+        return result
+
+    async def _persist_to_r2(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Zamienia efemeryczny URL/base64 providera na trwaly, publiczny URL w R2.
+
+        Bez tego zapisane posty tracą obrazy (tymczasowe URL-e wygasają albo
+        wymagają autoryzacji), a Instagram Content Publishing API i tak nie
+        przyjmie ani base64, ani URL-a chronionego nagłówkiem Authorization.
+        """
+        image_base64 = result.get("image_base64")
+        if not image_base64:
+            return result
+
+        try:
+            image_bytes = base64.b64decode(image_base64)
+        except Exception as e:
+            logger.error("Failed to decode generated image before R2 upload: %s", e)
+            return result
+
+        public_url = await r2_storage.upload_image(image_bytes)
+        if public_url:
+            result["image_url"] = public_url
+            result["storage_persisted"] = True
+        else:
+            # Bez trwalego URL-a obraz zniknie z zapisanego posta i nie da sie go
+            # opublikowac na Instagramie - flaga pozwala UI to zasygnalizowac.
+            logger.error("R2 upload unavailable/failed, image_url stays ephemeral")
+            result["storage_persisted"] = False
 
         return result
 

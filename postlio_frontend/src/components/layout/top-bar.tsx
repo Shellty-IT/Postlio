@@ -3,12 +3,11 @@
 'use client';
 
 import { useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
     Search,
     Command,
-    Plus,
     LayoutDashboard,
     PenTool,
     Calendar,
@@ -170,7 +169,6 @@ function PageTitle({ config }: PageTitleProps) {
 
 export function TopBar() {
     const pathname = usePathname();
-    const router = useRouter();
     const { selectedBrand } = useBrandsStore();
     const [searchOpen, setSearchOpen] = useState(false);
 
@@ -247,30 +245,6 @@ export function TopBar() {
                             </TooltipTrigger>
                             <TooltipContent>
                                 <p>Szybkie wyszukiwanie (⌘K)</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-
-                    {/* Quick create - ✅ Responsywne */}
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    size="icon"
-                                    className={cn(
-                                        "flex-shrink-0 h-9 w-9 sm:h-10 sm:w-auto sm:px-3 rounded-xl",
-                                        "bg-gradient-to-br from-primary to-accent hover:brightness-110",
-                                        "shadow-glow-primary"
-                                    )}
-                                    onClick={() => router.push('/creator')}
-                                    aria-label="Utwórz nowy post"
-                                >
-                                    <Plus className="h-5 w-5 sm:h-4 sm:w-4 sm:mr-1" />
-                                    <span className="hidden sm:inline">Nowy</span>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Utwórz nowy post</p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>

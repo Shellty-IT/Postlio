@@ -13,6 +13,7 @@ from typing import Optional
 import pytz
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +22,7 @@ from app.database import async_session_maker
 from app.models.autopilot import AutopilotConfig
 from app.services.autopilot_service import AutopilotService
 from app.services.publish_service import PublishService
+from app.services.storage import cleanup_orphaned_images
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +68,19 @@ class SchedulerService:
             max_instances=1,
         )
 
+        # Job 3: Cotygodniowe czyszczenie osieroconych obrazow w R2
+        self.scheduler.add_job(
+            self._check_r2_cleanup,
+            trigger=CronTrigger(day_of_week="sun", hour=3, minute=0),
+            id="r2_cleanup",
+            name="R2 Orphaned Images Cleanup",
+            replace_existing=True,
+            max_instances=1,
+        )
+
         self.scheduler.start()
         self._is_running = True
-        logger.info("🕐 Scheduler started - generation & publishing every minute")
+        logger.info("🕐 Scheduler started - generation & publishing every minute, R2 cleanup weekly")
 
     async def stop(self):
         """Zatrzymaj scheduler."""
@@ -201,6 +213,22 @@ class SchedulerService:
         except Exception as e:
             logger.error(f"Error in publish queue check: {e}")
 
+    # ==================== R2 Cleanup ====================
+
+    async def _check_r2_cleanup(self):
+        """Usuń z R2 obrazy nieużywane przez żaden Post ani AutopilotQueueItem."""
+        logger.debug("Running R2 orphaned images cleanup...")
+
+        try:
+            async with async_session_maker() as db:
+                stats = await cleanup_orphaned_images(db)
+
+                if stats.get("deleted"):
+                    logger.info(f"🧹 R2 cleanup: deleted {stats['deleted']} orphaned images")
+
+        except Exception as e:
+            logger.error(f"Error in R2 cleanup: {e}")
+
     # ==================== Manual Triggers (for API) ====================
 
     async def trigger_generation_check(self):
@@ -210,6 +238,10 @@ class SchedulerService:
     async def trigger_publish_check(self):
         """Ręcznie uruchom sprawdzanie publikacji."""
         await self._check_publish_queue()
+
+    async def trigger_r2_cleanup(self):
+        """Ręcznie uruchom czyszczenie osieroconych obrazów w R2."""
+        await self._check_r2_cleanup()
 
 
 # Singleton instance

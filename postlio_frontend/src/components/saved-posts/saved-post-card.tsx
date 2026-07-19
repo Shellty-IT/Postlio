@@ -15,11 +15,8 @@ import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import {
-    MoreHorizontal,
     Edit3,
-    Calendar,
     Trash2,
-    Hand,
     Copy,
     Image as ImageIcon,
     Sparkles,
@@ -34,13 +31,6 @@ import {
 
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
     Tooltip,
     TooltipContent,
@@ -339,10 +329,10 @@ export const SavedPostCard = forwardRef<HTMLDivElement, SavedPostCardProps>(
                                         onClick={() => onPublish?.(post)}
                                         className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] border border-white/[0.08] text-accent transition-colors hover:bg-accent/10"
                                     >
-                                        <Hand className="h-3.5 w-3.5" />
+                                        <Send className="h-3.5 w-3.5" />
                                     </button>
                                 </TooltipTrigger>
-                                <TooltipContent>Opublikuj ręcznie</TooltipContent>
+                                <TooltipContent>Opublikuj</TooltipContent>
                             </Tooltip>
 
                             <Tooltip>
@@ -357,41 +347,20 @@ export const SavedPostCard = forwardRef<HTMLDivElement, SavedPostCardProps>(
                                 </TooltipTrigger>
                                 <TooltipContent>Duplikuj</TooltipContent>
                             </Tooltip>
-                        </TooltipProvider>
 
-                        {/* More options dropdown */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button
-                                    type="button"
-                                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] border border-white/[0.08] text-muted-foreground transition-colors hover:bg-white/[0.05] hover:text-foreground"
-                                >
-                                    <MoreHorizontal className="h-3.5 w-3.5" />
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem onClick={() => onEdit?.(post)}>
-                                    <Edit3 className="h-4 w-4 mr-2" />
-                                    Edytuj
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => onDuplicate?.(post)}>
-                                    <Copy className="h-4 w-4 mr-2" />
-                                    Duplikuj
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => onSchedule?.(post)}>
-                                    <Calendar className="h-4 w-4 mr-2" />
-                                    Zaplanuj
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    onClick={() => onDelete?.(post)}
-                                    className="text-destructive focus:text-destructive"
-                                >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Usuń
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        type="button"
+                                        onClick={() => onDelete?.(post)}
+                                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] border border-white/[0.08] text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Usuń</TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                     </div>
                 </div>
             </motion.div>

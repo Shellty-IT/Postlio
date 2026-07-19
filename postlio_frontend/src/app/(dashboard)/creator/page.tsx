@@ -419,7 +419,7 @@ export default function CreatorPage() {
     const isSaving = createPostMutation.isPending || updatePostMutation.isPending;
 
     return (
-        <div className="flex flex-col h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] overflow-hidden -mx-3 xs:-mx-4 sm:-mx-6 lg:-mx-8 -mb-4">
+        <div className="flex flex-col h-[calc(100vh-9.5rem)] xs:h-[calc(100vh-10.5rem)] sm:h-[calc(100vh-11rem)] lg:h-[calc(100vh-6.5rem)] overflow-hidden -mx-3 xs:-mx-4 sm:-mx-6 lg:-mx-8 -mb-4">
             <div className="flex-shrink-0 border-b border-border/40 bg-background/50 backdrop-blur-sm">
                 <div className="px-3 py-3 xs:px-4 xs:py-4 sm:p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">

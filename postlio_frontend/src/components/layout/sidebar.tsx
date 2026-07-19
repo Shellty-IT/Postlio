@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useSidebar, useDock, type DockMode } from '@/store/ui-store';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,9 +28,10 @@ import {
     Settings,
     ChevronLeft,
     ChevronRight,
+    ChevronUp,
+    ChevronDown,
     LogOut,
     Zap,
-    Plus,
     GripVertical,
     Pin,
     PanelLeft,
@@ -73,7 +74,6 @@ export function badgeClass(badge: string) {
 
 export function Sidebar() {
     const pathname = usePathname();
-    const router = useRouter();
     const { isCollapsed, setCollapsed } = useSidebar();
     const { mode, position, setMode, setPosition } = useDock();
     const { user, logout } = useAuth();
@@ -81,6 +81,7 @@ export function Sidebar() {
     const panelRef = useRef<HTMLDivElement>(null);
     const dragOffset = useRef({ x: 0, y: 0 });
     const rafId = useRef<number | null>(null);
+    const dragOriginMode = useRef<DockMode>(mode);
     const [drag, setDrag] = useState<DragState | null>(null);
     const isDragging = drag !== null;
 
@@ -110,10 +111,12 @@ export function Sidebar() {
     const startDrag = (e: React.PointerEvent) => {
         if (e.button !== 0) return;
         e.preventDefault();
+        dragOriginMode.current = mode;
         const rect = panelRef.current?.getBoundingClientRect();
+        const width = rect?.width ?? panelWidth;
         dragOffset.current = rect
             ? {
-                x: clamp(e.clientX - rect.left, 12, panelWidth - 48),
+                x: clamp(e.clientX - rect.left, 12, width - 48),
                 y: clamp(e.clientY - rect.top, 8, 48),
             }
             : { x: 24, y: 24 };
@@ -153,10 +156,14 @@ export function Sidebar() {
         } else if (vh - e.clientY <= SNAP) {
             setMode('bottom');
         } else {
-            const height = panelRef.current?.getBoundingClientRect().height ?? 560;
+            // Dropping always lands in the tall vertical shape, even if the
+            // drag started from the short bottom-dock bar — measuring the
+            // still-short panelRef here would clamp against the wrong
+            // height and let the panel land off-screen once it expands.
+            const height = Math.min(640, vh - EDGE * 2);
             setPosition({
                 x: clamp(drag.x, EDGE, vw - panelWidth - EDGE),
-                y: clamp(drag.y, EDGE, vh - Math.min(height, vh - EDGE * 2) - EDGE),
+                y: clamp(drag.y, EDGE, vh - height - EDGE),
             });
             setMode('floating');
         }
@@ -220,50 +227,49 @@ export function Sidebar() {
     );
 
     const showBottomDock = mode === 'bottom' && !isDragging;
+    const isBottomShape = isDragging ? dragOriginMode.current === 'bottom' : mode === 'bottom';
     const tooltipSide = showBottomDock ? 'top' : mode === 'right' ? 'left' : 'right';
 
     const verticalContent = (
         <>
             <div className={cn(
-                'flex items-center gap-1.5 px-1 pb-3.5 pt-1',
-                isCollapsed && 'flex-col gap-2'
+                'px-1 pb-3.5 pt-1',
+                isCollapsed && 'flex flex-col items-center gap-2'
             )}>
-                {gripHandle}
-                <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5">
-                    <AppLogo className="h-9 w-9 flex-shrink-0" />
-                    {!isCollapsed && (
-                        <span className="truncate text-lg font-semibold tracking-tight">Postlio</span>
-                    )}
-                </Link>
-
-                {!isCollapsed && (
-                    <div className="ml-auto flex items-center gap-0.5">
-                        {pinMenu('right')}
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setCollapsed(true)}
-                                    className="h-[26px] w-[26px] flex-shrink-0 rounded-lg text-muted-foreground hover:bg-white/[0.05] hover:text-foreground"
-                                >
-                                    <ChevronLeft className="h-3.5 w-3.5" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side={tooltipSide}>Zwiń menu</TooltipContent>
-                        </Tooltip>
-                    </div>
+                {isCollapsed ? (
+                    <>
+                        {gripHandle}
+                        <Link href="/dashboard" className="flex items-center justify-center">
+                            <AppLogo className="h-9 w-9 flex-shrink-0" />
+                        </Link>
+                    </>
+                ) : (
+                    <>
+                        <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5">
+                            <AppLogo className="h-9 w-9 flex-shrink-0" />
+                            <span className="truncate text-lg font-semibold tracking-tight">Postlio</span>
+                        </Link>
+                        <div className="mt-2 flex items-center justify-between gap-0.5">
+                            {gripHandle}
+                            <div className="flex items-center gap-0.5">
+                                {pinMenu('right')}
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => setCollapsed(true)}
+                                            className="h-[26px] w-[26px] flex-shrink-0 rounded-lg text-muted-foreground hover:bg-white/[0.05] hover:text-foreground"
+                                        >
+                                            <ChevronLeft className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side={tooltipSide}>Zwiń menu</TooltipContent>
+                                </Tooltip>
+                            </div>
+                        </div>
+                    </>
                 )}
-            </div>
-
-            <div className="pb-3">
-                <button
-                    onClick={() => router.push('/creator')}
-                    className={cn('btn-gradient w-full py-2.5 text-sm', isCollapsed && 'px-0')}
-                >
-                    <Plus className="h-4 w-4 flex-shrink-0" />
-                    {!isCollapsed && 'Stwórz nowy'}
-                </button>
             </div>
 
             {isCollapsed && (
@@ -402,6 +408,28 @@ export function Sidebar() {
             {navigation.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 const Icon = item.icon;
+
+                if (!isCollapsed) {
+                    return (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className={cn(
+                                'flex flex-col items-center justify-center gap-0.5 rounded-xl px-2.5 py-1 text-[11px] font-medium leading-none transition-all duration-200',
+                                isActive
+                                    ? 'pill-active'
+                                    : 'text-muted-foreground hover:bg-white/[0.045] hover:text-foreground'
+                            )}
+                        >
+                            <Icon className="h-[18px] w-[18px]" />
+                            <span className="flex items-center gap-1 whitespace-nowrap">
+                                {item.title}
+                                {item.badge && <span className={badgeClass(item.badge)}>{item.badge}</span>}
+                            </span>
+                        </Link>
+                    );
+                }
+
                 return (
                     <Tooltip key={item.href}>
                         <TooltipTrigger asChild>
@@ -427,18 +455,6 @@ export function Sidebar() {
             <div className="mx-1.5 h-6 w-px bg-white/[0.08]" />
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <button
-                        onClick={() => router.push('/creator')}
-                        className="btn-gradient h-10 w-10 rounded-xl p-0"
-                        aria-label="Stwórz nowy"
-                    >
-                        <Plus className="h-[18px] w-[18px]" />
-                    </button>
-                </TooltipTrigger>
-                <TooltipContent side="top">Stwórz nowy</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-                <TooltipTrigger asChild>
                     <div className="ml-1 flex h-9 w-9 cursor-default items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent">
                         <span className="text-sm font-semibold text-white">
                             {user?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
@@ -462,6 +478,19 @@ export function Sidebar() {
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top">Wyloguj</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setCollapsed(!isCollapsed)}
+                        className="h-9 w-9 flex-shrink-0 rounded-lg text-muted-foreground hover:bg-white/[0.05] hover:text-foreground"
+                    >
+                        {isCollapsed ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">{isCollapsed ? 'Pokaż opisy' : 'Ukryj opisy'}</TooltipContent>
             </Tooltip>
             {pinMenu('top')}
         </div>
@@ -510,8 +539,10 @@ export function Sidebar() {
                             ? 'left-0 top-0 h-screen p-3'
                             : mode === 'right' && !isDragging
                                 ? 'right-0 top-0 h-screen p-3'
-                                : 'h-[min(640px,calc(100vh-24px))]',
-                    !showBottomDock && (isCollapsed ? 'w-[var(--dock-w-collapsed)]' : 'w-[var(--dock-w-expanded)]')
+                                : isBottomShape
+                                    ? 'h-16'
+                                    : 'h-[min(640px,calc(100vh-24px))]',
+                    !showBottomDock && !isBottomShape && (isCollapsed ? 'w-[var(--dock-w-collapsed)]' : 'w-[var(--dock-w-expanded)]')
                 )}
             >
                 <div
@@ -519,12 +550,12 @@ export function Sidebar() {
                     className={cn(
                         'border border-white/[0.09] bg-gradient-to-b from-white/[0.07] to-white/[0.015] shadow-panel backdrop-blur-2xl',
                         isDragging && 'shadow-glow-primary',
-                        showBottomDock
+                        isBottomShape
                             ? 'flex h-16 max-w-full items-center overflow-x-auto rounded-[22px] px-2 no-scrollbar'
                             : 'flex h-full flex-col gap-1 rounded-[26px] p-3'
                     )}
                 >
-                    {showBottomDock ? bottomContent : verticalContent}
+                    {isBottomShape ? bottomContent : verticalContent}
                 </div>
             </aside>
         </TooltipProvider>

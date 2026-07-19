@@ -544,12 +544,12 @@ export function PostEditor({
                         exit={{ opacity: 0, scale: 0.95 }}
                         className="relative rounded-2xl overflow-hidden border border-white/10"
                     >
-                        <div className="relative w-full h-48 xs:h-64 sm:h-80">
+                        <div className="relative w-full h-48 xs:h-64 sm:h-80 bg-black/20">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 src={imageUrl}
                                 alt="Post image"
-                                className="absolute inset-0 w-full h-full object-cover"
+                                className="absolute inset-0 w-full h-full object-contain"
                             />
                         </div>
                         <div className="absolute top-2 right-2 flex gap-1.5 sm:gap-2">

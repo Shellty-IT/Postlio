@@ -65,6 +65,18 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
 
+    # ==================== CLOUDFLARE R2 (magazyn obrazow) ====================
+
+    R2_ACCOUNT_ID: Optional[str] = None
+    R2_ACCESS_KEY_ID: Optional[str] = None
+    R2_SECRET_ACCESS_KEY: Optional[str] = None
+    R2_BUCKET_NAME: Optional[str] = None
+    R2_ENDPOINT_URL: Optional[str] = None
+    R2_PUBLIC_URL: Optional[str] = None
+    # Bezpiecznik: odmawia uploadu, zanim zbliżymy się do darmowego limitu R2.
+    # Cloudflare liczy 10 GB dziesiętnie (10^9 B); 8000 MiB = 8.39 GB, czyli ~16% zapasu.
+    R2_SAFETY_LIMIT_MB: int = 8000
+
     # OAuth Callback URLs
     @property
     def facebook_redirect_uri(self) -> str:
