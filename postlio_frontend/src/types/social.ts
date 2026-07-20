@@ -33,199 +33,11 @@ export type ConnectionStatus = 'connected' | 'disconnected' | 'expired' | 'error
 
 export type PublishMethod = 'auto' | 'share_dialog' | 'manual_copy';
 
-// ==================== Account Type Sets ====================
-
-export const BUSINESS_ACCOUNT_TYPES: AccountType[] = [
-    'facebook_page',
-    'instagram_business',
-    'instagram_creator',
-    'linkedin_company',
-];
-
-export const PERSONAL_ACCOUNT_TYPES: AccountType[] = [
-    'facebook_personal',
-    'instagram_personal',
-    'linkedin_personal',
-    'linkedin_profile',
-];
-
-// ==================== Account Capabilities ====================
-
-export interface AccountCapabilities {
-    platform: SocialPlatform;
-    is_business: boolean;
-    supports_auto_publish: boolean;
-    supports_autopilot: boolean;
-    supports_images: boolean;
-    supports_videos: boolean;
-    supports_links: boolean;
-    supports_scheduling: boolean;
-    supports_share_dialog: boolean;
-    supports_deeplink: boolean;
-    max_text_length: number;
-    max_hashtags?: number;
-    requires_image: boolean;
-    display_name: string;
-    description: string;
-    icon: string;
-    publish_method: PublishMethod;
-}
-
-export const ACCOUNT_CAPABILITIES: Record<AccountType, AccountCapabilities> = {
-    // === FACEBOOK ===
-    facebook_page: {
-        platform: 'facebook',
-        is_business: true,
-        supports_auto_publish: true,
-        supports_autopilot: true,
-        supports_images: true,
-        supports_videos: true,
-        supports_links: true,
-        supports_scheduling: true,
-        supports_share_dialog: false,
-        supports_deeplink: true,
-        max_text_length: 63206,
-        requires_image: false,
-        display_name: 'Strona Facebook',
-        description: 'Pełny dostęp do automatycznej publikacji',
-        icon: 'facebook-page',
-        publish_method: 'auto',
-    },
-    facebook_personal: {
-        platform: 'facebook',
-        is_business: false,
-        supports_auto_publish: false,
-        supports_autopilot: false,
-        supports_images: true,
-        supports_videos: true,
-        supports_links: true,
-        supports_scheduling: false,
-        supports_share_dialog: true,
-        supports_deeplink: true,
-        max_text_length: 63206,
-        requires_image: false,
-        display_name: 'Profil Facebook',
-        description: 'Publikacja przez okno udostępniania',
-        icon: 'facebook-profile',
-        publish_method: 'share_dialog',
-    },
-
-    // === INSTAGRAM ===
-    instagram_business: {
-        platform: 'instagram',
-        is_business: true,
-        supports_auto_publish: true,
-        supports_autopilot: true,
-        supports_images: true,
-        supports_videos: true,
-        supports_links: false,
-        supports_scheduling: true,
-        supports_share_dialog: false,
-        supports_deeplink: true,
-        max_text_length: 2200,
-        max_hashtags: 30,
-        requires_image: true,
-        display_name: 'Instagram Business',
-        description: 'Pełny dostęp do automatycznej publikacji',
-        icon: 'instagram-business',
-        publish_method: 'auto',
-    },
-    instagram_creator: {
-        platform: 'instagram',
-        is_business: true,
-        supports_auto_publish: true,
-        supports_autopilot: true,
-        supports_images: true,
-        supports_videos: true,
-        supports_links: false,
-        supports_scheduling: true,
-        supports_share_dialog: false,
-        supports_deeplink: true,
-        max_text_length: 2200,
-        max_hashtags: 30,
-        requires_image: true,
-        display_name: 'Instagram Creator',
-        description: 'Pełny dostęp do automatycznej publikacji',
-        icon: 'instagram-creator',
-        publish_method: 'auto',
-    },
-    instagram_personal: {
-        platform: 'instagram',
-        is_business: false,
-        supports_auto_publish: false,
-        supports_autopilot: false,
-        supports_images: true,
-        supports_videos: true,
-        supports_links: false,
-        supports_scheduling: false,
-        supports_share_dialog: false,
-        supports_deeplink: true,
-        max_text_length: 2200,
-        max_hashtags: 30,
-        requires_image: true,
-        display_name: 'Instagram (osobiste)',
-        description: 'Kopiuj treść i opublikuj ręcznie w aplikacji',
-        icon: 'instagram-personal',
-        publish_method: 'manual_copy',
-    },
-
-    // === LINKEDIN ===
-    linkedin_company: {
-        platform: 'linkedin',
-        is_business: true,
-        supports_auto_publish: true,
-        supports_autopilot: true,
-        supports_images: true,
-        supports_videos: false,
-        supports_links: true,
-        supports_scheduling: true,
-        supports_share_dialog: false,
-        supports_deeplink: true,
-        max_text_length: 3000,
-        requires_image: false,
-        display_name: 'Strona firmowa LinkedIn',
-        description: 'Pełny dostęp do automatycznej publikacji',
-        icon: 'linkedin-company',
-        publish_method: 'auto',
-    },
-    linkedin_personal: {
-        platform: 'linkedin',
-        is_business: false,
-        supports_auto_publish: false,
-        supports_autopilot: false,
-        supports_images: true,
-        supports_videos: false,
-        supports_links: true,
-        supports_scheduling: false,
-        supports_share_dialog: true,
-        supports_deeplink: true,
-        max_text_length: 3000,
-        requires_image: false,
-        display_name: 'Profil LinkedIn',
-        description: 'Publikacja przez okno udostępniania',
-        icon: 'linkedin-profile',
-        publish_method: 'share_dialog',
-    },
-    // Alias dla kompatybilności wstecznej
-    linkedin_profile: {
-        platform: 'linkedin',
-        is_business: false,
-        supports_auto_publish: false,
-        supports_autopilot: false,
-        supports_images: true,
-        supports_videos: false,
-        supports_links: true,
-        supports_scheduling: false,
-        supports_share_dialog: true,
-        supports_deeplink: true,
-        max_text_length: 3000,
-        requires_image: false,
-        display_name: 'Profil LinkedIn',
-        description: 'Publikacja przez okno udostępniania',
-        icon: 'linkedin-profile',
-        publish_method: 'share_dialog',
-    },
-};
+// Uwaga: nie duplikujemy tu tabeli mozliwosci per typ konta (auto-publish,
+// share dialog, limity znakow, display_name...) - backend jest jedynym
+// zrodlem prawdy (app/schemas/social.py -> ACCOUNT_CAPABILITIES) i zwraca
+// juz wyliczone pola bezposrednio na kazdym koncie (patrz ConnectedAccount
+// nizej) oraz zbiorczo w GET /social/capabilities.
 
 // ==================== Platform Info ====================
 
@@ -403,18 +215,6 @@ export interface ManualPublishInfo {
 
 // ==================== Helper Functions ====================
 
-export function isBusinessAccountType(accountType: AccountType): boolean {
-    return BUSINESS_ACCOUNT_TYPES.includes(accountType);
-}
-
-export function isPersonalAccountType(accountType: AccountType): boolean {
-    return PERSONAL_ACCOUNT_TYPES.includes(accountType);
-}
-
-export function getAccountCapabilities(accountType: AccountType): AccountCapabilities {
-    return ACCOUNT_CAPABILITIES[accountType];
-}
-
 export function getPlatformColor(platform: SocialPlatform): string {
     const colors: Record<SocialPlatform, string> = {
         facebook: '#1877F2',
@@ -431,8 +231,4 @@ export function getPlatformName(platform: SocialPlatform): string {
         linkedin: 'LinkedIn',
     };
     return names[platform];
-}
-
-export function getAccountTypeLabel(accountType: AccountType): string {
-    return ACCOUNT_CAPABILITIES[accountType]?.display_name ?? accountType;
 }

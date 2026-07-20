@@ -1,9 +1,10 @@
 // src/app/(dashboard)/autopilot/page.tsx
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import {
     Loader2,
@@ -44,6 +45,7 @@ import {
     useQueueStats,
     useGeneratePosts,
 } from '@/hooks/useAutopilot';
+import { useConnectedAccounts } from '@/hooks/useSocial';
 import type { BackendAutopilotConfigCreate, BackendAutopilotConfigUpdate } from '@/types/autopilot';
 
 export default function AutopilotPage() {
@@ -103,6 +105,52 @@ export default function AutopilotPage() {
             : selectedConfig.is_active
                 ? 'review'
                 : 'offline';
+
+    const { data: accountsData } = useConnectedAccounts();
+    const connectedAccounts = accountsData?.accounts ?? [];
+
+    // "Pełny Autopilot" (publikacja bez zatwierdzenia) wymaga, żeby KAŻDA
+    // platforma configu miała podłączone konto zdolne do auto-publikacji.
+    // LinkedIn jest zablokowany zawsze — automatyczna publikacja bez udziału
+    // człowieka narusza §3.1(26) LinkedIn API Terms of Use (zbadane wcześniej
+    // w tej sesji). Reużywa is_business_account/supports_auto_publish z
+    // /social/accounts (Etap 1) - zero nowej logiki klasyfikacji kont.
+    const fullAutopilotBlockedReason = useMemo(() => {
+        if (!selectedConfig || !hasPlatforms) {
+            return 'Wybierz najpierw platformy publikacji.';
+        }
+        if (selectedConfig.platforms.includes('linkedin')) {
+            return 'LinkedIn wymaga zatwierdzenia każdego posta przez człowieka (regulamin LinkedIn API) — dostępny tylko tryb "Do akceptacji".';
+        }
+        const platformWithoutAutoAccount = selectedConfig.platforms.find((platform) => {
+            const accountId = selectedConfig.social_account_mapping?.[platform];
+            const account = connectedAccounts.find((a) => a.id === accountId);
+            return !account?.supports_auto_publish;
+        });
+        if (platformWithoutAutoAccount) {
+            return `Konto podłączone dla platformy "${platformWithoutAutoAccount}" nie wspiera automatycznej publikacji (wymaga Strony/konta firmowego).`;
+        }
+        return null;
+    }, [selectedConfig, hasPlatforms, connectedAccounts]);
+
+    const canUseFullAutopilot = fullAutopilotBlockedReason === null;
+
+    const handleSelectWorkMode = (mode: 'offline' | 'review' | 'full') => {
+        if (!selectedConfigId) {
+            setCreateModalOpen(true);
+            return;
+        }
+        if (mode === 'full' && !canUseFullAutopilot) return;
+
+        const updates =
+            mode === 'offline'
+                ? { is_active: false }
+                : mode === 'review'
+                    ? { is_active: true, auto_publish_on_approve: false }
+                    : { is_active: true, auto_publish_on_approve: true };
+
+        updateConfig.mutate({ configId: selectedConfigId, data: updates });
+    };
 
     const nextAiAction = !selectedConfig
         ? 'Czekam, aż wybierzesz platformy i markę.'
@@ -254,12 +302,14 @@ export default function AutopilotPage() {
                         </div>
 
                         <div className="relative z-10 grid grid-cols-1 xs:grid-cols-3 gap-3">
-                            <div
+                            <button
+                                type="button"
+                                onClick={() => handleSelectWorkMode('offline')}
                                 className={cn(
-                                    'rounded-2xl p-4 border flex flex-col gap-2.5',
+                                    'rounded-2xl p-4 border flex flex-col gap-2.5 text-left cursor-pointer transition-colors',
                                     workMode === 'offline'
                                         ? 'border-white/10 bg-white/[0.035]'
-                                        : 'border-white/[0.07] bg-white/[0.02]'
+                                        : 'border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.05]'
                                 )}
                             >
                                 <div className="flex items-center justify-between">
@@ -276,11 +326,13 @@ export default function AutopilotPage() {
                                 <div className="text-xs text-muted-foreground leading-relaxed">
                                     Bez automatyzacji — publikujesz ręcznie z Kreatora.
                                 </div>
-                            </div>
+                            </button>
 
-                            <div
+                            <button
+                                type="button"
+                                onClick={() => handleSelectWorkMode('review')}
                                 className={cn(
-                                    'rounded-2xl p-4 border flex flex-col gap-2.5 cursor-pointer transition-colors',
+                                    'rounded-2xl p-4 border flex flex-col gap-2.5 text-left cursor-pointer transition-colors',
                                     workMode === 'review'
                                         ? 'border-primary/40 bg-primary/[0.1]'
                                         : 'border-primary/30 bg-primary/[0.08] hover:bg-primary/[0.13]'
@@ -298,31 +350,46 @@ export default function AutopilotPage() {
                                 <div className="text-xs text-muted-foreground leading-relaxed">
                                     AI tworzy treści, Ty zatwierdzasz przed publikacją.
                                 </div>
-                            </div>
+                            </button>
 
-                            <div
-                                className={cn(
-                                    'rounded-2xl p-4 border flex flex-col gap-2.5 cursor-pointer transition-colors',
-                                    workMode === 'full'
-                                        ? 'border-white/10 bg-white/[0.06]'
-                                        : 'border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.06]'
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSelectWorkMode('full')}
+                                        disabled={!canUseFullAutopilot}
+                                        className={cn(
+                                            'rounded-2xl p-4 border flex flex-col gap-2.5 text-left transition-colors',
+                                            !canUseFullAutopilot
+                                                ? 'cursor-not-allowed opacity-50 border-white/[0.07] bg-white/[0.02]'
+                                                : 'cursor-pointer',
+                                            canUseFullAutopilot && workMode === 'full'
+                                                ? 'border-white/10 bg-white/[0.06]'
+                                                : canUseFullAutopilot
+                                                    ? 'border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.06]'
+                                                    : ''
+                                        )}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className="w-8 h-8 rounded-[10px] bg-warning/[0.14] flex items-center justify-center text-warning">
+                                                <Rocket className="w-4 h-4" />
+                                            </span>
+                                            {workMode === 'full' && (
+                                                <span className="text-[9.5px] font-semibold px-1.5 py-0.5 rounded-md bg-white/[0.08] text-foreground/80 tracking-wide">
+                                                    OBECNY
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="text-sm font-semibold text-foreground/90">Pełny Autopilot</div>
+                                        <div className="text-xs text-muted-foreground leading-relaxed">
+                                            AI tworzy i publikuje samodzielnie wg harmonogramu.
+                                        </div>
+                                    </button>
+                                </TooltipTrigger>
+                                {!canUseFullAutopilot && fullAutopilotBlockedReason && (
+                                    <TooltipContent className="max-w-xs">{fullAutopilotBlockedReason}</TooltipContent>
                                 )}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <span className="w-8 h-8 rounded-[10px] bg-warning/[0.14] flex items-center justify-center text-warning">
-                                        <Rocket className="w-4 h-4" />
-                                    </span>
-                                    {workMode === 'full' && (
-                                        <span className="text-[9.5px] font-semibold px-1.5 py-0.5 rounded-md bg-white/[0.08] text-foreground/80 tracking-wide">
-                                            OBECNY
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="text-sm font-semibold text-foreground/90">Pełny Autopilot</div>
-                                <div className="text-xs text-muted-foreground leading-relaxed">
-                                    AI tworzy i publikuje samodzielnie wg harmonogramu.
-                                </div>
-                            </div>
+                            </Tooltip>
                         </div>
 
                         <div className="relative z-10 flex flex-wrap items-center gap-3 mt-0.5">

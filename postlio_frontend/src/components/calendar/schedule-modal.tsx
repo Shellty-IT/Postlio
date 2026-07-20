@@ -55,7 +55,15 @@ import { cn } from '@/lib/utils';
 import { Platform } from '@/types';
 import { useCalendarStore } from '@/store/calendar-store';
 import { getPrimaryPlatformFromScheduledPost } from '@/types/calendar';
-import { useCreatePost, useUpdatePost, useDeletePost, useBrands, useGenerateText } from '@/hooks';
+import {
+    useCreatePost,
+    useUpdatePost,
+    useDeletePost,
+    useBrands,
+    useGenerateText,
+    useUpdateQueueItem,
+    useDeleteQueueItem,
+} from '@/hooks';
 
 // Schema walidacji
 const schedulePostSchema = z.object({
@@ -118,6 +126,15 @@ export function ScheduleModal() {
             closeScheduleModal();
         },
     });
+
+    // Posty z Autopilota zyja w osobnej tabeli (AutopilotQueueItem) i maja
+    // wlasne endpointy - ich id w Kalendarzu jest prefiksowane ("autopilot-7"),
+    // wiec wyslanie go do /posts skonczyloby sie bledem.
+    const updateQueueItem = useUpdateQueueItem();
+    const deleteQueueItem = useDeleteQueueItem();
+
+    const isAutopilotPost = selectedPost?.origin === 'autopilot';
+    const autopilotItemId = isAutopilotPost ? Number(String(selectedPost.id).replace('autopilot-', '')) : null;
 
     const generateText = useGenerateText({
         onSuccess: (data) => {
@@ -207,7 +224,18 @@ export function ScheduleModal() {
             `${data.scheduledDate}T${String(data.scheduledHour).padStart(2, '0')}:${String(data.scheduledMinute).padStart(2, '0')}`
         ).toISOString();
 
-        if (isEditing && selectedPost) {
+        if (isEditing && isAutopilotPost && autopilotItemId !== null) {
+            // Kolejka Autopilota wspiera edycję treści i terminu; platforma
+            // i marka pochodzą z konfiguracji Autopilota, więc nie są tu edytowalne.
+            await updateQueueItem.mutateAsync({
+                itemId: autopilotItemId,
+                data: {
+                    content: data.content,
+                    scheduled_for: scheduledAt,
+                },
+            });
+            closeScheduleModal();
+        } else if (isEditing && selectedPost) {
             // ✅ NAPRAWIONE: Używamy platforms[] zamiast platform
             await updatePost.mutateAsync({
                 id: String(selectedPost.id),
@@ -231,7 +259,10 @@ export function ScheduleModal() {
     };
 
     const handleDelete = async () => {
-        if (selectedPost) {
+        if (isAutopilotPost && autopilotItemId !== null) {
+            await deleteQueueItem.mutateAsync(autopilotItemId);
+            closeScheduleModal();
+        } else if (selectedPost) {
             await deletePost.mutateAsync(String(selectedPost.id));
         }
         setShowDeleteAlert(false);
@@ -256,6 +287,16 @@ export function ScheduleModal() {
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                        {isAutopilotPost && (
+                            <div className="flex items-start gap-2.5 rounded-lg border border-accent/25 bg-accent/[0.06] px-3 py-2.5">
+                                <Sparkles className="h-4 w-4 flex-shrink-0 text-accent mt-0.5" />
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                    Ten post pochodzi z <span className="font-medium text-foreground">Autopilota</span>.
+                                    Możesz zmienić treść i termin — platforma oraz marka wynikają z konfiguracji Autopilota.
+                                </p>
+                            </div>
+                        )}
+
                         {/* Platform Selector */}
                         <div className="space-y-2">
                             <Label>Platforma</Label>
@@ -266,11 +307,13 @@ export function ScheduleModal() {
                                             key={platform}
                                             type="button"
                                             onClick={() => handlePlatformSelect(platform)}
+                                            disabled={isAutopilotPost}
                                             className={cn(
                                                 "flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all",
                                                 selectedPlatform === platform
                                                     ? "border-current shadow-md"
-                                                    : "border-transparent bg-white/[0.04] hover:bg-white/[0.07]"
+                                                    : "border-transparent bg-white/[0.04] hover:bg-white/[0.07]",
+                                                isAutopilotPost && "opacity-50 cursor-not-allowed hover:bg-white/[0.04]"
                                             )}
                                             style={{
                                                 color: selectedPlatform === platform ? config.color : undefined,
@@ -294,27 +337,29 @@ export function ScheduleModal() {
                         </div>
 
                         {/* Brand Selector */}
-                        <div className="space-y-2">
-                            <Label>Marka (opcjonalnie)</Label>
-                            <Select onValueChange={(value) => setValue('brandId', value)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Wybierz markę..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {brands.map((brand) => (
-                                        <SelectItem key={brand.id} value={String(brand.id)}>
-                                            <div className="flex items-center gap-2">
-                                                <div
-                                                    className="w-3 h-3 rounded-full"
-                                                    style={{ backgroundColor: brand.primaryColor || '#8B5CF6' }}
-                                                />
-                                                {brand.name}
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        {!isAutopilotPost && (
+                            <div className="space-y-2">
+                                <Label>Marka (opcjonalnie)</Label>
+                                <Select onValueChange={(value) => setValue('brandId', value)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Wybierz markę..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {brands.map((brand) => (
+                                            <SelectItem key={brand.id} value={String(brand.id)}>
+                                                <div className="flex items-center gap-2">
+                                                    <div
+                                                        className="w-3 h-3 rounded-full"
+                                                        style={{ backgroundColor: brand.primaryColor || '#8B5CF6' }}
+                                                    />
+                                                    {brand.name}
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
 
                         {/* Content */}
                         <div className="space-y-2">

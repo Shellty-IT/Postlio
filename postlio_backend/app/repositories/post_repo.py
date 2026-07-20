@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
 
 from app.models.post import Post, PostStatus
+from app.models.autopilot import AutopilotQueueItem
 
 
 class PostRepository:
@@ -62,6 +63,31 @@ class PostRepository:
         if brand_id:
             query = query.where(Post.brand_id == brand_id)
         query = query.order_by(Post.scheduled_at)
+        result = await db.execute(query)
+        return list(result.scalars().all())
+
+    async def get_calendar_autopilot_items(
+        self,
+        db: AsyncSession,
+        user_id: int,
+        start: datetime,
+        end: datetime,
+    ) -> List[AutopilotQueueItem]:
+        """Zatwierdzone/zaplanowane elementy kolejki Autopilota w danym zakresie dat.
+
+        Kalendarz jest jedynym miejscem, w ktorym uzytkownik widzi i przesuwa
+        terminy - obejmuje to takze tresci wygenerowane przez Autopilota, nie
+        tylko posty utworzone recznie w Kreatorze.
+        """
+        query = select(AutopilotQueueItem).where(
+            and_(
+                AutopilotQueueItem.user_id == user_id,
+                AutopilotQueueItem.status.in_(["approved", "scheduled"]),
+                AutopilotQueueItem.scheduled_for >= start,
+                AutopilotQueueItem.scheduled_for <= end,
+            )
+        )
+        query = query.order_by(AutopilotQueueItem.scheduled_for)
         result = await db.execute(query)
         return list(result.scalars().all())
 

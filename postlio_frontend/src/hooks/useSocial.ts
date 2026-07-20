@@ -536,39 +536,8 @@ export function getStatusColor(status: string): string {
     return statusColors[status.toLowerCase()] || 'text-gray-500';
 }
 
-/**
- * Typ konta - tekst do wyświetlenia.
- */
-export function getAccountTypeText(accountType: string): string {
-    const typeTexts: Record<string, string> = {
-        facebook_page: 'Strona Facebook',
-        facebook_personal: 'Profil Facebook',
-        instagram_business: 'Instagram Business',
-        instagram_creator: 'Instagram Creator',
-        instagram_personal: 'Instagram (osobiste)',
-        linkedin_company: 'Strona firmowa LinkedIn',
-        linkedin_personal: 'Profil LinkedIn',
-        linkedin_profile: 'Profil LinkedIn',
-    };
-    return typeTexts[accountType] || accountType;
-}
-
-/**
- * Czy typ konta wspiera automatyczną publikację.
- */
-export function supportsAutoPublish(accountType: string): boolean {
-    const autoPublishTypes = [
-        'facebook_page',
-        'instagram_business',
-        'instagram_creator',
-        'linkedin_company',
-    ];
-    return autoPublishTypes.includes(accountType);
-}
-
-/**
- * Czy typ konta jest kontem firmowym.
- */
-export function isBusinessAccountType(accountType: string): boolean {
-    return supportsAutoPublish(accountType);
-}
+// getAccountTypeText/supportsAutoPublish/isBusinessAccountType zostaly usuniete -
+// byly trzecia niezalezna kopia tabeli mozliwosci kont (po backendowym
+// ACCOUNT_CAPABILITIES i identycznej kopii w types/social.ts). Kazdy
+// ConnectedAccount ma juz pola display_name/supports_auto_publish/
+// is_business_account wyliczone przez backend.

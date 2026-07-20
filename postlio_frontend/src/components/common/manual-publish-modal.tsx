@@ -27,6 +27,8 @@ import {
     Linkedin,
     ClipboardCopy,
     Loader2,
+    Send,
+    ChevronDown,
 } from 'lucide-react';
 
 import {
@@ -44,6 +46,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useUpdatePlatformStatus } from '@/hooks/usePosts';
+import { getShareUrl, resolveManualPublishTarget } from '@/components/creator/manual-publish-utils';
 import type { ManualPublishData } from '@/types/autopilot';
 import type { Platform } from '@/types';
 
@@ -95,31 +98,20 @@ const PLATFORM_CONFIG: Record<Platform, {
 };
 
 const PLATFORM_INSTRUCTIONS: Record<Platform, string> = {
-    facebook: `1. Skopiuj treść posta (przycisk powyżej)
-2. Kliknij "Udostępnij na Facebook" lub otwórz Facebook ręcznie
-3. Kliknij "Napisz post" lub "Co słychać?"
-4. Wklej skopiowaną treść (Ctrl+V / Cmd+V)
-5. Jeśli jest zdjęcie - dodaj je (przycisk "Zdjęcie/Wideo")
-6. Kliknij "Opublikuj"
-7. Wróć tutaj i kliknij "Opublikowałem"`,
+    facebook: `1. Kliknij duży przycisk powyżej - skopiuje treść i otworzy Facebooka (lub od razu pokaże listę aplikacji)
+2. Jeśli wracasz do ręcznego wklejania: wklej treść (Ctrl+V) w nowym poście
+3. Dodaj zdjęcie, jeśli je pobrano
+4. Opublikuj i wróć tutaj, klikając "Opublikowałem"`,
 
-    instagram: `1. Pobierz zdjęcie (przycisk powyżej) - Instagram wymaga zdjęcia!
-2. Skopiuj treść posta
-3. Otwórz aplikację Instagram na telefonie
-4. Kliknij + (nowy post) na dole ekranu
-5. Wybierz pobrane zdjęcie z galerii
-6. Kliknij "Dalej", dodaj filtry jeśli chcesz
-7. Wklej skopiowany opis
-8. Kliknij "Udostępnij"
-9. Wróć tutaj i kliknij "Opublikowałem"`,
+    instagram: `1. Kliknij duży przycisk powyżej - skopiuje treść i zapisze zdjęcie w galerii (Instagram wymaga zdjęcia!)
+2. W aplikacji Instagram: nowy post → wybierz zapisane zdjęcie
+3. Wklej skopiowany opis
+4. Opublikuj i wróć tutaj, klikając "Opublikowałem"`,
 
-    linkedin: `1. Skopiuj treść posta (przycisk powyżej)
-2. Kliknij "Udostępnij na LinkedIn" lub otwórz LinkedIn ręcznie
-3. Kliknij "Rozpocznij post"
-4. Wklej skopiowaną treść (Ctrl+V / Cmd+V)
-5. Jeśli jest zdjęcie - kliknij ikonę obrazka i dodaj
-6. Kliknij "Opublikuj"
-7. Wróć tutaj i kliknij "Opublikowałem"`,
+    linkedin: `1. Kliknij duży przycisk powyżej - skopiuje treść i otworzy LinkedIn
+2. Jeśli wracasz do ręcznego wklejania: wklej treść (Ctrl+V) w nowym poście
+3. Dodaj zdjęcie, jeśli je pobrano
+4. Opublikuj i wróć tutaj, klikając "Opublikowałem"`,
 };
 
 // ============================================================
@@ -156,6 +148,8 @@ function PlatformTabContent({
     const [copiedField, setCopiedField] = useState<string | null>(null);
     const [isDownloading, setIsDownloading] = useState(false);
     const [isCopyingImage, setIsCopyingImage] = useState(false);
+    const [isSharing, setIsSharing] = useState(false);
+    const [showFallbackActions, setShowFallbackActions] = useState(false);
 
     const platformConfig = PLATFORM_CONFIG[platform];
 
@@ -233,6 +227,65 @@ function PlatformTabContent({
         }
     }, [shareUrl, platform]);
 
+    // Jeden przycisk, ktory robi wszystko na raz: probuje natywny arkusz
+    // udostepniania systemu (obsluguje tekst + zdjecie i pozwala wybrac
+    // Facebooka/Instagram/LinkedIn wprost z listy aplikacji), a jesli
+    // przegladarka go nie wspiera (glownie desktop) - kopiuje tresc, zapisuje
+    // zdjecie (Instagram wymaga go w galerii) i otwiera najlepszy dostepny link.
+    const handlePrimaryAction = useCallback(async () => {
+        if (typeof navigator !== 'undefined' && navigator.share) {
+            setIsSharing(true);
+            try {
+                let files: File[] | undefined;
+
+                if (imageUrl && navigator.canShare) {
+                    try {
+                        const blob = await fetch(imageUrl).then((r) => r.blob());
+                        const file = new File([blob], `postlio-${platform}.jpg`, { type: blob.type || 'image/jpeg' });
+                        if (navigator.canShare({ files: [file] })) {
+                            files = [file];
+                        }
+                    } catch {
+                        // brak pliku nie blokuje udostepniania - poleci sam tekst
+                    }
+                }
+
+                const shareData: ShareData = files ? { text: fullContent, files } : { text: fullContent };
+
+                if (!navigator.canShare || navigator.canShare(shareData)) {
+                    await navigator.share(shareData);
+                    toast.success('Gotowe - wybierz aplikację z listy');
+                    return;
+                }
+            } catch (error) {
+                if ((error as Error)?.name === 'AbortError') {
+                    return; // użytkownik zamknął arkusz udostępniania - nic nie rób
+                }
+                // przejdź do fallbacku poniżej
+            } finally {
+                setIsSharing(false);
+            }
+        }
+
+        // Fallback (desktop / brak Web Share API): kopiuj + zapisz zdjęcie + otwórz link
+        await handleCopy(fullContent, 'content');
+
+        if (imageUrl) {
+            if (platform === 'instagram') {
+                await handleDownloadImage();
+            } else {
+                await handleCopyImage();
+            }
+        }
+
+        const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < 768;
+        const targetUrl = resolveManualPublishTarget({ platform, isMobileViewport, shareUrl });
+
+        if (targetUrl) {
+            window.open(targetUrl, '_blank', shareUrl ? 'width=600,height=400' : undefined);
+        }
+    }, [imageUrl, platform, fullContent, shareUrl, handleCopy, handleCopyImage, handleDownloadImage]);
+
     if (isPublished) {
         return (
             <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
@@ -255,16 +308,53 @@ function PlatformTabContent({
         );
     }
 
+    const canNativeShare = typeof navigator !== 'undefined' && !!navigator.share;
+
     return (
         <div className="space-y-3 sm:space-y-4">
+            <div className="p-2.5 sm:p-3 bg-muted/50 rounded-lg text-xs sm:text-sm whitespace-pre-wrap max-h-24 xs:max-h-28 sm:max-h-32 overflow-y-auto">
+                {content}
+            </div>
+
+            <Button
+                className={cn(
+                    'w-full h-12',
+                    'bg-gradient-to-r from-blue-500 to-violet-500',
+                    'hover:from-blue-600 hover:to-violet-600'
+                )}
+                onClick={handlePrimaryAction}
+                disabled={isSharing}
+            >
+                {isSharing ? (
+                    <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Otwieram...
+                    </>
+                ) : canNativeShare ? (
+                    <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Udostępnij na {platformConfig.name}
+                    </>
+                ) : (
+                    <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Kopiuj i otwórz {platformConfig.name}
+                    </>
+                )}
+            </Button>
+
+            <button
+                type="button"
+                onClick={() => setShowFallbackActions((v) => !v)}
+                className="flex w-full items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+                Więcej opcji
+                <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', showFallbackActions && 'rotate-180')} />
+            </button>
+
+            {showFallbackActions && (
+            <div className="space-y-3 sm:space-y-4">
             <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium flex items-center justify-center gap-2">
-                    <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
-                    Treść posta
-                </label>
-                <div className="p-2.5 sm:p-3 bg-muted/50 rounded-lg text-xs sm:text-sm whitespace-pre-wrap max-h-24 xs:max-h-28 sm:max-h-32 overflow-y-auto">
-                    {content}
-                </div>
                 <Button
                     variant="outline"
                     className="w-full"
@@ -400,47 +490,47 @@ function PlatformTabContent({
                 </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 pt-2">
-                <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={handleOpenPlatform}
-                >
-                    {shareUrl ? (
-                        <>
-                            <Share2 className="w-4 h-4 mr-2" />
-                            <span className="truncate">Udostępnij na {platformConfig.name}</span>
-                        </>
-                    ) : (
-                        <>
-                            <ExternalLink className="w-4 h-4 mr-2" />
-                            <span className="truncate">Otwórz {platformConfig.name}</span>
-                        </>
-                    )}
-                </Button>
-
-                <Button
-                    className={cn(
-                        'flex-1',
-                        'bg-gradient-to-r from-green-500 to-emerald-500',
-                        'hover:from-green-600 hover:to-emerald-600'
-                    )}
-                    onClick={onMarkAsPublished}
-                    disabled={isUpdating}
-                >
-                    {isUpdating ? (
-                        <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Zapisywanie...
-                        </>
-                    ) : (
-                        <>
-                            <CheckCircle2 className="w-4 h-4 mr-2" />
-                            <span className="truncate">Opublikowałem</span>
-                        </>
-                    )}
-                </Button>
+            <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleOpenPlatform}
+            >
+                {shareUrl ? (
+                    <>
+                        <Share2 className="w-4 h-4 mr-2" />
+                        <span className="truncate">Udostępnij na {platformConfig.name}</span>
+                    </>
+                ) : (
+                    <>
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        <span className="truncate">Otwórz {platformConfig.name}</span>
+                    </>
+                )}
+            </Button>
             </div>
+            )}
+
+            <Button
+                className={cn(
+                    'w-full',
+                    'bg-gradient-to-r from-green-500 to-emerald-500',
+                    'hover:from-green-600 hover:to-emerald-600'
+                )}
+                onClick={onMarkAsPublished}
+                disabled={isUpdating}
+            >
+                {isUpdating ? (
+                    <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Zapisywanie...
+                    </>
+                ) : (
+                    <>
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        <span className="truncate">Opublikowałem</span>
+                    </>
+                )}
+            </Button>
         </div>
     );
 }
@@ -680,7 +770,7 @@ export function ManualPublishModal({
                                     hashtagsString={data.hashtags_string}
                                     imageUrl={data.image_url}
                                     instructions={PLATFORM_INSTRUCTIONS[platform]}
-                                    shareUrl={data.share_url}
+                                    shareUrl={getShareUrl(platform, data.full_content)}
                                     isPublished={publishedPlatforms.has(platform)}
                                     isUpdating={isUpdating}
                                     onMarkAsPublished={() => handleMarkPlatformPublished(platform)}

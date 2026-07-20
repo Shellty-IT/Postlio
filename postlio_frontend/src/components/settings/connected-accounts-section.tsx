@@ -39,7 +39,6 @@ import {
     type SocialPlatform,
     type AccountType,
     type ConnectedAccount,
-    getAccountTypeLabel,
 } from '@/lib/api/social';
 
 interface PlatformConfig {
@@ -482,7 +481,7 @@ function AccountItem({
                             {account.platform_username || 'Nieznane konto'}
                         </span>
                         <Badge variant="secondary" className="text-[9px] xs:text-[10px] px-1 xs:px-1.5 flex-shrink-0">
-                            {getAccountTypeLabel(account.account_type)}
+                            {account.display_name}
                         </Badge>
                     </div>
 

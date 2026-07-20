@@ -8,16 +8,29 @@ from sqlalchemy import select
 from app.models.autopilot import AutopilotConfig, AutopilotQueueItem
 from app.models.social_account import SocialAccount
 from app.services.publishers import PublishResult, ManualPublishData, BusinessPublisher, ManualAssistPublisher
+from app.schemas.social import (
+    ACCOUNT_CAPABILITIES,
+    BUSINESS_ACCOUNT_TYPES,
+    PERSONAL_ACCOUNT_TYPES,
+)
 
 logger = logging.getLogger(__name__)
 
 _business_publisher = BusinessPublisher()
 _manual_publisher = ManualAssistPublisher()
 
-AUTO_PUBLISH_ACCOUNT_TYPES = {"facebook_page", "instagram_business", "instagram_creator", "linkedin_company"}
-MANUAL_PUBLISH_ACCOUNT_TYPES = {"facebook_personal", "instagram_personal", "linkedin_personal", "linkedin_profile"}
-SHARE_DIALOG_ACCOUNT_TYPES = {"facebook_personal", "linkedin_personal", "linkedin_profile"}
-DEEPLINK_ONLY_ACCOUNT_TYPES = {"instagram_personal"}
+# SocialAccount.account_type jest zwyklym stringiem w bazie (nie enumem), wiec
+# te zbiory sa wyprowadzone z app.schemas.social - JEDYNEGO zrodla prawdy o
+# tym, ktore typy kont wspieraja auto-publikacje. Wczesniej ten sam podzial
+# byl utrzymywany tutaj osobno jako druga, rownolegla kopia i mogl sie z
+# czasem rozjechac bez zadnego testu, ktory by to wylapal.
+AUTO_PUBLISH_ACCOUNT_TYPES = {t.value for t in BUSINESS_ACCOUNT_TYPES}
+MANUAL_PUBLISH_ACCOUNT_TYPES = {t.value for t in PERSONAL_ACCOUNT_TYPES}
+SHARE_DIALOG_ACCOUNT_TYPES = {
+    t.value for t in PERSONAL_ACCOUNT_TYPES
+    if ACCOUNT_CAPABILITIES.get(t, {}).get("supports_share_dialog")
+}
+DEEPLINK_ONLY_ACCOUNT_TYPES = MANUAL_PUBLISH_ACCOUNT_TYPES - SHARE_DIALOG_ACCOUNT_TYPES
 
 
 class PublishService:

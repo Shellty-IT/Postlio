@@ -41,7 +41,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Badge } from '@/components/ui/badge';
 import { useCalendarStore } from '@/store/calendar-store';
 import { useAuthStore } from '@/store/auth-store';
-import { useCalendarPosts, useUpdatePost, usePosts } from '@/hooks';
+import { useCalendarPosts, useUpdatePost, usePosts, useUpdateQueueItem } from '@/hooks';
 import type { ScheduledPost } from '@/types/calendar';
 import type { CalendarEvent } from '@/types/post';
 import type { Post } from '@/types/post';
@@ -67,6 +67,8 @@ function convertToScheduledPost(event: CalendarEvent): ScheduledPost {
         brandName: undefined,
         aiGenerated: false,
         imageUrl: event.image_url ?? undefined,
+        origin: event.origin,
+        requiresManualPublish: event.requires_manual_publish,
     };
 }
 
@@ -123,6 +125,7 @@ export default function CalendarPage() {
 
     const drafts = allPostsData?.posts || [];
     const updatePost = useUpdatePost();
+    const updateQueueItem = useUpdateQueueItem();
 
     const posts = useMemo(() => {
         return apiEvents.map(convertToScheduledPost);
@@ -145,18 +148,28 @@ export default function CalendarPage() {
         if (!event) return;
 
         try {
-            await updatePost.mutateAsync({
-                id: event.post_id,
-                data: { scheduled_at: newDate.toISOString() },
-            });
+            if (event.origin === 'autopilot') {
+                // Kolejka Autopilota żyje w osobnej tabeli (AutopilotQueueItem) -
+                // przesunięcie w Kalendarzu aktualizuje ją przez jej własny endpoint,
+                // nie przez /posts.
+                await updateQueueItem.mutateAsync({
+                    itemId: Number(event.post_id),
+                    data: { scheduled_for: newDate.toISOString() },
+                });
+            } else {
+                await updatePost.mutateAsync({
+                    id: event.post_id,
+                    data: { scheduled_at: newDate.toISOString() },
+                });
 
-            toast.success('Post został przeniesiony', {
-                description: `Nowa data: ${format(newDate, 'dd.MM.yyyy HH:mm')}`,
-            });
+                toast.success('Post został przeniesiony', {
+                    description: `Nowa data: ${format(newDate, 'dd.MM.yyyy HH:mm')}`,
+                });
+            }
         } catch {
             toast.error('Nie udało się przenieść posta');
         }
-    }, [apiEvents, updatePost]);
+    }, [apiEvents, updatePost, updateQueueItem]);
 
     const handleDragStart = useCallback((event: DragStartEvent) => {
         const { active } = event;
@@ -379,4 +392,4 @@ export default function CalendarPage() {
             </DragOverlay>
         </DndContext>
     );
-}
+}

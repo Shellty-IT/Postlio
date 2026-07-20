@@ -42,7 +42,6 @@ export type {
     AccountType,
     ConnectionStatus,
     PublishMethod,
-    AccountCapabilities,
     PlatformInfo,
     FacebookPageInfo,
     InstagramAccountInfo,
@@ -57,16 +56,9 @@ export type {
 } from './social';
 
 export {
-    BUSINESS_ACCOUNT_TYPES,
-    PERSONAL_ACCOUNT_TYPES,
-    ACCOUNT_CAPABILITIES,
     PLATFORMS,
-    isBusinessAccountType,
-    isPersonalAccountType,
-    getAccountCapabilities,
     getPlatformColor,
     getPlatformName,
-    getAccountTypeLabel,
 } from './social';
 
 // ============================================================

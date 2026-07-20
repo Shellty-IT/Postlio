@@ -9,7 +9,6 @@ import type {
     AccountType,
     ConnectionStatus,
     PublishMethod,
-    AccountCapabilities,
     ConnectedAccount,
     ListAccountsResponse,
     OAuthInitResponse,
@@ -24,12 +23,7 @@ import type {
     InstagramAccountInfo,
 } from '@/types';
 
-import {
-    ACCOUNT_CAPABILITIES,
-    BUSINESS_ACCOUNT_TYPES,
-    PERSONAL_ACCOUNT_TYPES,
-    PLATFORMS,
-} from '@/types';
+import { PLATFORMS } from '@/types';
 
 // Re-export types for convenience
 export type {
@@ -37,7 +31,6 @@ export type {
     AccountType,
     ConnectionStatus,
     PublishMethod,
-    AccountCapabilities,
     ConnectedAccount,
     ListAccountsResponse,
     OAuthInitResponse,
@@ -53,9 +46,6 @@ export type {
 
 // Re-export constants
 export {
-    ACCOUNT_CAPABILITIES,
-    BUSINESS_ACCOUNT_TYPES,
-    PERSONAL_ACCOUNT_TYPES,
     PLATFORMS,
 };
 
@@ -105,43 +95,13 @@ export async function getUserCapabilities(): Promise<UserCapabilities> {
     return apiClient.get<UserCapabilities>('/social/capabilities');
 }
 
+// Uwaga: brak tu funkcji typu isBusinessAccount/supportsAutoPublish/
+// getAccountTypeLabel liczonych z lokalnej tabeli - backend zwraca te pola
+// juz wyliczone na kazdym ConnectedAccount (is_business_account,
+// supports_auto_publish, display_name, publish_method...), wiec liczenie
+// ich drugi raz po stronie frontendu tylko rodzi ryzyko rozjazdu.
+
 // ==================== Helper Functions ====================
-
-export function getCapabilities(accountType: AccountType): AccountCapabilities {
-    return ACCOUNT_CAPABILITIES[accountType];
-}
-
-export function isBusinessAccount(accountType: AccountType): boolean {
-    return BUSINESS_ACCOUNT_TYPES.includes(accountType);
-}
-
-export function isPersonalAccount(accountType: AccountType): boolean {
-    return PERSONAL_ACCOUNT_TYPES.includes(accountType);
-}
-
-export function supportsAutoPublish(accountType: AccountType): boolean {
-    return ACCOUNT_CAPABILITIES[accountType]?.supports_auto_publish ?? false;
-}
-
-export function supportsAutopilot(accountType: AccountType): boolean {
-    return ACCOUNT_CAPABILITIES[accountType]?.supports_autopilot ?? false;
-}
-
-export function requiresImage(accountType: AccountType): boolean {
-    return ACCOUNT_CAPABILITIES[accountType]?.requires_image ?? false;
-}
-
-export function supportsShareDialog(accountType: AccountType): boolean {
-    return ACCOUNT_CAPABILITIES[accountType]?.supports_share_dialog ?? false;
-}
-
-export function getPublishMethod(accountType: AccountType): PublishMethod {
-    return ACCOUNT_CAPABILITIES[accountType]?.publish_method ?? 'manual_copy';
-}
-
-export function getAccountTypeLabel(accountType: AccountType): string {
-    return ACCOUNT_CAPABILITIES[accountType]?.display_name ?? accountType;
-}
 
 export function getPlatformColor(platform: SocialPlatform): string {
     const colors: Record<SocialPlatform, string> = {

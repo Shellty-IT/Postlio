@@ -40,14 +40,18 @@ class FacebookService(BaseSocialService):
     OAUTH_URL = "https://www.facebook.com"
 
     # Wymagane uprawnienia
+    # UWAGA: bez pages_show_list, /me/accounts (patrz _get_user_pages) zawsze
+    # zwraca pustą listę, wiec KAZDE konto FB - takze administratora Strony -
+    # zostaje sklasyfikowane jako facebook_personal. Te trzy scope'y wymagaja
+    # App Review w Meta (poza kontami testowymi/deweloperskimi) - dopoki
+    # aplikacja go nie przejdzie, dziala to tylko dla testerow dodanych w
+    # Meta for Developers.
     REQUIRED_SCOPES = [
         "public_profile",
         "email",
-        # Poniższe wymagają App Review lub statusu testera:
-        # "pages_show_list",
-        # "pages_read_engagement",
-        # "pages_manage_posts",
-        # "pages_read_user_content",
+        "pages_show_list",
+        "pages_read_engagement",
+        "pages_manage_posts",
     ]
 
     def __init__(self):

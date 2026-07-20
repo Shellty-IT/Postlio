@@ -10,7 +10,7 @@ import json
 import logging
 import time
 from datetime import datetime
-from typing import List
+from typing import Any, Dict, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -182,8 +182,7 @@ async def oauth_callback(
                 error_description=result.error_description or "Failed to exchange code for token"
             )
 
-        # Określ typ konta
-        account_type = _determine_account_type(platform, result.profile_data)
+        account_type = _resolve_account_type(platform, result)
 
         existing_account = await social_repo.find_existing(
             db, current_user.id, platform.value, result.platform_user_id
@@ -427,9 +426,7 @@ async def publish_post(
         access_token = account.access_token
 
     else:  # LinkedIn
-        user_id = account.profile_data.get("sub") or account.profile_data.get("id") if account.profile_data else None
-        if user_id:
-            kwargs["author_urn"] = f"urn:li:person:{user_id}"
+        kwargs.update(_build_linkedin_publish_kwargs(account))
         access_token = account.access_token
 
     # Publikuj
@@ -480,6 +477,24 @@ async def _get_user_account(db: AsyncSession, account_id: int, user_id: int) -> 
 def _has_full_access_override(user: User) -> bool:
     return (user.email or "").strip().lower() in FULL_ACCESS_EMAILS
 
+def _resolve_account_type(platform: SocialPlatform, result: OAuthResult) -> AccountType:
+    """
+    Wybiera account_type dla nowo polaczonego konta.
+
+    Kazdy serwis (FacebookService/InstagramService/LinkedInService) juz
+    poprawnie wyznacza account_type na zwracanym OAuthResult (m.in.
+    facebook_personal, gdy uzytkownik nie ma zadnej Strony). Uzywamy go
+    wprost - _determine_account_type ponizej to tylko defensywny fallback
+    na wypadek gdyby result.account_type z jakiegos powodu nie przyszedl.
+    """
+    if result.account_type:
+        try:
+            return AccountType(result.account_type)
+        except ValueError:
+            pass
+    return _determine_account_type(platform, result.profile_data)
+
+
 def _determine_account_type(platform: SocialPlatform, profile_data: dict) -> AccountType:
     """Określa typ konta na podstawie platformy i danych profilu."""
     if platform == SocialPlatform.FACEBOOK:
@@ -497,6 +512,25 @@ def _determine_account_type(platform: SocialPlatform, profile_data: dict) -> Acc
         return AccountType.LINKEDIN_PROFILE
 
     return AccountType.FACEBOOK_PAGE
+
+
+def _build_linkedin_publish_kwargs(account: SocialAccount) -> Dict[str, Any]:
+    """
+    Buduje kwargs dla LinkedInService.publish_post na podstawie typu konta.
+
+    Konto firmowe (linkedin_company) musi publikowac jako Strona
+    (urn:li:organization:...), nie jako profil osobisty. organization_id jest
+    zapisane w profile_data["organizations"][0] - SocialAccount nie ma dla
+    LinkedIn osobnej kolumny takiej jak page_id/instagram_account_id.
+    """
+    organizations = (account.profile_data or {}).get("organizations") or []
+    organization_id = organizations[0].get("organization_id") if organizations else None
+
+    if account.account_type == "linkedin_company" and organization_id:
+        return {"account_type": account.account_type, "organization_id": organization_id}
+
+    user_id = (account.profile_data or {}).get("sub") or (account.profile_data or {}).get("id")
+    return {"author_urn": f"urn:li:person:{user_id}"} if user_id else {}
 
 
 def _apply_oauth_result_to_account(

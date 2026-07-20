@@ -21,6 +21,8 @@ import {
     Facebook,
     Instagram,
     Linkedin,
+    Zap,
+    Hand,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCalendarStore } from '@/store/calendar-store';
@@ -162,6 +164,11 @@ export function MobileAgendaView({ posts }: MobileAgendaViewProps) {
                                                     </span>
                                                     {post.aiGenerated && (
                                                         <Sparkles className="h-3.5 w-3.5 text-accent flex-shrink-0" />
+                                                    )}
+                                                    {post.requiresManualPublish ? (
+                                                        <Hand className="h-3.5 w-3.5 text-amber-400 flex-shrink-0" />
+                                                    ) : (
+                                                        <Zap className="h-3.5 w-3.5 text-emerald-400 flex-shrink-0" />
                                                     )}
                                                     {platforms.length > 1 && (
                                                         <span className="text-xs text-muted-foreground">

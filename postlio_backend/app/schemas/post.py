@@ -147,6 +147,15 @@ class CalendarEventResponse(BaseModel):
     preview: Optional[str] = None
     image_url: Optional[str] = None
     brand_id: Optional[int] = None
+    # "manual" = utworzony w Kreatorze (tabela Post), "autopilot" = z kolejki
+    # Autopilota (tabela AutopilotQueueItem) - dwie osobne tabele scalone w
+    # jedna liste na potrzeby Kalendarza.
+    origin: str = "manual"
+    # Czy publikacja tego posta wymaga recznego kopiowania tresci (brak
+    # podlaczonego konta biznesowego dla ktorejs z platform posta). Liczone
+    # raz po stronie backendu (PublishService.can_auto_publish, Etap 1) -
+    # frontend tylko czyta gotowy wynik, nie zgaduje.
+    requires_manual_publish: bool = False
 
 
 class CalendarEventsResponse(BaseModel):

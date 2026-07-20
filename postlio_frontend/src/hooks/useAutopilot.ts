@@ -259,6 +259,9 @@ export function useUpdateQueueItem() {
             queryClient.invalidateQueries({ queryKey: autopilotKeys.queue(updatedItem.config_id) });
             queryClient.invalidateQueries({ queryKey: autopilotKeys.queueItem(updatedItem.id) });
             queryClient.invalidateQueries({ queryKey: autopilotKeys.queueStats(updatedItem.config_id) });
+            // Kalendarz dociąga zatwierdzone elementy kolejki Autopilota (Etap 4) -
+            // bez tego przesunięcie/edycja terminu w Kalendarzu nie odświeży widoku.
+            queryClient.invalidateQueries({ queryKey: ['posts', 'calendar'] });
             toast.success('Post zaktualizowany');
         },
         onError: (error: Error) => {
@@ -277,6 +280,8 @@ export function useApproveQueueItem() {
             queryClient.invalidateQueries({ queryKey: autopilotKeys.queue(updatedItem.config_id) });
             queryClient.invalidateQueries({ queryKey: autopilotKeys.queueStats(updatedItem.config_id) });
             queryClient.invalidateQueries({ queryKey: autopilotKeys.dashboard(updatedItem.config_id) });
+            // Zatwierdzenie to moment, w ktorym post staje sie widoczny w Kalendarzu (Etap 4).
+            queryClient.invalidateQueries({ queryKey: ['posts', 'calendar'] });
 
             if (updatedItem.status === 'published') {
                 toast.success('Post zatwierdzony i opublikowany! 🎉', {
@@ -304,6 +309,8 @@ export function useRejectQueueItem() {
             queryClient.invalidateQueries({ queryKey: autopilotKeys.queue(updatedItem.config_id) });
             queryClient.invalidateQueries({ queryKey: autopilotKeys.queueStats(updatedItem.config_id) });
             queryClient.invalidateQueries({ queryKey: autopilotKeys.dashboard(updatedItem.config_id) });
+            // Odrzucony post znika z Kalendarza (Etap 4 pokazuje tylko approved/scheduled).
+            queryClient.invalidateQueries({ queryKey: ['posts', 'calendar'] });
             toast.success('Post odrzucony');
         },
         onError: (error: Error) => {
@@ -319,6 +326,8 @@ export function useDeleteQueueItem() {
         mutationFn: (itemId: number) => deleteQueueItem(itemId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: autopilotKeys.all });
+            // Patrz komentarz w useUpdateQueueItem - Kalendarz też pokazuje ten post.
+            queryClient.invalidateQueries({ queryKey: ['posts', 'calendar'] });
             toast.success('Post usunięty');
         },
         onError: (error: Error) => {
@@ -334,6 +343,9 @@ export function useBulkQueueAction() {
         mutationFn: (data: BackendBulkActionRequest) => bulkQueueAction(data),
         onSuccess: (result) => {
             queryClient.invalidateQueries({ queryKey: autopilotKeys.all });
+            // Masowa akcja może zatwierdzać/odrzucać/publikować - w każdym przypadku
+            // zmienia to, co widać w Kalendarzu (Etap 4).
+            queryClient.invalidateQueries({ queryKey: ['posts', 'calendar'] });
             const actionLabels = {
                 approve: 'zatwierdzonych',
                 reject: 'odrzuconych',
@@ -358,6 +370,8 @@ export function usePublishQueueItem() {
             publishQueueItem(itemId, request),
         onSuccess: (result) => {
             queryClient.invalidateQueries({ queryKey: autopilotKeys.all });
+            // Opublikowany post znika z Kalendarza (Etap 4 pokazuje tylko approved/scheduled).
+            queryClient.invalidateQueries({ queryKey: ['posts', 'calendar'] });
 
             if (result.success) {
                 toast.success('Post opublikowany! 🎉', {
@@ -393,6 +407,7 @@ export function usePublishReadyItems() {
             queryClient.invalidateQueries({ queryKey: autopilotKeys.queueStats(configId) });
             queryClient.invalidateQueries({ queryKey: autopilotKeys.dashboard(configId) });
             queryClient.invalidateQueries({ queryKey: autopilotKeys.config(configId) });
+            queryClient.invalidateQueries({ queryKey: ['posts', 'calendar'] });
 
             if (result.published > 0) {
                 toast.success(`Opublikowano ${result.published} postów! 🎉`);
@@ -421,6 +436,7 @@ export function useRetryFailedItems() {
             queryClient.invalidateQueries({ queryKey: autopilotKeys.queue(configId) });
             queryClient.invalidateQueries({ queryKey: autopilotKeys.queueStats(configId) });
             queryClient.invalidateQueries({ queryKey: autopilotKeys.dashboard(configId) });
+            queryClient.invalidateQueries({ queryKey: ['posts', 'calendar'] });
 
             if (result.success > 0) {
                 toast.success(`${result.success} postów opublikowanych po ponowieniu! 🎉`);

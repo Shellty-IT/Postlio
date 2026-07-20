@@ -2,13 +2,13 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Sparkles, AlertTriangle, Pencil, X } from 'lucide-react';
 
 import {
-    PlatformSelector,
+    AccountSelector,
     PostEditor,
     AIChatPanel,
     PostPreview,
@@ -19,9 +19,10 @@ import {
 } from '@/components/creator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { useAI, useCreatePost, useUpdatePost } from '@/hooks';
+import { useAI, useCreatePost, useUpdatePost, useConnectedAccounts, usePublishToSocial } from '@/hooks';
+import { useUpdatePlatformStatus } from '@/hooks/usePosts';
 import { useBrandsStore } from '@/store/brands-store';
-import type { Platform } from '@/types';
+import type { Platform, ConnectedAccount } from '@/types';
 import type { Post } from '@/types/post';
 import type { ManualPublishData } from '@/types/autopilot';
 import type { Tone, Category, TextProvider, ImageProvider } from '@/lib/api/ai';
@@ -73,16 +74,18 @@ export default function CreatorPage() {
     const isEditMode = searchParams.get('mode') === 'edit';
     const [editingPostId, setEditingPostId] = useState<string | null>(null);
 
-    const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(['facebook']);
+    const [selectedAccountIds, setSelectedAccountIds] = useState<number[]>([]);
     const [content, setContent] = useState('');
     const [imageUrl, setImageUrl] = useState<string | undefined>();
     const [videoUrl, setVideoUrl] = useState<string | undefined>();
     const [hashtags, setHashtags] = useState<string[]>([]);
     const [isChatOpen, setIsChatOpen] = useState(false);
 
+    const [pendingEditPlatforms, setPendingEditPlatforms] = useState<Platform[] | null>(null);
     const [isManualPublishOpen, setIsManualPublishOpen] = useState(false);
     const [manualPublishData, setManualPublishData] = useState<ManualPublishData | null>(null);
     const [manualPublishPostId, setManualPublishPostId] = useState<string | null>(null);
+    const [manualPublishPlatforms, setManualPublishPlatforms] = useState<Platform[]>([]);
 
     const [selectedTone] = useState<Tone>('professional');
     const [selectedCategory] = useState<Category | undefined>();
@@ -101,8 +104,34 @@ export default function CreatorPage() {
 
     const createPostMutation = useCreatePost();
     const updatePostMutation = useUpdatePost();
+    const { data: accountsData } = useConnectedAccounts();
+    const publishToSocial = usePublishToSocial();
+    const updatePlatformStatus = useUpdatePlatformStatus({ showToast: false });
+
+    const connectedAccounts = useMemo(
+        () => (accountsData?.accounts ?? []).filter((a) => a.is_active && a.status !== 'disconnected'),
+        [accountsData]
+    );
+
+    const selectedAccounts = useMemo(
+        () => connectedAccounts.filter((a) => selectedAccountIds.includes(a.id)),
+        [connectedAccounts, selectedAccountIds]
+    );
+
+    const selectedPlatforms = useMemo(
+        () => Array.from(new Set(selectedAccounts.map((a) => a.platform))) as Platform[],
+        [selectedAccounts]
+    );
 
     const primaryPlatform = selectedPlatforms[0];
+
+    // Domyślnie zaznacz pierwsze podłączone konto, gdy lista się załaduje i nic nie jest jeszcze wybrane.
+    useEffect(() => {
+        if (selectedAccountIds.length === 0 && connectedAccounts.length > 0 && !isEditMode) {
+            setSelectedAccountIds([connectedAccounts[0].id]);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [connectedAccounts]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -133,9 +162,9 @@ export default function CreatorPage() {
             setImageUrl(post.image_url || undefined);
 
             if (post.platforms && post.platforms.length > 0) {
-                setSelectedPlatforms(post.platforms);
+                setPendingEditPlatforms(post.platforms);
             } else if (post.platform) {
-                setSelectedPlatforms([post.platform as Platform]);
+                setPendingEditPlatforms([post.platform as Platform]);
             }
 
             if (post.hashtags && post.hashtags.length > 0) {
@@ -161,6 +190,22 @@ export default function CreatorPage() {
         }
     }, [isEditMode, router]);
 
+    // Post nie pamięta konkretnego account_id per platforma (tylko nazwę platformy),
+    // więc przy edycji dopasowujemy pierwsze aktywne podłączone konto danej platformy.
+    // Czeka na załadowanie connectedAccounts, dlatego to osobny efekt.
+    useEffect(() => {
+        if (!pendingEditPlatforms || connectedAccounts.length === 0) return;
+
+        const ids = pendingEditPlatforms
+            .map((platform) => connectedAccounts.find((a) => a.platform === platform)?.id)
+            .filter((id): id is number => id !== undefined);
+
+        if (ids.length > 0) {
+            setSelectedAccountIds(ids);
+        }
+        setPendingEditPlatforms(null);
+    }, [pendingEditPlatforms, connectedAccounts]);
+
     const getFullContent = useCallback(() => {
         return hashtags.length > 0
             ? `${content}\n\n${hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}`
@@ -173,9 +218,9 @@ export default function CreatorPage() {
         setImageUrl(undefined);
         setVideoUrl(undefined);
         setHashtags([]);
-        setSelectedPlatforms(['facebook']);
+        setSelectedAccountIds(connectedAccounts.length > 0 ? [connectedAccounts[0].id] : []);
         setManualPublishPostId(null);
-    }, []);
+    }, [connectedAccounts]);
 
     const handleCancelEdit = useCallback(() => {
         clearForm();
@@ -337,13 +382,18 @@ export default function CreatorPage() {
         });
     }, [content, selectedPlatforms, imageUrl, videoUrl, selectedBrand, createPostMutation, updatePostMutation, textProvider, editingPostId, router, getFullContent, clearForm]);
 
-    const handlePublishManually = useCallback(async () => {
+    const handlePublish = useCallback(async () => {
         const validation = validatePlatformRequirements(selectedPlatforms, content, imageUrl, videoUrl);
 
         if (!validation.isValid) {
             validation.errors.forEach(error => {
                 toast.error(error);
             });
+            return;
+        }
+
+        if (selectedAccounts.length === 0) {
+            toast.error('Wybierz przynajmniej jedno konto docelowe');
             return;
         }
 
@@ -368,19 +418,73 @@ export default function CreatorPage() {
             }
         }
 
+        // Konta z is_business_account=true (Strona FB, IG Business/Creator, Strona LinkedIn)
+        // publikują od razu przez prawdziwe API. Reszta (konta osobiste) dostaje
+        // instrukcje ręcznej publikacji - jak dotychczas.
+        const autoAccounts = selectedAccounts.filter((a) => a.publish_method === 'auto');
+        const manualAccounts = selectedAccounts.filter((a) => a.publish_method !== 'auto');
+
+        let autoFailures = 0;
+
+        for (const account of autoAccounts) {
+            try {
+                const result = await publishToSocial.mutateAsync({
+                    account_id: account.id,
+                    content: fullContent,
+                    image_url: imageUrl,
+                    page_id: account.pages?.[0]?.id,
+                    instagram_account_id: account.instagram_accounts?.[0]?.id,
+                });
+
+                if (result.success && !result.requires_manual_publish) {
+                    await updatePlatformStatus.mutateAsync({
+                        postId: postIdForModal,
+                        platform: account.platform,
+                        status: 'published',
+                    });
+                } else {
+                    autoFailures += 1;
+                }
+            } catch (error) {
+                console.error(`Failed to auto-publish to ${account.display_name}:`, error);
+                autoFailures += 1;
+            }
+        }
+
+        if (autoAccounts.length > 0 && autoFailures === 0) {
+            toast.success(
+                autoAccounts.length === 1
+                    ? `Opublikowano na ${autoAccounts[0].display_name}!`
+                    : `Opublikowano automatycznie na ${autoAccounts.length} kontach!`
+            );
+        }
+
+        if (manualAccounts.length === 0) {
+            if (autoAccounts.length > 0 && autoFailures < autoAccounts.length) {
+                clearForm();
+                if (isEditMode) router.replace('/creator');
+            }
+            return;
+        }
+
         const data = createManualPublishData({
             id: parseInt(postIdForModal, 10),
             post_id: parseInt(postIdForModal, 10),
             content,
             hashtags,
             image_url: imageUrl || null,
-            platform: primaryPlatform,
+            platform: manualAccounts[0].platform,
         });
 
         setManualPublishData(data);
+        setManualPublishPlatforms(manualAccounts.map((a) => a.platform));
         setManualPublishPostId(postIdForModal);
         setIsManualPublishOpen(true);
-    }, [content, hashtags, imageUrl, videoUrl, selectedPlatforms, primaryPlatform, editingPostId, selectedBrand, createPostMutation, textProvider, getFullContent]);
+    }, [
+        content, hashtags, imageUrl, videoUrl, selectedPlatforms, selectedAccounts,
+        editingPostId, selectedBrand, createPostMutation, textProvider, getFullContent,
+        publishToSocial, updatePlatformStatus, clearForm, isEditMode, router,
+    ]);
 
     const handlePlatformPublished = useCallback((_postId?: number, _platform?: Platform) => {
     }, []);
@@ -389,6 +493,7 @@ export default function CreatorPage() {
         clearForm();
         setIsManualPublishOpen(false);
         setManualPublishData(null);
+        setManualPublishPlatforms([]);
 
         if (isEditMode) {
             router.replace('/creator');
@@ -403,6 +508,7 @@ export default function CreatorPage() {
         setIsManualPublishOpen(open);
         if (!open) {
             setManualPublishData(null);
+            setManualPublishPlatforms([]);
         }
     }, []);
 
@@ -423,9 +529,9 @@ export default function CreatorPage() {
             <div className="flex-shrink-0 border-b border-border/40 bg-background/50 backdrop-blur-sm">
                 <div className="px-3 py-3 xs:px-4 xs:py-4 sm:p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                        <PlatformSelector
-                            selected={selectedPlatforms}
-                            onChange={setSelectedPlatforms}
+                        <AccountSelector
+                            selected={selectedAccountIds}
+                            onChange={setSelectedAccountIds}
                         />
 
                         <InlineProviderSelector
@@ -533,7 +639,7 @@ export default function CreatorPage() {
                         <ActionBar
                             onSaveDraft={handleSaveDraft}
                             onSchedule={handleSchedule}
-                            onPublishManually={handlePublishManually}
+                            onPublish={handlePublish}
                             isSaving={isSaving}
                             hasContent={!!content.trim()}
                             hasImage={hasMedia}
@@ -564,7 +670,7 @@ export default function CreatorPage() {
                 open={isManualPublishOpen}
                 onOpenChange={handleModalClose}
                 data={manualPublishData}
-                platforms={selectedPlatforms}
+                platforms={manualPublishPlatforms}
                 postId={manualPublishPostId || undefined}
                 onMarkAsPublished={handlePlatformPublished}
                 onAllPublished={handleAllPublished}

@@ -33,6 +33,8 @@ const PUBLIC_PATHS = [
     '/offline',
     '/features',
     '/onboarding',
+    '/privacy',
+    '/terms',
 ];
 
 const AUTH_ONLY_PATHS = ['/login', '/register'];

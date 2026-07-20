@@ -1,7 +1,8 @@
 # app/api/v1/posts.py
 from datetime import datetime
-from typing import Optional, List
+from typing import Dict, Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
@@ -9,6 +10,7 @@ from app.api.deps import get_db, get_current_user
 from app.api.exceptions import NotFoundError
 from app.models.user import User
 from app.models.post import Post, PostStatus
+from app.models.social_account import SocialAccount
 from app.repositories import post_repo
 from app.schemas.post import (
     PostCreate,
@@ -18,6 +20,7 @@ from app.schemas.post import (
     PostSchedule,
     CalendarEventResponse,
 )
+from app.services.publish_service import AUTO_PUBLISH_ACCOUNT_TYPES
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
@@ -26,6 +29,61 @@ class PlatformStatusUpdate(BaseModel):
     platform: str
     status: str
     platform_post_id: Optional[str] = None
+
+
+async def _build_platform_auto_publish_map(db: AsyncSession, user_id: int) -> Dict[str, bool]:
+    """Dla kazdej platformy: czy uzytkownik ma podlaczone choc jedno konto,
+    ktore wspiera automatyczna publikacje (Etap 1 - AUTO_PUBLISH_ACCOUNT_TYPES,
+    jedyne zrodlo prawdy). Jedno zapytanie dla calego widoku kalendarza zamiast
+    N+1 per post/queue-item.
+    """
+    result = await db.execute(
+        select(SocialAccount.platform, SocialAccount.account_type)
+        .where(SocialAccount.user_id == user_id)
+        .where(SocialAccount.is_active)
+    )
+    capability_map: Dict[str, bool] = {}
+    for platform, account_type in result.all():
+        if account_type in AUTO_PUBLISH_ACCOUNT_TYPES:
+            capability_map[platform] = True
+        else:
+            capability_map.setdefault(platform, False)
+    return capability_map
+
+
+def _requires_manual_publish(platforms: List[str], capability_map: Dict[str, bool]) -> bool:
+    """Post/queue-item wymaga recznej publikacji, jesli KTORAKOLWIEK z jego
+    platform nie ma podlaczonego konta zdolnego do auto-publikacji."""
+    return not all(capability_map.get(p, False) for p in platforms)
+
+
+def _autopilot_item_to_event(item, capability_map: Dict[str, bool]) -> CalendarEventResponse:
+    """Mapuje element kolejki Autopilota na wydarzenie Kalendarza.
+
+    UWAGA na status: kolejka Autopilota ma wlasny slownik statusow
+    ("approved"/"scheduled"), ktory NIE pokrywa sie ze statusami posta
+    rozumianymi przez Kalendarz (draft/scheduled/publishing/published/failed).
+    Z punktu widzenia Kalendarza zatwierdzony element czekajacy na swoja
+    godzine to po prostu post zaplanowany - bez tego mapowania frontend
+    wpada w fallback i pokazuje go uzytkownikowi jako "Szkic".
+    """
+    title = (item.content[:50] + "...") if item.content and len(item.content) > 50 else (item.content or "")
+    platforms_list = [item.platform] if item.platform else []
+    return CalendarEventResponse(
+        id=f"autopilot-{item.id}",
+        post_id=str(item.id),
+        title=title.replace("\n", " "),
+        date=item.scheduled_for.strftime("%Y-%m-%d"),
+        time=item.scheduled_for.strftime("%H:%M"),
+        platforms=platforms_list,
+        platform_statuses={},
+        status=PostStatus.SCHEDULED.value,
+        preview=item.content[:150] if item.content else None,
+        image_url=item.image_url,
+        brand_id=item.brand_id,
+        origin="autopilot",
+        requires_manual_publish=_requires_manual_publish(platforms_list, capability_map),
+    )
 
 
 @router.get("/calendar", response_model=List[CalendarEventResponse])
@@ -47,6 +105,8 @@ async def get_calendar_events(
         raise HTTPException(status_code=400, detail=f"Invalid date format: {e}")
 
     posts = await post_repo.get_calendar_events(db, current_user.id, start, end, brand_id)
+    autopilot_items = await post_repo.get_calendar_autopilot_items(db, current_user.id, start, end)
+    capability_map = await _build_platform_auto_publish_map(db, current_user.id)
 
     events = []
     for post in posts:
@@ -64,7 +124,18 @@ async def get_calendar_events(
             preview=post.content[:150] if post.content else None,
             image_url=post.image_url,
             brand_id=post.brand_id,
+            origin="manual",
+            requires_manual_publish=_requires_manual_publish(platforms_list, capability_map),
         ))
+
+    # Autopilot ma osobna tabele (AutopilotQueueItem) - jesli filtrujemy po marce,
+    # queue-itemy tej marki tez musza przejsc przez ten sam filtr co posty.
+    for item in autopilot_items:
+        if brand_id and item.brand_id != brand_id:
+            continue
+        events.append(_autopilot_item_to_event(item, capability_map))
+
+    events.sort(key=lambda e: (e.date, e.time))
     return events
 
 

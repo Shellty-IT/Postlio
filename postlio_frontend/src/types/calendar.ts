@@ -28,6 +28,11 @@ export interface ScheduledPost {
     brandName?: string;
     imageUrl?: string;
     aiGenerated: boolean;
+
+    // "manual" = utworzony w Kreatorze, "autopilot" = z kolejki Autopilota -
+    // Kalendarz laczy oba zrodla (Etap 4)
+    origin: 'manual' | 'autopilot';
+    requiresManualPublish: boolean;
 }
 
 export interface CalendarDay {

@@ -79,6 +79,9 @@ export interface CalendarEvent {
     preview: string | null;
     image_url: string | null;
     brand_id: number | null;
+    // "manual" = utworzony w Kreatorze, "autopilot" = z kolejki Autopilota
+    origin: 'manual' | 'autopilot';
+    requires_manual_publish: boolean;
 }
 
 // ============================================================

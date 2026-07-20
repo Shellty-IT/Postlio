@@ -122,7 +122,4 @@ export {
     getPlatformInfo,
     getStatusText,
     getStatusColor,
-    getAccountTypeText,
-    supportsAutoPublish,
-    isBusinessAccountType,
 } from './useSocial';

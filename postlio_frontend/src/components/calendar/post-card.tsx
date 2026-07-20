@@ -22,6 +22,8 @@ import {
     Copy,
     ExternalLink,
     Send,
+    Zap,
+    Hand,
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -126,6 +128,13 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
                             <Sparkles className="h-3 w-3 text-accent flex-shrink-0" />
                         )}
 
+                        {/* Tryb publikacji: auto vs ręcznie (Etap 4) */}
+                        {post.requiresManualPublish ? (
+                            <Hand className="h-3 w-3 text-amber-400 flex-shrink-0" />
+                        ) : (
+                            <Zap className="h-3 w-3 text-emerald-400 flex-shrink-0" />
+                        )}
+
                         {/* Title */}
                         <span className="truncate font-medium">
                             {post.title || post.content?.slice(0, 30)}
@@ -216,6 +225,31 @@ export const PostCard = memo(function PostCard({ post, compact = false }: PostCa
                                 <TooltipContent>Wygenerowany przez AI</TooltipContent>
                             </Tooltip>
                         )}
+
+                        {/* Tryb publikacji: auto vs ręcznie (Etap 4) */}
+                        <Tooltip>
+                            <TooltipTrigger>
+                                <div
+                                    className={cn(
+                                        'flex items-center gap-1 rounded-full px-1.5 py-0.5',
+                                        post.requiresManualPublish
+                                            ? 'bg-amber-400/15 text-amber-400'
+                                            : 'bg-emerald-400/15 text-emerald-400'
+                                    )}
+                                >
+                                    {post.requiresManualPublish ? (
+                                        <Hand className="h-3 w-3" />
+                                    ) : (
+                                        <Zap className="h-3 w-3" />
+                                    )}
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                {post.requiresManualPublish
+                                    ? 'Wymaga ręcznej publikacji'
+                                    : 'Publikacja automatyczna'}
+                            </TooltipContent>
+                        </Tooltip>
                     </div>
 
                     {/* Actions */}

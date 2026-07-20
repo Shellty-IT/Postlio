@@ -46,7 +46,7 @@ import type { Platform } from '@/types';
 interface ActionBarProps {
     onSaveDraft: () => Promise<void>;
     onSchedule: (scheduledAt: string) => Promise<void>;
-    onPublishManually: () => void;
+    onPublish: () => void;
     isSaving: boolean;
     hasContent: boolean;
     hasImage?: boolean;
@@ -184,7 +184,7 @@ function StatusIndicator({
 export function ActionBar({
                               onSaveDraft,
                               onSchedule,
-                              onPublishManually,
+                              onPublish,
                               isSaving,
                               hasContent,
                               hasImage = false,
@@ -325,7 +325,7 @@ export function ActionBar({
                             <TooltipTrigger asChild>
                                 <Button
                                     size="sm"
-                                    onClick={onPublishManually}
+                                    onClick={onPublish}
                                     disabled={!canPublish || isLoading}
                                     className="h-9 px-2 sm:px-3 gap-1.5 btn-gradient"
                                 >
