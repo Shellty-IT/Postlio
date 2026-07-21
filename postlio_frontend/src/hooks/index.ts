@@ -99,6 +99,8 @@ export {
     autopilotKeys,
 } from './useAutopilot';
 
+export { useAutopilotQueueStream } from './useAutopilotQueueStream';
+
 // ============================================================
 // SOCIAL MEDIA HOOKS
 // ============================================================

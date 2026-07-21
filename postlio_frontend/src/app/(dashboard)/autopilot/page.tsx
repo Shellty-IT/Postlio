@@ -45,6 +45,7 @@ import {
     useQueueStats,
     useGeneratePosts,
 } from '@/hooks/useAutopilot';
+import { useAutopilotQueueStream } from '@/hooks/useAutopilotQueueStream';
 import { useConnectedAccounts } from '@/hooks/useSocial';
 import type { BackendAutopilotConfigCreate, BackendAutopilotConfigUpdate } from '@/types/autopilot';
 
@@ -71,6 +72,7 @@ export default function AutopilotPage() {
         { status: queueFilter === 'all' ? undefined : queueFilter }
     );
     const { data: queueStats } = useQueueStats(selectedConfigId);
+    useAutopilotQueueStream(selectedConfigId);
 
     const brandsQuery = useBrands();
     const brands = brandsQuery.data?.brands || [];

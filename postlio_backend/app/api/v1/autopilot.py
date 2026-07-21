@@ -1,15 +1,20 @@
 ﻿"""
 API endpoints dla Autopilota.
 """
+import asyncio
+import json
 from datetime import datetime
 from typing import List, Optional
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, get_current_user, verify_scheduler_tick_secret
+from app.api.deps import get_db, get_current_user, verify_scheduler_tick_secret, security
 from app.api.exceptions import NotFoundError
+from app.database import async_session_maker
 from app.models.user import User
 from app.models.autopilot import AutopilotConfig, AutopilotQueueItem
 from app.repositories import autopilot_repo
@@ -31,6 +36,8 @@ from app.schemas.autopilot import (
 )
 from app.services.autopilot_service import get_autopilot_service
 from app.services.publish_service import get_publish_service
+from app.services import queue_events
+from app.utils.security import decode_token
 from app.config import settings
 
 
@@ -363,6 +370,52 @@ async def get_queue_stats(
         raise NotFoundError("Config")
 
     return await service.get_queue_stats(config_id, current_user.id)
+
+
+@router.get("/configs/{config_id}/queue/stream")
+async def stream_queue_events(
+    config_id: int,
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """
+    Server-Sent Events z live-updates kolejki (patrz queue_events.py).
+
+    Uwierzytelnienie robimy ręcznie (zamiast Depends(get_current_user)) i
+    walidację właściciela configu na krótkiej, osobnej sesji DB, którą
+    zamykamy PRZED wejściem w generator - żeby połączenie SSE (długo żyjące
+    z natury) nie trzymało zajętego slotu w puli połączeń (pool_size=5)
+    przez cały czas trwania streamu.
+    """
+    payload = decode_token(credentials.credentials)
+    if not payload or payload.get("type") != "access":
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    user_id = int(payload.get("sub"))
+
+    async with async_session_maker() as db:
+        config = await get_autopilot_service(db).get_config(config_id, user_id)
+    if not config:
+        raise NotFoundError("Config")
+
+    async def event_generator():
+        queue = queue_events.subscribe(config_id)
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=15)
+                    yield f"data: {json.dumps(event)}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": keep-alive\n\n"
+        finally:
+            queue_events.unsubscribe(config_id, queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get("/queue/{item_id}", response_model=QueueItemResponse)

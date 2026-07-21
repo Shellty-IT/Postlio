@@ -14,6 +14,7 @@ from app.schemas.autopilot import (
     QueueStatsResponse,
 )
 from app.services.generation_service import GenerationService
+from app.services import queue_events
 
 logger = logging.getLogger(__name__)
 
@@ -213,6 +214,10 @@ class AutopilotService:
 
         await self.db.flush()
         await self.db.refresh(item)
+        queue_events.publish(item.config_id, {
+            "type": "queue_item_updated", "item_id": item.id,
+            "config_id": item.config_id, "status": item.status,
+        })
         return item
 
     async def reject_item(
@@ -233,14 +238,20 @@ class AutopilotService:
 
         await self.db.flush()
         await self.db.refresh(item)
+        queue_events.publish(item.config_id, {
+            "type": "queue_item_updated", "item_id": item.id,
+            "config_id": item.config_id, "status": item.status,
+        })
         return item
 
     async def delete_queue_item(self, item_id: int, user_id: int) -> bool:
         item = await self.get_queue_item(item_id, user_id)
         if not item:
             return False
+        config_id = item.config_id
         await self.db.delete(item)
         await self.db.flush()
+        queue_events.publish(config_id, {"type": "queue_item_deleted", "item_id": item_id, "config_id": config_id})
         return True
 
     async def bulk_action(self, item_ids: List[int], user_id: int, action: str) -> Tuple[int, int]:
@@ -352,7 +363,13 @@ class AutopilotService:
         topics: Optional[List[str]] = None,
         platforms: Optional[List[str]] = None,
     ) -> Tuple[List[AutopilotQueueItem], List[str]]:
-        return await self._gen.generate_posts(config, count, topics, platforms)
+        items, errors = await self._gen.generate_posts(config, count, topics, platforms)
+        for item in items:
+            queue_events.publish(item.config_id, {
+                "type": "queue_item_created", "item_id": item.id,
+                "config_id": item.config_id, "status": item.status,
+            })
+        return items, errors
 
 
 def get_autopilot_service(db: AsyncSession) -> AutopilotService:

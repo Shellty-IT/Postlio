@@ -8,6 +8,7 @@ from sqlalchemy import select
 from app.models.autopilot import AutopilotConfig, AutopilotQueueItem
 from app.models.social_account import SocialAccount
 from app.services.publishers import PublishResult, ManualPublishData, BusinessPublisher, ManualAssistPublisher
+from app.services import queue_events
 from app.schemas.social import (
     ACCOUNT_CAPABILITIES,
     BUSINESS_ACCOUNT_TYPES,
@@ -36,6 +37,17 @@ DEEPLINK_ONLY_ACCOUNT_TYPES = MANUAL_PUBLISH_ACCOUNT_TYPES - SHARE_DIALOG_ACCOUN
 class PublishService:
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    @staticmethod
+    def _notify(item: AutopilotQueueItem) -> None:
+        """Wypycha zmianę statusu do subskrybentów SSE dashboardu (patrz queue_events)."""
+        queue_events.publish(item.config_id, {
+            "type": "queue_item_updated",
+            "item_id": item.id,
+            "config_id": item.config_id,
+            "status": item.status,
+            "publish_error": item.publish_error,
+        })
 
     # ==================== ACCOUNT QUERIES ====================
 
@@ -168,6 +180,7 @@ class PublishService:
             if item.publish_attempts >= 3:
                 item.status = "failed"
             await self.db.flush()
+            self._notify(item)
             return PublishResult(success=False, error=item.publish_error, platform=item.platform)
 
         if self.is_personal_account(social_account):
@@ -192,6 +205,7 @@ class PublishService:
             item.publish_error = f"Account {item.platform} is inactive"
             item.last_publish_attempt_at = now
             await self.db.flush()
+            self._notify(item)
             return PublishResult(success=False, error=item.publish_error, platform=item.platform)
 
         if social_account.is_token_expired:
@@ -199,6 +213,7 @@ class PublishService:
             item.publish_error = f"Token expired for {item.platform}"
             item.last_publish_attempt_at = now
             await self.db.flush()
+            self._notify(item)
             return PublishResult(success=False, error=item.publish_error, platform=item.platform)
 
         if social_account.requires_image and not item.image_url:
@@ -206,6 +221,7 @@ class PublishService:
             item.publish_error = "Instagram requires an image"
             item.last_publish_attempt_at = now
             await self.db.flush()
+            self._notify(item)
             return PublishResult(success=False, error=item.publish_error, platform=item.platform)
 
         try:
@@ -249,6 +265,7 @@ class PublishService:
                 logger.warning("Failed to publish item %s: %s", item.id, result.error)
 
             await self.db.flush()
+            self._notify(item)
             return result
 
         except Exception as e:
@@ -259,6 +276,7 @@ class PublishService:
             if item.publish_attempts >= 3:
                 item.status = "failed"
             await self.db.flush()
+            self._notify(item)
             return PublishResult(success=False, error=str(e), platform=item.platform)
 
     # ==================== MANUAL PUBLISH HELPERS ====================
@@ -297,6 +315,7 @@ class PublishService:
                 account.last_used_at = now
 
         await self.db.flush()
+        self._notify(item)
         logger.info("Marked item %s as manually published", item.id)
 
     # ==================== BULK OPERATIONS ====================
