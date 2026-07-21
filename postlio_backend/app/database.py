@@ -36,10 +36,7 @@ def _create_production_engine():
     def get_connect_args():
         """Przygotuj argumenty połączenia dla asyncpg."""
         if "neon.tech" in settings.DATABASE_URL or "sslmode" in settings.DATABASE_URL:
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-            return {"ssl": ssl_context}
+            return {"ssl": ssl.create_default_context()}
         return {}
 
     return create_async_engine(
