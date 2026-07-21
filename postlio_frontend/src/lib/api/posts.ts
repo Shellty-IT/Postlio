@@ -203,6 +203,22 @@ export async function duplicatePost(id: string): Promise<Post> {
     return apiClient.post<Post>(`/posts/${id}/duplicate`);
 }
 
+export interface LinkPreview {
+    url: string;
+    title?: string;
+    description?: string;
+    image?: string;
+    site_name?: string;
+}
+
+/**
+ * Pobierz metadane Open Graph dla URL wklejonego w edytorze.
+ */
+export async function getLinkPreview(url: string): Promise<LinkPreview> {
+    const searchParams = new URLSearchParams({ url });
+    return apiClient.get<LinkPreview>(`/posts/link-preview?${searchParams}`);
+}
+
 // ============================================================
 // EXPORT ZBIORCZY
 // ============================================================
@@ -219,6 +235,7 @@ export const postsApi = {
     bulkAction,
     getCalendarEvents,
     duplicatePost,
+    getLinkPreview,
 };
 
 export default postsApi;

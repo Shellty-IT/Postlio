@@ -19,8 +19,10 @@ from app.schemas.post import (
     PostsListResponse,
     PostSchedule,
     CalendarEventResponse,
+    LinkPreviewResponse,
 )
 from app.services.publish_service import AUTO_PUBLISH_ACCOUNT_TYPES
+from app.services.link_preview_service import fetch_link_preview, LinkPreviewError
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
@@ -198,6 +200,19 @@ async def create_post(
     )
     post = await post_repo.create(db, post)
     return PostResponse.model_validate(post)
+
+
+@router.get("/link-preview", response_model=LinkPreviewResponse)
+async def get_link_preview(
+        url: str = Query(..., description="URL wklejony w edytorze"),
+        current_user: User = Depends(get_current_user),
+):
+    """Pobiera metadane Open Graph (tytuł/opis/obraz) dla wklejonego URL."""
+    try:
+        data = await fetch_link_preview(url)
+    except LinkPreviewError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    return data
 
 
 @router.get("/{post_id}", response_model=PostResponse)

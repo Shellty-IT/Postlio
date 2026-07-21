@@ -40,6 +40,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AIProviderSelector } from './ai-provider-selector';
 import { ImageCropModal } from './image-crop-modal';
+import { LinkPreviewCard } from './link-preview-card';
 import { generateVideo as generateVideoApi } from '@/lib/api/ai';
 import { cn } from '@/lib/utils';
 import type { Platform } from '@/types';
@@ -518,6 +519,8 @@ export function PostEditor({
                     className="hidden"
                 />
             </div>
+
+            {!hasMedia && <LinkPreviewCard content={content} />}
 
             {hashtags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
