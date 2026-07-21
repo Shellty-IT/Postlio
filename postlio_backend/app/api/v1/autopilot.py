@@ -8,7 +8,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_current_user, verify_scheduler_tick_secret
 from app.api.exceptions import NotFoundError
 from app.models.user import User
 from app.models.autopilot import AutopilotConfig, AutopilotQueueItem
@@ -726,6 +726,27 @@ async def get_dashboard(
         recommendations=recommendations,
         social_accounts_status=social_status,
     )
+
+
+# === EXTERNAL SCHEDULER TICK ===
+
+@router.post("/tick", include_in_schema=False, dependencies=[Depends(verify_scheduler_tick_secret)])
+async def scheduler_tick():
+    """
+    Wybudza generację i publikację Autopilota.
+
+    Przeznaczony dla zewnętrznego crona (np. cron-job.org, Render Cron Job)
+    pingującego tę instancję, gdy free-tier Render usypia proces web i
+    wewnętrzny APScheduler nie zdąży odpalić joba w swoim oknie.
+    Chroniony nagłówkiem X-Scheduler-Secret (patrz verify_scheduler_tick_secret),
+    nie sesją użytkownika - cron nie ma zalogowanego usera.
+    """
+    from app.services.scheduler_service import scheduler_service
+
+    await scheduler_service.trigger_generation_check()
+    await scheduler_service.trigger_publish_check()
+
+    return {"status": "ok"}
 
 
 # === DEBUG / TESTING ENDPOINTS ===

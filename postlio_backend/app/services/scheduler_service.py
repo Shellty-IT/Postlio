@@ -18,6 +18,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import async_session_maker
 from app.models.autopilot import AutopilotConfig
 from app.services.autopilot_service import AutopilotService
@@ -148,7 +149,7 @@ class SchedulerService:
         scheduled_minutes = schedule_hour * 60 + schedule_minute
         time_diff = abs(current_minutes - scheduled_minutes)
 
-        if time_diff > 2:
+        if time_diff > settings.AUTOPILOT_GENERATION_WINDOW_MINUTES:
             return
 
         # Sprawdź czy już generowaliśmy

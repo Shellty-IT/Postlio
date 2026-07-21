@@ -32,6 +32,16 @@ class Settings(BaseSettings):
     # Token Encryption (dla social media tokenów)
     TOKEN_ENCRYPTION_KEY: Optional[str] = None
 
+    # Sekret dla /autopilot/tick - pozwala zewnętrznemu cronowi (np. cron-job.org,
+    # Render Cron Job) wybudzić generację/publikację, gdy free-tier instancja Rendera
+    # zasnęła i wewnętrzny APScheduler nie zdążył odpalić joba w swoim oknie.
+    SCHEDULER_TICK_SECRET: Optional[str] = None
+
+    # Tolerancja (w minutach) okna generacji Autopilota wokół zaplanowanej godziny.
+    # Szersza niż domyślne odpytywanie co minutę, bo zewnętrzny cron budzący
+    # uśpioną instancję może pingować rzadziej niż raz na minutę.
+    AUTOPILOT_GENERATION_WINDOW_MINUTES: int = 15
+
     # Database - PostgreSQL (Neon)
     DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost/postlio"
 
