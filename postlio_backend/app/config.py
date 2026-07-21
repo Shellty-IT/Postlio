@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     # uśpioną instancję może pingować rzadziej niż raz na minutę.
     AUTOPILOT_GENERATION_WINDOW_MINUTES: int = 15
 
+    # Observability - Sentry (opcjonalny; brak DSN = integracja wyłączona)
+    SENTRY_DSN: Optional[str] = None
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.0
+
     # Database - PostgreSQL (Neon)
     DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost/postlio"
 

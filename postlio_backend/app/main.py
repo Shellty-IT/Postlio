@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 import asyncio
 
+import sentry_sdk
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -15,12 +16,23 @@ from app.api.rate_limit import limiter
 from app.api.v1 import auth, posts, brands, ai, autopilot, social
 from app.api.exceptions import register_exception_handlers
 from app.services.scheduler_service import start_scheduler, stop_scheduler
+from app.utils.request_context import RequestIdMiddleware, RequestIdLogFilter
+
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment="production" if not settings.DEBUG else "development",
+        traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
+        send_default_pii=False,
+    )
 
 # Konfiguracja logowania
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format="%(asctime)s - %(name)s - [%(request_id)s] - %(levelname)s - %(message)s",
 )
+for _handler in logging.getLogger().handlers:
+    _handler.addFilter(RequestIdLogFilter())
 logger = logging.getLogger(__name__)
 
 
@@ -92,6 +104,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestIdMiddleware)
 
 
 # ==================== Health Endpoints ====================
@@ -128,8 +141,9 @@ async def full_health_check():
             await db.execute(text("SELECT 1"))
             db_status = "healthy"
             break
-    except Exception as e:
-        db_status = f"error: {str(e)}"
+    except Exception:
+        logger.exception("Database health check failed")
+        db_status = "error"
 
     return {
         "status": "healthy" if db_status == "healthy" else "degraded",
