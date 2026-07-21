@@ -20,9 +20,10 @@ from app.api.deps import get_db, get_current_user
 from app.api.rate_limit import limiter
 from app.models.user import User
 from app.schemas.user import UserRegister, UserLogin, UserResponse, AccessTokenResponse, OnboardingComplete
-from app.utils.security import hash_password, verify_password, create_tokens, decode_token
+from app.utils.security import hash_password, verify_password, decode_token
 from app.config import settings
 from app.services.social import social_manager, SocialPlatform
+from app.services import refresh_token_service
 
 logger = logging.getLogger(__name__)
 
@@ -194,8 +195,9 @@ async def login(
             detail="User is inactive",
         )
 
-    access_token, refresh_token = create_tokens(user.id)
-    _set_refresh_cookie(response, refresh_token)
+    access_token, new_refresh_token = await refresh_token_service.issue_tokens(db, user.id)
+    await db.commit()
+    _set_refresh_cookie(response, new_refresh_token)
 
     return AccessTokenResponse(access_token=access_token)
 
@@ -206,7 +208,7 @@ async def refresh_token(
         db: AsyncSession = Depends(get_db),
         refresh_token: Optional[str] = Cookie(None, alias=REFRESH_COOKIE_NAME),
 ):
-    """Refresh access token using the httpOnly refresh cookie."""
+    """Refresh access token using the httpOnly refresh cookie. Rotates the refresh token on every call."""
     if not refresh_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -214,14 +216,34 @@ async def refresh_token(
         )
 
     payload = decode_token(refresh_token)
+    jti = payload.get("jti") if payload else None
 
-    if not payload or payload.get("type") != "refresh":
+    if not payload or payload.get("type") != "refresh" or not jti:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
         )
 
     user_id = int(payload.get("sub"))
+
+    record = await refresh_token_service.get_by_jti(db, jti)
+
+    if record is None or record.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
+        )
+
+    if record.revoked_at is not None:
+        # Reuse of an already-rotated token: the cookie may have been stolen and
+        # replayed after the legitimate client already rotated past it. Revoke
+        # every session for this user rather than trusting any of them.
+        await refresh_token_service.revoke_all_for_user(db, user_id)
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token reuse detected - all sessions revoked, please log in again",
+        )
 
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
@@ -232,15 +254,30 @@ async def refresh_token(
             detail="User not found or inactive",
         )
 
-    new_access_token, new_refresh_token = create_tokens(user.id)
+    await refresh_token_service.revoke(record)
+    new_access_token, new_refresh_token = await refresh_token_service.issue_tokens(db, user.id)
+    await db.commit()
     _set_refresh_cookie(response, new_refresh_token)
 
     return AccessTokenResponse(access_token=new_access_token)
 
 
 @router.post("/logout")
-async def logout(response: Response):
-    """Clear the refresh token cookie."""
+async def logout(
+        response: Response,
+        db: AsyncSession = Depends(get_db),
+        refresh_token: Optional[str] = Cookie(None, alias=REFRESH_COOKIE_NAME),
+):
+    """Clear the refresh token cookie and revoke the session server-side."""
+    if refresh_token:
+        payload = decode_token(refresh_token)
+        jti = payload.get("jti") if payload else None
+        if jti:
+            record = await refresh_token_service.get_by_jti(db, jti)
+            if record is not None:
+                await refresh_token_service.revoke(record)
+                await db.commit()
+
     _clear_refresh_cookie(response)
     return {"success": True}
 
@@ -409,8 +446,9 @@ async def oauth_login_callback(
             is_new_user = True
 
         # Utwórz tokeny JWT
-        access_token, refresh_token = create_tokens(user.id)
-        _set_refresh_cookie(response, refresh_token)
+        access_token, new_refresh_token = await refresh_token_service.issue_tokens(db, user.id)
+        await db.commit()
+        _set_refresh_cookie(response, new_refresh_token)
 
         return OAuthLoginResponse(
             success=True,

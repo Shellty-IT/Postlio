@@ -114,7 +114,7 @@ async def init_db():
         return
 
     async with engine.begin() as conn:
-        from app.models import user, brand, post, social_account, autopilot  # noqa: F401
+        from app.models import user, brand, post, social_account, autopilot, refresh_token  # noqa: F401
         await conn.run_sync(Base.metadata.create_all)
 
 
@@ -132,7 +132,7 @@ async def reset_test_db():
     if not TESTING:
         raise RuntimeError("reset_test_db can only be called in TESTING mode!")
 
-    from app.models import user, brand, post, social_account, autopilot  # noqa: F401
+    from app.models import user, brand, post, social_account, autopilot, refresh_token  # noqa: F401
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)

@@ -1,6 +1,7 @@
 ﻿"""
 Security utilities for authentication and password handling.
 """
+import secrets
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, Tuple
 from jose import jwt, JWTError
@@ -77,6 +78,9 @@ def create_refresh_token(
     Supports two calling conventions:
     - create_refresh_token(user_id=123)  # Simple
     - create_refresh_token(data={"sub": "123"})  # Full control
+
+    Every refresh token gets a unique "jti" claim so it can be tracked in the
+    refresh_tokens table for rotation and revocation (see refresh_token_service).
     """
     if data is not None:
         to_encode = data.copy()
@@ -93,7 +97,8 @@ def create_refresh_token(
 
     to_encode.update({
         "exp": expire,
-        "type": "refresh"
+        "type": "refresh",
+        "jti": to_encode.get("jti") or secrets.token_urlsafe(32),
     })
 
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
