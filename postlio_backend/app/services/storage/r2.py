@@ -14,7 +14,6 @@ import io
 import logging
 import time
 import uuid
-from datetime import datetime
 from typing import Dict, List, Optional
 
 import boto3

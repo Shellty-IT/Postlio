@@ -13,7 +13,6 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from app.models.post import Post
-from app.models.autopilot import AutopilotQueueItem
 from app.services.storage.cleanup_service import _extract_r2_key, cleanup_orphaned_images
 
 
