@@ -21,6 +21,9 @@ from app.schemas.brand import (
     VoiceDNABase,
 )
 from app.services.ai.text.manager import TextAIManager
+from app.services.storage import r2_storage
+
+MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024
 
 router = APIRouter(prefix="/brands", tags=["Brand Voice"])
 
@@ -149,7 +152,20 @@ async def upload_brand_logo(
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Plik musi być obrazem")
 
-    logo_url = f"/uploads/brands/{brand_id}/logo_{file.filename}"
+    image_bytes = await file.read()
+    if len(image_bytes) > MAX_LOGO_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Plik jest za duży (max {MAX_LOGO_SIZE_BYTES // (1024 * 1024)}MB)",
+        )
+
+    logo_url = await r2_storage.upload_image(image_bytes, folder="brand-logos")
+    if not logo_url:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Nie udało się zapisać logo. Spróbuj ponownie później.",
+        )
+
     brand.logo_url = logo_url
     await brand_repo.save(db, brand)
     return {"logo_url": logo_url}
