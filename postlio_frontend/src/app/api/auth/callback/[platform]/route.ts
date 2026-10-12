@@ -35,7 +35,7 @@ export async function GET(
     const errorDescription = searchParams.get('error_description');
 
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = request.nextUrl.origin;
 
 
     let context: OAuthContext = 'settings';
