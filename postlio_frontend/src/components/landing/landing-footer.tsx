@@ -49,7 +49,7 @@ const footerLinks = {
     legal: {
         title: 'Prawne',
         links: [
-            { label: 'Polityka prywatności', href: '#' },
+            { label: 'Polityka prywatności', href: '/privacy' },
             { label: 'Regulamin', href: '#' },
             { label: 'Cookies', href: '#' },
             { label: 'RODO', href: '#' },
