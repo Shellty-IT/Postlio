@@ -29,9 +29,9 @@ class GoogleService(BaseSocialService):
     platform = SocialPlatform.GOOGLE
 
     # API endpoints
-    OAUTH_URL = "https://accounts.google.com/o/oauth2"
+    OAUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
     TOKEN_URL = "https://oauth2.googleapis.com/token"
-    USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
+    USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
 
     # Wymagane uprawnienia
     REQUIRED_SCOPES = [
@@ -63,11 +63,9 @@ class GoogleService(BaseSocialService):
             "response_type": "code",
             "scope": " ".join(self.REQUIRED_SCOPES),
             "state": state,
-            "access_type": "offline",
-            "prompt": "consent",
         }
 
-        return f"{self.OAUTH_URL}/auth?{urlencode(params)}"
+        return f"{self.OAUTH_URL}?{urlencode(params)}"
 
     async def exchange_code_for_token(self, code: str) -> OAuthResult:
         """Wymienia authorization code na access token."""
@@ -133,19 +131,19 @@ class GoogleService(BaseSocialService):
                     access_token=access_token,
                     refresh_token=refresh_token,
                     expires_at=datetime.utcnow() + timedelta(seconds=expires_in),
-                    platform_user_id=user_data.get("id"),
+                    platform_user_id=user_data.get("sub"),
                     platform_username=user_data.get("name"),
                     profile_data={
-                        "id": user_data.get("id"),
+                        "id": user_data.get("sub"),
                         "email": user_data.get("email"),
                         "name": user_data.get("name"),
                         "given_name": user_data.get("given_name"),
                         "family_name": user_data.get("family_name"),
                         "picture": user_data.get("picture"),
-                        "verified_email": user_data.get("verified_email"),
+                        "email_verified": user_data.get("email_verified"),
                     },
                     email=user_data.get("email"),
-                    email_verified=user_data.get("verified_email", False),
+                    email_verified=user_data.get("email_verified", False),
                 )
 
             except httpx.RequestError as e:
@@ -234,7 +232,7 @@ class GoogleService(BaseSocialService):
 
             return AccountInfo(
                 platform=self.platform,
-                platform_user_id=data.get("id", ""),
+                platform_user_id=data.get("sub", ""),
                 username=data.get("email", ""),
                 name=data.get("name"),
                 avatar_url=data.get("picture"),

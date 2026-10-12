@@ -4,13 +4,14 @@ Model użytkownika.
 """
 from datetime import datetime, timedelta
 from typing import Optional
-from sqlalchemy import String, Boolean, DateTime
+from sqlalchemy import String, Boolean, DateTime, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (UniqueConstraint("oauth_provider", "oauth_provider_id", name="uq_users_oauth_identity"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)

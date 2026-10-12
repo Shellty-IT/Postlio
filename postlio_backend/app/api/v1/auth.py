@@ -24,6 +24,7 @@ from app.utils.security import hash_password, verify_password, decode_token
 from app.config import settings
 from app.services.social import social_manager, SocialPlatform
 from app.services import refresh_token_service
+from app.services.oauth_login_service import OAuthLoginError, find_or_create_user
 
 logger = logging.getLogger(__name__)
 
@@ -367,7 +368,7 @@ async def oauth_login_callback(
             error_description="Invalid or expired state token"
         )
 
-    if state_data.get("platform") != platform:
+    if state_data.get("platform") != platform or request.platform != platform:
         return OAuthLoginResponse(
             success=False,
             error="platform_mismatch",
@@ -386,64 +387,7 @@ async def oauth_login_callback(
                 error_description=result.error_description or "Failed to authenticate with provider"
             )
 
-        # Pobierz email z wyników OAuth
-        email = result.email or (result.profile_data or {}).get("email")
-
-        if not email:
-            return OAuthLoginResponse(
-                success=False,
-                error="email_required",
-                error_description="Email is required for login. Please grant email permission."
-            )
-
-        # Znajdź lub utwórz użytkownika
-        existing_user = await db.execute(
-            select(User).where(User.email == email)
-        )
-        user = existing_user.scalar_one_or_none()
-        is_new_user = False
-
-        if user:
-            # Istniejący użytkownik - zaloguj
-            if not user.is_active:
-                return OAuthLoginResponse(
-                    success=False,
-                    error="user_inactive",
-                    error_description="User account is inactive"
-                )
-
-            # Aktualizuj avatar jeśli nie ma
-            if not user.avatar_url and result.profile_data:
-                avatar = result.profile_data.get("picture")
-                if isinstance(avatar, dict):
-                    avatar = avatar.get("data", {}).get("url")
-                if avatar:
-                    user.avatar_url = avatar
-                    await db.commit()
-
-        else:
-            # Nowy użytkownik - zarejestruj
-            name = result.platform_username or result.profile_data.get("name", "") if result.profile_data else ""
-            avatar = None
-            if result.profile_data:
-                avatar = result.profile_data.get("picture")
-                if isinstance(avatar, dict):
-                    avatar = avatar.get("data", {}).get("url")
-
-            user = User(
-                email=email,
-                full_name=name,
-                hashed_password="",  # OAuth users don't have password
-                avatar_url=avatar,
-                oauth_provider=platform,
-                oauth_provider_id=result.platform_user_id,
-                is_active=True,
-            )
-
-            db.add(user)
-            await db.commit()
-            await db.refresh(user)
-            is_new_user = True
+        user, is_new_user = await find_or_create_user(db, platform, result)
 
         # Utwórz tokeny JWT
         access_token, new_refresh_token = await refresh_token_service.issue_tokens(db, user.id)
@@ -457,7 +401,14 @@ async def oauth_login_callback(
             is_new_user=is_new_user,
         )
 
+    except OAuthLoginError as exc:
+        return OAuthLoginResponse(
+            success=False,
+            error=exc.code,
+            error_description=exc.description,
+        )
     except Exception:
+        await db.rollback()
         logger.exception("OAuth login callback failed for platform %s", platform)
 
         return OAuthLoginResponse(

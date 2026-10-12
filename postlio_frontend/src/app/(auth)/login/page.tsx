@@ -1,7 +1,7 @@
 // src/app/(auth)/login/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -37,6 +37,7 @@ export default function LoginPage() {
     const searchParams = useSearchParams();
     const [showPassword, setShowPassword] = useState(false);
     const [oauthLoading, setOauthLoading] = useState<'facebook' | 'google' | null>(null);
+    const callbackStarted = useRef(false);
     const { mutate: login, isPending } = useLogin();
     const { login: authLogin } = useAuthStore();
 
@@ -62,6 +63,8 @@ export default function LoginPage() {
             const oauthErrorDescription = searchParams.get('oauth_error_description');
 
             if (oauthError) {
+                sessionStorage.removeItem('oauth_login_state');
+                sessionStorage.removeItem('oauth_login_platform');
                 toast.error('Błąd logowania', {
                     description: oauthErrorDescription || 'Autoryzacja została anulowana',
                 });
@@ -70,6 +73,17 @@ export default function LoginPage() {
             }
 
             if (oauthSuccess === 'true' && oauthCode && oauthState && platform) {
+                if (callbackStarted.current) return;
+                callbackStarted.current = true;
+                const expectedState = sessionStorage.getItem('oauth_login_state');
+                const expectedPlatform = sessionStorage.getItem('oauth_login_platform');
+                sessionStorage.removeItem('oauth_login_state');
+                sessionStorage.removeItem('oauth_login_platform');
+                if (oauthState !== expectedState || platform !== expectedPlatform || !['google', 'facebook'].includes(platform)) {
+                    toast.error('Błąd logowania', { description: 'Nieprawidłowa lub wygasła sesja logowania' });
+                    router.replace('/login', { scroll: false });
+                    return;
+                }
                 setOauthLoading(platform as 'facebook' | 'google');
 
                 try {
@@ -90,17 +104,22 @@ export default function LoginPage() {
                         }
                     } else {
                         toast.error('Błąd logowania', {
-                            description: result.error_description || result.error || 'Nie udało się zalogować',
+                            description: result.error === 'account_exists'
+                                ? 'Konto z tym adresem e-mail już istnieje. Zaloguj się pierwotną metodą.'
+                                : result.error === 'email_unverified'
+                                    ? 'Najpierw potwierdź adres e-mail na koncie Google.'
+                                    : result.error_description || result.error || 'Nie udało się zalogować',
                         });
+                        router.replace('/login', { scroll: false });
                     }
                 } catch (error) {
                     console.error('OAuth callback error:', error);
                     toast.error('Błąd logowania', {
                         description: 'Wystąpił nieoczekiwany błąd',
                     });
+                    router.replace('/login', { scroll: false });
                 } finally {
                     setOauthLoading(null);
-                    router.replace('/login', { scroll: false });
                 }
             }
         };
