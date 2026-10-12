@@ -35,7 +35,9 @@ export async function GET(
     const errorDescription = searchParams.get('error_description');
 
 
-    const baseUrl = request.nextUrl.origin;
+    const baseUrl = process.env.NODE_ENV === 'production'
+        ? process.env.URL || 'https://postlio.shellty.pl'
+        : request.nextUrl.origin;
 
 
     let context: OAuthContext = 'settings';
